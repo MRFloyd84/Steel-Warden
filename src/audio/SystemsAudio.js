@@ -52,7 +52,8 @@ export class SystemsAudio {
 
     const al = cfg.alarms;
     const critical = (f.scrammed && time - s.reactor.scramAt < al.scramAlarmTime)
-      || (s.power.fault && time - s.power.faultAt < al.faultAlarmTime);
+      || (s.power.fault && time - s.power.faultAt < al.faultAlarmTime)
+      || time < (this.systems.criticalAlarmUntil ?? -Infinity); // critical hit damage (CockpitHits)
     L.alarmHeat.setGain(f.heatWarning && !critical && f.batteryBus ? 1 : 0, 0.05);
     L.alarmCritical.setGain(critical && s.battery.on ? 1 : 0, 0.05);
   }

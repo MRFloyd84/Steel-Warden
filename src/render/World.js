@@ -18,7 +18,7 @@ export class World {
       x: start.x, z: start.z, radius: 60, falloff: 90,
       minHeight: this.theater.terrain.startMinHeight,
     }];
-    this.sampler = new TerrainSampler(this.theater.terrain, mission.seed, gridStep, flatZones);
+    this.sampler = new TerrainSampler(this.theater.terrain, mission.seed, gridStep, flatZones, mission.hills ?? []);
 
     this.lighting = { ...getLighting(mission.timeOfDay), ...this.theater.lightingOverride };
     this.environment = new Environment(this.scene, this.theater, this.lighting, mission.seed);

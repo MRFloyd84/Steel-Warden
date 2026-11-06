@@ -25,7 +25,9 @@ export class CrtScreen {
     const [rw, rh] = resolution;
     this.id = id;
     this.flicker = false; // set from outside (e.g. reactor ignition)
+    this.extraFlicker = 0; // 0..1 short disturbance from hits, decays
     this.display = display;
+    this.override = null; // display module shown instead (missile camera)
     this.p = PHOSPHORS[phosphor] ?? PHOSPHORS.amber;
     this.interval = 1 / refreshHz;
     this.timer = phaseOffset * this.interval;
@@ -63,13 +65,25 @@ export class CrtScreen {
     ctx.fillRect(0, 0, this.phosphor.width, this.phosphor.height);
     const status = data.monitorStatus ? data.monitorStatus(this.id) : ON;
     let brightness = this.flicker ? 0.35 + Math.random() * 0.9 : 1;
+    if (this.extraFlicker > 0) {
+      brightness *= 1 - this.extraFlicker * Math.random() * 0.9;
+      this.extraFlicker = Math.max(0, this.extraFlicker - this.interval * 3);
+    }
     if (status.mode !== 'off') {
       this.painter.begin();
       if (status.mode === 'boot') {
         drawBoot(this.painter, this.id, status);
+        if (status.noise) this.painter.static(0.22);
         if (status.t < status.timing.flickerTime) brightness = 0.3 + Math.random() * 1.2;
+      } else if (status.mode === 'noise') {
+        // Defective tube: static with rolling bars
+        this.painter.static(0.55);
+        const roll = (performance.now() * 0.05) % this.phosphor.height;
+        this.painter.rect(0, roll, this.phosphor.width, 10, 0.25, true);
+        brightness *= 0.6 + Math.random() * 0.5;
       } else {
-        this.display.draw(this.painter, data);
+        (this.override ?? this.display).draw(this.painter, data);
+        if (this.extraFlicker > 0.3) this.painter.static(this.extraFlicker * 0.5);
       }
       this.painter.end();
     }
@@ -157,6 +171,40 @@ export class Painter {
     }
   }
 
+  /** A monochrome picture (grey canvas) tinted in the phosphor colour, scaled into a box. */
+  image(canvas, x, y, w, h, alpha = 1) {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.shadowBlur = 0;
+    ctx.imageSmoothingEnabled = false;
+    ctx.globalAlpha = alpha;
+    ctx.drawImage(canvas, x, y, w, h);
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.fillStyle = this.c(1);
+    ctx.fillRect(x, y, w, h);
+    ctx.restore();
+  }
+
+  /** Snow: random noise over the whole screen at the given strength. */
+  static(strength = 1) {
+    const ctx = this.ctx;
+    const n = noiseCanvas();
+    ctx.save();
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = Math.min(1, strength);
+    ctx.globalCompositeOperation = strength >= 0.5 ? 'source-over' : 'lighter';
+    ctx.imageSmoothingEnabled = false;
+    const ox = Math.random() * 40;
+    const oy = Math.random() * 30;
+    ctx.drawImage(n, -ox, -oy, this.w + 40, this.h + 30);
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = this.c(1);
+    ctx.fillRect(0, 0, this.w, this.h);
+    ctx.restore();
+  }
+
   poly(points, alpha = 1, fill = false, color = null) {
     const ctx = this.ctx;
     ctx.beginPath();
@@ -170,6 +218,27 @@ export class Painter {
       ctx.stroke();
     }
   }
+}
+
+/** Shared random-noise canvas, regenerated at most once per 50 ms. */
+let noise = null;
+let noiseAt = 0;
+function noiseCanvas() {
+  const now = performance.now();
+  if (!noise) noise = makeCanvas(120, 90);
+  if (now - noiseAt > 50) {
+    noiseAt = now;
+    const ctx = noise.getContext('2d');
+    const img = ctx.createImageData(noise.width, noise.height);
+    const d = img.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const v = Math.random() < 0.5 ? Math.random() * 90 : 120 + Math.random() * 135;
+      d[i] = d[i + 1] = d[i + 2] = v;
+      d[i + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+  return noise;
 }
 
 /** Scanlines + vignette, pre-rendered once. */

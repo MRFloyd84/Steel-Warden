@@ -30,11 +30,15 @@ export function updateLamps(sys) {
   const legsWaiting = c.value('legLock') === 1 && !s.legs.released;
   set('lampHeat', f.heatWarning);
   set('lampReactor', (ignitionFail && blink) || f.scrammed || (sys.extraCircuit && f.reactorRunning && !f.reactor2Running && s.reactor2.mode === 'igniting' && blink));
-  set('lampMasterWarning', (f.heatWarning || scramRecent || s.power.fault) && blink);
+  set('lampMasterWarning', (f.heatWarning || scramRecent || s.power.fault || sys.criticalDamage) && blink);
   const weaponsBlocked = t < (sys.cautionUntil ?? -Infinity);
   set('lampMasterCaution', ignitionFail || hydraulicsOnAux || legsWaiting || (weaponsBlocked && blink));
   set('lampShield', c.value('shields') === 1 && !f.shieldsReady);
-  set('lampMissile', false);
+  // Enemy lock: fast blinking; missile in the air: steady
+  const fastBlink = Math.floor(t * 8) % 2 === 0;
+  set('lampMissile', sys.missileWarning === 'missile' || (sys.missileWarning === 'lock' && fastBlink));
+  set('lampTracking', sys.trackingActive);
+  set('missileCamera', sys.missileCamOn);
 
   set('lampReactor2', f.reactor2Running);
   set('lampStatReactor', !f.reactorRunning);

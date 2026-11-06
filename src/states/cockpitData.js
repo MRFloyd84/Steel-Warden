@@ -38,6 +38,7 @@ export function createCockpitData(walker, mission, systems) {
 }
 
 export function updateCockpitData(d, dt, { motion: m, controls: c, systems, stick, combat }) {
+  d.monitorFaults = systems.monitorFaults;
   const s = systems.s;
   const f = systems.flags;
   const k = systems.cfg;
@@ -135,6 +136,13 @@ function updateCombatData(d, m, combat) {
   d.armorNow.reactor = t.internal;
   d.radarRange *= r.sensorsRange;
   d.weaponsReadout = r.weapons;
+  d.lockState = r.lockState;
+  d.sensorsHeavy = r.parts.sensors.stage >= 3;
+  const th = combat.threat;
+  d.threat = th ? { ...th, dist: Math.hypot(th.dx, th.dz) } : null;
+  d.guidance = r.guidance;
+  d.hasPod = r.hasPod;
+  d.tracking = r.tracking;
   d.loadoutWeight = r.weapons.slots.reduce((sum, sl) => sum + combat.weapons.byId[sl.id].def.weight, 0);
 
   // Radar contacts (all other walkers; data link and passive radar come with A4)
@@ -154,7 +162,15 @@ function updateCombatData(d, m, combat) {
       wreck: tg.wreck, unit: u,
       stages: Object.fromEntries(Object.entries(u.damage.parts).map(([k, p]) => [k, p.stage])),
       shields: { front: u.damage.shieldFraction('front'), rear: u.damage.shieldFraction('rear'), left: u.damage.shieldFraction('left'), right: u.damage.shieldFraction('right') },
-      needLock: Math.max(0, ...combat.weapons.slots.filter((s) => s.def.guidance === 'track').map((s) => s.def.lockTime)),
+      needLock: needLock(combat.weapons.slots),
+      component: tg.component,
+      converging: tg.converging,
     };
   } else d.target = null;
+}
+
+/** Shortest lock time of the launchers that currently need a lock (0 = none). */
+function needLock(slots) {
+  const times = slots.filter((s) => !s.disabled && (s.mode === 'active' || s.mode === 'semiActive')).map((s) => s.def.lockTime);
+  return times.length ? Math.min(...times) : 0;
 }

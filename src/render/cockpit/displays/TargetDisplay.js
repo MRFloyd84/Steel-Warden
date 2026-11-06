@@ -14,7 +14,8 @@ const pts = Array.from({ length: 8 }, () => [0, 0]);
 /**
  * Target page: slowly turning wireframe of the locked walker built from its
  * hit zones, coloured by damage stage, plus type, distance, lock progress,
- * shields and component stages. Idle acquisition pattern without a target.
+ * shields and component stages. With the target pod the chosen component
+ * blinks and is framed. Idle acquisition pattern without a target.
  */
 export const TargetDisplay = {
   persistence: 0.6,
@@ -35,13 +36,19 @@ export const TargetDisplay = {
 
     p.text(t.name, w - 8, 12, { size: 11, align: 'right' });
     drawWireframe(p, t, d.time, 8, 28, w * 0.58, h - 70);
+    const comp = t.component;
 
     // Component stages
     const tx = w * 0.62;
     let y = 40;
     for (const k of ['torso', 'armL', 'armR', 'legs', 'sensors']) {
       const st = t.stages[k];
-      p.text(LABELS[k], tx, y, { size: 9, alpha: 0.75 });
+      const chosen = comp === k;
+      if (chosen) {
+        p.rect(tx - 4, y - 7, w - tx - 1, 13, 0.9);
+        if (Math.floor(d.time * 3) % 2 === 0) p.poly([[tx - 10, y - 4], [tx - 5, y], [tx - 10, y + 4]], 1, true);
+      }
+      p.text(LABELS[k], tx, y, { size: 9, alpha: chosen ? 1 : 0.75 });
       p.text(STAGE_TEXT[st], w - 8, y, { size: 9, align: 'right', color: healthColor(STAGE_FRACTION[st]) });
       y += 15;
     }
@@ -51,6 +58,7 @@ export const TargetDisplay = {
 
     p.line(8, h - 40, w - 8, h - 40, 0.4);
     p.text(`${t.cls.toUpperCase()} ${t.tonnage} t`, 8, h - 28, { size: 11 });
+    if (comp) p.text(`KAPSEL ${LABELS[comp]}${t.converging ? ' ◆' : ''}`, w * 0.36, h - 28, { size: 10, alpha: 0.9 });
     p.text(`${Math.round(t.distance)} m`, w - 8, h - 28, { size: 13, align: 'right' });
     if (t.wreck) {
       p.text(WRECK[t.wreck] ?? 'WRACK', w / 2, h - 11, { size: 11, align: 'center' });
@@ -77,9 +85,12 @@ function drawWireframe(p, t, time, x0, y0, bw, bh) {
   const sa = Math.sin(a);
   inv.copy(model.root.matrixWorld).invert();
   const groundY = -model.root.position.y + unit.motion.pose.y - unit.walker.cockpit.eyeHeight; // hip → ground offset
+  const blink = Math.floor(time * 3) % 2 === 0;
   for (const v of unit.volumes.volumes) {
     const st = t.stages[v.component] ?? 0;
-    const color = healthColor(STAGE_FRACTION[st]);
+    const chosen = t.component === v.component;
+    const color = chosen && blink ? '#ffffff' : healthColor(STAGE_FRACTION[st]);
+    const alpha = t.component && !chosen ? 0.45 : 0.9;
     m.multiplyMatrices(inv, v.mesh.matrixWorld);
     for (let i = 0; i < 8; i++) {
       corner.set(i & 1 ? v.box.max.x : v.box.min.x, i & 2 ? v.box.max.y : v.box.min.y, i & 4 ? v.box.max.z : v.box.min.z).applyMatrix4(m);
@@ -87,7 +98,7 @@ function drawWireframe(p, t, time, x0, y0, bw, bh) {
       pts[i][0] = cx + rx * scale;
       pts[i][1] = base - (corner.y - groundY) * scale;
     }
-    for (const [i, j] of EDGES) p.line(pts[i][0], pts[i][1], pts[j][0], pts[j][1], 0.9, color);
+    for (const [i, j] of EDGES) p.line(pts[i][0], pts[i][1], pts[j][0], pts[j][1], alpha, color);
   }
 }
 

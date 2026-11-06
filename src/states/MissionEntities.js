@@ -29,7 +29,7 @@ export class MissionEntities {
       motion.place(spawn.at[0], spawn.at[1], spawn.heading ?? 0);
       const model = new WalkerModel(walker, sampler, feel);
       model.addTo(scene);
-      this.units.push({ id: spawn.id, walker, motion, model, driver: new DummyDriver(spawn.behavior), renderPose: { ...motion.pose } });
+      this.units.push({ id: spawn.id, walker, motion, model, driver: new DummyDriver(spawn.behavior), renderPose: { ...motion.pose }, spawnEmitting: !!spawn.emitting });
     }
   }
 

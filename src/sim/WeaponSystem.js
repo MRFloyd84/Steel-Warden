@@ -14,7 +14,11 @@ export class WeaponSystem {
   constructor(walker, { loadout, groups, chains }) {
     this.walker = walker;
     const hpById = Object.fromEntries(walker.hardpoints.map((hp) => [hp.id, hp]));
-    this.slots = Object.entries(loadout).map(([hpId, weaponId]) => {
+    const entries = Object.entries(loadout);
+    // Equipment (target pod) is carried but never fires.
+    this.equipment = entries.filter(([, id]) => getWeapon(id).kind === 'equipment')
+      .map(([hpId, id]) => ({ id: hpId, hp: hpById[hpId], def: getWeapon(id), disabled: false }));
+    this.slots = entries.filter(([, id]) => getWeapon(id).kind !== 'equipment').map(([hpId, weaponId]) => {
       const def = getWeapon(weaponId);
       const mag = def.ammoPerMagazine;
       return {
@@ -35,6 +39,8 @@ export class WeaponSystem {
         heat: 0,
         disabled: false,
         firedAt: -Infinity,
+        mode: def.guidance ? 'dumb' : null, // effective missile guidance, set by the mission
+        hold: '', // why a ready weapon is held back (e.g. no lock)
       };
     });
     this.byId = Object.fromEntries(this.slots.map((s) => [s.id, s]));
@@ -60,6 +66,7 @@ export class WeaponSystem {
 
   /** Weapons on a destroyed arm stop working for good. */
   disableLocation(location) {
+    for (const e of this.equipment) if (e.hp.location === location) e.disabled = true;
     for (const s of this.slots) if (s.hp.location === location) {
       s.disabled = true;
       s.beamOn = false;
@@ -69,8 +76,13 @@ export class WeaponSystem {
   }
 
   /** Short label of what keeps a weapon from firing ('' = ready). */
+  has(equipmentId) {
+    return this.equipment.some((e) => e.def.id === equipmentId && !e.disabled);
+  }
+
   status(s) {
     if (s.disabled) return 'AUSFALL';
+    if (s.hold) return s.hold;
     if (s.magazine !== null && s.magazine === 0 && s.reserve === 0 && s.reload <= 0) return 'LEER';
     if (s.reload > 0) return 'NACHLADEN';
     if (s.beamCool > 0) return 'KÜHLT';
@@ -159,9 +171,12 @@ export class WeaponSystem {
 
       if (!triggered) {
         s.charge = 0;
+        s.hold = '';
         continue;
       }
       if (!this.canShoot(s)) continue;
+      s.hold = ctx.holdReason?.(s) ?? '';
+      if (s.hold) continue;
       if (d.chargeTime > 0) {
         s.charge += dt;
         if (s.charge < d.chargeTime) continue;
@@ -240,6 +255,8 @@ export class WeaponSystem {
         load: loadShare(s),
         heat: Math.min(1, s.heat / Math.max(4, s.def.heatPerShot * 2.5)),
         status: this.status(s),
+        mode: s.mode,
+        location: s.hp.location,
         disabled: s.disabled,
         empty: s.magazine === 0 && s.reserve === 0 && s.reload <= 0,
         beamOn: s.beamOn,

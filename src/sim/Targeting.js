@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { COMBAT } from '../data/combat.js';
+import { COMPONENTS } from './DamageModel.js';
 
 const DEG = Math.PI / 180;
 const to = new THREE.Vector3();
@@ -15,6 +16,8 @@ export class Targeting {
   constructor() {
     this.target = null;
     this.lockTime = 0;
+    this.inCone = false; // inside the lock cone right now (semi-active guidance)
+    this.component = 'torso'; // aim/homing component chosen with the target pod
   }
 
   /** Units that may be locked, with their angle off the torso axis. */
@@ -55,9 +58,22 @@ export class Targeting {
   }
 
   setTarget(unit) {
-    if (unit !== this.target) this.lockTime = 0;
+    if (unit !== this.target) {
+      this.lockTime = 0;
+      this.inCone = false;
+      this.component = 'torso';
+    }
     this.target = unit;
     return unit;
+  }
+
+  /** Tab with the target pod: next component of the target that still exists. */
+  cycleComponent() {
+    const t = this.target;
+    if (!t) return null;
+    const order = COMPONENTS.filter((c) => t.volumes.hasComponent(c));
+    this.component = order[(order.indexOf(this.component) + 1) % order.length] ?? 'torso';
+    return this.component;
   }
 
   update(dt, eye, aimDir, rangeFactor) {
@@ -75,6 +91,8 @@ export class Targeting {
       return;
     }
     this.distance = dist;
-    if (angle <= COMBAT.targeting.coneDeg) this.lockTime += dt;
+    this.inCone = angle <= COMBAT.targeting.coneDeg;
+    if (this.inCone) this.lockTime += dt;
+    if (!t.volumes.hasComponent(this.component)) this.component = 'torso';
   }
 }

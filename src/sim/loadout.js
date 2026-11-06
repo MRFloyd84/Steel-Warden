@@ -7,7 +7,7 @@ import { WALKERS } from '../data/walkers.js';
  *   - weapon size ≤ hardpoint size
  *   - type: same type, or the hardpoint is 'universal' (IMP-2 as a 'universal' weapon needs one)
  *   - total weight ≤ walker.maxLoadoutWeight
- *   - groups 1–4, chains only reference loaded hardpoints
+ *   - groups 1–4, chains only reference loaded hardpoints with weapons (no equipment)
  * Returns a list of problems; empty = valid.
  */
 export function checkLoadout(walker, loadout, groups = {}, chains = []) {
@@ -24,12 +24,17 @@ export function checkLoadout(walker, loadout, groups = {}, chains = []) {
     weight += w.weight;
   }
   if (weight > walker.maxLoadoutWeight + 1e-6) problems.push(`Übergewicht ${weight.toFixed(1)} t > ${walker.maxLoadoutWeight} t`);
+  const isEquipment = (hpId) => WEAPONS[loadout[hpId]]?.kind === 'equipment';
   for (const [hpId, g] of Object.entries(groups)) {
     if (!loadout[hpId]) problems.push(`Gruppe: ${hpId} ist nicht bestückt`);
+    if (isEquipment(hpId)) problems.push(`Gruppe: ${hpId} trägt Ausrüstung, keine Waffe`);
     if (!(g >= 1 && g <= 4)) problems.push(`Gruppe ${hpId}: ${g} liegt nicht in 1–4`);
   }
   chains.forEach((ch, i) => {
-    for (const hpId of ch.weapons) if (!loadout[hpId]) problems.push(`Kette ${i + 1} (${ch.name}): ${hpId} ist nicht bestückt`);
+    for (const hpId of ch.weapons) {
+      if (!loadout[hpId]) problems.push(`Kette ${i + 1} (${ch.name}): ${hpId} ist nicht bestückt`);
+      else if (isEquipment(hpId)) problems.push(`Kette ${i + 1} (${ch.name}): ${hpId} trägt Ausrüstung, keine Waffe`);
+    }
     if (ch.mode !== 'salvo' && ch.mode !== 'sequence') problems.push(`Kette ${i + 1}: Modus "${ch.mode}" unbekannt`);
   });
   return { problems, weight };

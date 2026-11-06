@@ -96,6 +96,44 @@ export function renderCombatSounds(ctx) {
 
   // Lock tone
   sounds.lockTone = make(0.12, (t) => Math.sin(2 * Math.PI * 1500 * t) * (t < 0.1 ? 1 : (0.12 - t) / 0.02) * 0.6);
+  // Lock-on beep (rate rises with lock progress)
+  sounds.lockBeep = make(0.06, (t) => Math.sin(2 * Math.PI * 1100 * t) * 0.6);
+
+  // Locked: steady tone (300 periods, loops seamlessly)
+  sounds.lockSteady = make(0.2, (t) => Math.sin(2 * Math.PI * 1500 * t) * 0.5 + Math.sin(2 * Math.PI * 3000 * t) * 0.1, 0.5, true);
+
+  // Enemy lock warning: fast beeps, 8 per second (0.25 s = two beeps)
+  sounds.enemyLock = make(0.25, (t) => {
+    const ph = (t % 0.125) / 0.125;
+    return ph < 0.5 ? Math.sign(Math.sin(2 * Math.PI * 2000 * t)) * 0.35 + Math.sin(2 * Math.PI * 2000 * t) * 0.3 : 0;
+  }, 0.5, true);
+
+  // Incoming missile: steady harsh tone
+  sounds.incoming = make(0.2, (t) => Math.sign(Math.sin(2 * Math.PI * 900 * t)) * 0.3 + Math.sin(2 * Math.PI * 1800 * t) * 0.25, 0.45, true);
+
+  // Missile motor in flight: roaring band noise (loop)
+  sounds.missileFlight = make(1.0, (t, i, n, lp, lp2) => {
+    const x = lp(n(i), 0.3) - lp2(n(i), 0.02);
+    return x * (0.85 + 0.15 * Math.sin(2 * Math.PI * 23 * t));
+  }, 0.6, true);
+
+  // Missile camera static: white noise with a little hum (loop)
+  sounds.camStatic = make(0.5, (t, i, n) => n(i) * 0.8 + Math.sin(2 * Math.PI * 60 * t) * 0.1, 0.5, true);
+
+  // Shield hit inside the cockpit: deep hum with a falling sweep
+  phase.p = 0;
+  sounds.shieldHum = make(0.9, (t, i, n, lp) => (osc(95 - t * 30, dt) * 0.8 + Math.sin(2 * Math.PI * 47 * t) * 0.5 + lp(n(i), 0.02) * 0.6) * Math.min(1, t * 30) * Math.exp(-t * 3.5));
+
+  // Armour hit inside the cockpit: heavy thud through the frame
+  sounds.cockpitThud = make(0.7, (t, i, n, lp) => {
+    const thump = Math.sin(2 * Math.PI * (60 - t * 25) * t) * Math.exp(-t * 7);
+    const rattle = lp(n(i), 0.2) * Math.exp(-t * 14) * 0.9;
+    const ring = Math.sin(2 * Math.PI * 610 * t) * Math.exp(-t * 6) * 0.15;
+    return thump + rattle + ring;
+  }, 0.9);
+
+  // Sparks from a panel: crackle
+  sounds.sparks = make(0.5, (t, i, n) => (n(i) > 0.92 || n(i) < -0.96 ? n(i) : n(i) * 0.08) * Math.exp(-t * 6));
   return sounds;
 }
 

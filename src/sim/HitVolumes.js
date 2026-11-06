@@ -73,14 +73,26 @@ export class HitVolumes {
     return best;
   }
 
-  /** World-space centre of a component's first volume (aiming, blast damage). */
+  /** World-space centre of a component (mean of its volumes' centres; aiming, homing, blasts). */
   componentCenter(component, out) {
-    const v = this.volumes.find((x) => x.component === component) ?? this.volumes[0];
-    if (!v) return this.center(out);
-    return v.box.getCenter(out).applyMatrix4(v.mesh.matrixWorld);
+    let n = 0;
+    out.set(0, 0, 0);
+    for (const v of this.volumes) {
+      if (v.component !== component || !v.mesh.parent) continue;
+      out.add(v.box.getCenter(c2).applyMatrix4(v.mesh.matrixWorld));
+      n++;
+    }
+    if (n) return out.divideScalar(n);
+    const any = this.volumes[0];
+    return any ? any.box.getCenter(out).applyMatrix4(any.mesh.matrixWorld) : this.center(out);
+  }
+
+  hasComponent(component) {
+    return this.volumes.some((v) => v.component === component);
   }
 }
 
+const c2 = new THREE.Vector3();
 const padded = new THREE.Box3();
 function padBox(box, pad) {
   return padded.copy(box).expandByScalar(pad);

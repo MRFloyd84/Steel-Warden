@@ -50,6 +50,11 @@ const BUILDERS = {
     box(0.8, 0.8, 1.0, 0, 0, -0.5, BODY), cyl(0.36, 2.0, -1.8, BODY, 10), cyl(0.3, 0.06, -2.8, DARK, 10),
     box(0.84, 0.1, 0.6, 0, 0.42, -0.5, '#b8962e'),
   ] }),
+  // Target pod: sensor box with a lens and a small antenna
+  pod: () => ({ length: 0.7, parts: [
+    box(0.32, 0.3, 0.6, 0, 0, -0.3, BODY), cyl(0.11, 0.06, -0.63, '#1c2a2a', 10), cyl(0.07, 0.04, -0.67, '#9fd8ff', 8),
+    box(0.03, 0.35, 0.03, 0.1, 0.32, -0.15, METAL),
+  ] }),
   emp: () => {
     const dish = colored(new THREE.ConeGeometry(0.5, 0.35, 10, 1, true).rotateX(-Math.PI / 2).translate(0, 0, -1.35), '#8fa6b8');
     return { length: 1.5, parts: [box(0.5, 0.45, 0.8, 0, 0, -0.4, BODY), cyl(0.1, 0.5, -1.0, METAL, 6), dish, cyl(0.06, 0.25, -1.45, '#9fd8ff', 6)] };

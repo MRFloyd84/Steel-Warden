@@ -27,9 +27,12 @@ import { ChaseCamera } from '../render/ChaseCamera.js';
 import { WALKERS } from '../data/walkers.js';
 import { createCockpitData, updateCockpitData } from './cockpitData.js';
 import { MissionCombat } from './combat/MissionCombat.js';
+import { MissileCamView } from './combat/MissileCamView.js';
+import { CockpitHits } from './combat/CockpitHits.js';
 import { damp } from '../util/math.js';
 
 const START_MODES = ['full', 'simple', 'auto'];
+const COMPONENT_LABELS = { torso: 'TORSO', armL: 'ARM L', armR: 'ARM R', legs: 'BEINE', sensors: 'SENSOR' };
 
 /**
  * In-mission state: walker sim and systems, pilot view, cockpit + controls,
@@ -131,6 +134,14 @@ export class MissionState extends State {
     this.stickVisual = { x: 0, y: 0, twist: 0 };
     this.aimRate = { x: 0, y: 0 };
     this.data = createCockpitData(this.walker, this.mission, this.systems);
+    this.camView = new MissileCamView({
+      game, world: this.world, cockpit: this.cockpit, controls: this.controls, systems: this.systems, combat: this.combat, config: cfg.missileCam,
+    });
+    this.data.missileCam = this.camView.data;
+    this.hits = new CockpitHits({
+      game, combat: this.combat, systems: this.systems, cockpit: this.cockpit, view: this.view,
+      radio: (msg) => this.radioMessage(msg), config: cfg.hitFeedback,
+    });
     this.tmpVec = new THREE.Vector3();
     this.tmpProj = new THREE.Vector3();
 
@@ -158,6 +169,8 @@ export class MissionState extends State {
     game.audio.setPaused(false);
     this.cockpitAudio.dispose();
     this.systemsAudio.dispose();
+    this.camView.dispose();
+    this.hits.dispose();
     this.combat.dispose();
     this.automation.stop();
     this.link.dispose();
@@ -243,6 +256,10 @@ export class MissionState extends State {
     if (this.view.freeLook && !external) this.interaction.activate();
     else this.interaction.deactivate();
 
+    this.combat.frame(input, { canAim: !this.freeCam && !(this.view.freeLook && !external) });
+    this.camView.frame(input);
+    this.hits.frame(input);
+
     let look = { x: 0, y: 0 };
     if (this.freeCam) {
       look = input.lookDelta(dt);
@@ -263,10 +280,14 @@ export class MissionState extends State {
     } else {
       input.mouse.consumeWheel();
       look = input.lookDelta(dt);
-      this.motion.aim(look.x, look.y);
+      // Optical missile: while fire is held the mouse steers the missile, the torso stays put
+      if (this.combat.firing && this.combat.missiles.steer(look.x, look.y, this.game.config.missileCam.steerSensitivity)) {
+        look = { x: 0, y: 0 };
+      } else {
+        this.motion.aim(look.x, look.y);
+        if (look.x || look.y) this.combat.tracking.manual();
+      }
     }
-
-    this.combat.frame(input, { canAim: !this.freeCam && !(this.view.freeLook && !external) });
 
     // Stick deflection: turn input sideways, aim rate fore/aft and twist.
     const k = damp(10, dt);
@@ -310,6 +331,7 @@ export class MissionState extends State {
     }
     this.entities.update(dt);
     this.combat.update(dt);
+    this.hits.update(dt);
     this.systems.update(dt);
     this.checklist.update(this.systems.flags);
     this.automation.update(dt, this.systems.flags);
@@ -340,6 +362,9 @@ export class MissionState extends State {
     const p = this.renderPose;
     this.combat.setViewportHeight(renderer.height);
     this.combat.render(fdt, { eye: this.tmpVec.set(p.x, p.y, p.z), aimDir: this.view.aimDir });
+    this.camView.update(fdt);
+    this.hits.setViewportHeight(renderer.height);
+    this.hits.render(fdt, this.systems.flags.batteryBus);
     if (external) {
       this.chase.apply(this.renderPose, this.walker.cockpit.eyeHeight, this.view, fdt);
       this.link.frame();
@@ -357,6 +382,7 @@ export class MissionState extends State {
     this.link.frame();
     updateCockpitData(this.data, fdt, { motion: this.motion, controls: this.controls, systems: this.systems, stick: this.stickVisual, combat: this.combat });
     this.cockpit.update(fdt, this.data, this.view.torsoQuat, this.checklist, renderer.cockpitCamera);
+    this.camView.render(fdt);
     this.world.beforeRender(renderer.camera);
     renderer.renderWithCockpit(this.world.scene, this.cockpit.scene);
     this.interaction.updateHover();
@@ -388,11 +414,19 @@ export class MissionState extends State {
     const pt = r.project(top, new THREE.Vector3());
     if (!pc || !pt) return null;
     const half = Math.max(14, Math.abs(pc.y - pt.y));
-    return { x: pc.x, y: pc.y - half * 0.2, half, label: `${t.walker.name}  ${Math.round(this.combat.targeting.distance ?? 0)} m`, wreck: !!t.wreck };
+    const box = { x: pc.x, y: pc.y - half * 0.2, half, label: `${t.walker.name}  ${Math.round(this.combat.targeting.distance ?? 0)} m`, wreck: !!t.wreck };
+    const comp = this.combat.podComponent;
+    if (comp && !t.wreck) {
+      const cc = r.project(t.volumes.componentCenter(comp, c), new THREE.Vector3());
+      if (cc) box.comp = { x: cc.x, y: cc.y, label: COMPONENT_LABELS[comp], converging: this.combat.converging };
+    }
+    const m = this.combat.missiles;
+    if (m.lockState !== 'none') box.lock = { progress: m.lockProgress };
+    return box;
   }
 
   debugInfo() {
-    return [...missionDebugLines(this), ...this.combat.debugLines()];
+    return [...missionDebugLines(this), ...this.combat.debugLines(), this.hits.debugLine()];
   }
 }
 

@@ -12,9 +12,11 @@ export class TerrainSampler {
    * @param seed       mission seed
    * @param gridStep   LOD0 vertex spacing — heightAt() matches that mesh exactly
    * @param flatZones  [{x, z, radius, falloff, minHeight?}] areas levelled for bases/starts
+   * @param hills      [{x, z, radius, height}] extra mounds from the mission (cover)
    */
-  constructor(terrain, seed, gridStep, flatZones = []) {
+  constructor(terrain, seed, gridStep, flatZones = [], hills = []) {
     this.p = terrain;
+    this.hills = hills;
     this.seed = seed | 0;
     this.gridStep = gridStep;
     this.invScale = 1 / terrain.scale;
@@ -44,6 +46,10 @@ export class TerrainSampler {
     }
 
     if (p.craters) h += this.craterOffset(x, z, p.craters);
+    for (const hill of this.hills) {
+      const d = Math.hypot(x - hill.x, z - hill.z) / hill.radius;
+      if (d < 1) h += hill.height * (0.5 + 0.5 * Math.cos(Math.PI * d));
+    }
 
     return h + (p.baseHeight ?? 0);
   }

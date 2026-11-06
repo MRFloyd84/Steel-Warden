@@ -43,6 +43,7 @@ const GLARE = [
   { id: 'lampMasterWarning', type: 'lamp', panel: 'glare', at: [0.06, 0.5], text: 'WARNUNG', color: 'red', size: [0.08, 0.038] },
   { id: 'lampMasterCaution', type: 'lamp', panel: 'glare', at: [0.15, 0.5], text: 'VORSICHT', color: 'amber', size: [0.08, 0.038] },
   { id: 'lampHeat', type: 'lamp', panel: 'glare', at: [0.27, 0.5], text: 'HITZE', color: 'red', size: [0.07, 0.034] },
+  { id: 'lampTracking', type: 'lamp', panel: 'glare', at: [0.61, 0.5], text: 'NACHF.', color: 'green', size: [0.07, 0.034] },
   { id: 'lampMissile', type: 'lamp', panel: 'glare', at: [0.73, 0.5], text: 'RAKETE', color: 'red', size: [0.07, 0.034] },
   { id: 'lampReactor', type: 'lamp', panel: 'glare', at: [0.85, 0.5], text: 'REAKTOR', color: 'amber', size: [0.07, 0.034] },
   { id: 'lampShield', type: 'lamp', panel: 'glare', at: [0.94, 0.5], text: 'SCHILD', color: 'amber', size: [0.07, 0.034] },
@@ -58,6 +59,10 @@ const LEFT_CONSOLE = [
 const RIGHT_CONSOLE = [
   { id: 'energyPreset', type: 'rotary', panel: 'rightConsole', at: [0.3, 0.12], label: 'ENERGIE', positions: ['SCHILD', 'AUSGL', 'WAFFE'], initial: 1 },
   { id: 'floodlight', type: 'toggle', panel: 'rightConsole', at: [0.74, 0.12], label: 'SCHEINWERFER', positions: ['AUS', 'EIN'] },
+  // Missile guidance for all launchers (a launcher that can't do the mode fires unguided)
+  { id: 'missileGuidance', type: 'rotary', panel: 'rightConsole', at: [0.3, 0.34], label: 'LENKUNG', positions: ['UNGEL', 'AKTIV', 'HALB', 'A-RAD', 'OPT'] },
+  { id: 'targetTracking', type: 'toggle', panel: 'rightConsole', at: [0.74, 0.34], label: 'ZIELNACHF.', positions: ['AUS', 'EIN'] },
+  { id: 'missileCamera', type: 'button', panel: 'rightConsole', at: [0.76, 0.88], label: 'MONITOR', cap: 'KAM', lampColor: 'green', momentary: true },
   { id: 'stick', type: 'stick', panel: 'rightConsole', at: [0.45, 0.62] },
 ];
 

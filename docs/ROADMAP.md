@@ -1,6 +1,6 @@
 # STEEL WARDEN – Fahrplan
 
-Stand: nach Phase A2a (Waffen, Schaden, Schilde, Hitze). Dieses Dokument führt das Grundkonzept,
+Stand: nach Phase A2b (Lenkraketen, Raketenkamera, Zielkapsel, Treffer im Cockpit). Dieses Dokument führt das Grundkonzept,
 die Cockpit-Erweiterung, das Missionsdokument und die Ergänzungen (Stützpunkt, Bergung,
 Funk, Radar, Kampf, Übung) zusammen.
 
@@ -37,11 +37,19 @@ Funk, Radar, Kampf, Übung) zusammen.
      - ✅ Zielaufschaltung im Torso-Kegel, Zielmonitor mit Drahtgitter, Zielrahmen.
      - ✅ Neustart nach Überhitzung im Kampf (Notabschaltung aus Schritt 3).
      - ✅ Testmission „Schießstand“ (`?mission=range&start=hot`).
-   - **A2b** (offen):
-     - Raketen-Lenkarten: aktiv, halbaktiv (Aufschaltung halten), Anti-Radar, optisch mit
-       Raketenkamera auf einem Cockpitmonitor.
-     - Zielkapsel als Ausrüstung: Komponentenwahl am Ziel (Tab).
-     - Cockpit-Reaktionen auf Treffer.
+   - **A2b ✅** (erledigt, Plan in `docs/A2b-PLAN.md`):
+     - ✅ Raketen-Flugmodell (Schub, Brenndauer, Wendigkeit, ballistisch, Absturz, Rauchband)
+       und Lenkarten ungelenkt / aktiv / halbaktiv / Anti-Radar / optisch, Wahl per Drehschalter.
+     - ✅ Raketenkamera (eigener Render-Pass 160×120) auf dem Zielmonitor, optische Lenkung mit
+       der Maus, Weißrauschen beim Einschlag.
+     - ✅ Zielkapsel als Ausrüstung: Komponentenwahl am Ziel (Tab), Konvergenz der Geschosse,
+       Lenkraketen suchen die Komponente.
+     - ✅ Zielnachführung des Torsos (ZIELNACHF.).
+     - ✅ Cockpit-Reaktionen auf Treffer (Schild, Panzer, bleibende Schäden, Monitorausfall,
+       kritischer Schaden, Rauch), Warnungen bei feindlicher Aufschaltung und Rakete im Anflug.
+     - ✅ Schießstand mit Hügel, verdecktem Ziel und zwei strahlenden Zielen, Debugtasten.
+     - Offen für A3/A4: Gegner nutzen Lenkraketen selbst (KI), Unit-Flag `emitting` kommt dann
+       aus dem Radar-Modus aktiv/passiv.
 3. **Synthese-Gegner** (Grundkonzept Phase 5):
    - Trefferzonen Beine / Waffenträger / Torso (Reaktor).
    - Zerstörungsart: Beine → bewegungsunfähig, volles Material, Waffen bergbar. Waffenträger

@@ -21,6 +21,27 @@ export class PilotView {
     this.aimDir = new THREE.Vector3();
     this.euler = new THREE.Euler(0, 0, 0, 'YXZ');
     this.headOffset = new THREE.Vector3();
+    // Hit jolt: damped springs for head offset (m) and rotation (rad)
+    this.shake = { pos: new THREE.Vector3(), vel: new THREE.Vector3(), rot: new THREE.Vector3(), rotVel: new THREE.Vector3(), stiffness: 120, damping: 9 };
+    this.shakeQuat = new THREE.Quaternion();
+    this.shakeEuler = new THREE.Euler(0, 0, 0, 'YXZ');
+  }
+
+  /**
+   * Kicks the head away from a hit. dir: torso-local direction the hit came
+   * from (unit), offset in metres, angle in radians.
+   */
+  kick(dir, offset, angle, { stiffness, damping } = {}) {
+    const s = this.shake;
+    if (stiffness) s.stiffness = stiffness;
+    if (damping) s.damping = damping;
+    const v = Math.sqrt(s.stiffness); // initial speed for roughly the given amplitude
+    s.vel.addScaledVector(dir, -offset * v);
+    s.vel.y += offset * v * 0.4 * (Math.random() - 0.3);
+    // Side hits roll and yaw, front/rear hits pitch
+    s.rotVel.x += -dir.z * angle * v * (0.8 + Math.random() * 0.4);
+    s.rotVel.z += dir.x * angle * v * (0.8 + Math.random() * 0.4);
+    s.rotVel.y += (Math.random() - 0.5) * angle * v * 0.6;
   }
 
   toggleLatch() {
@@ -38,6 +59,11 @@ export class PilotView {
   }
 
   update(dt) {
+    const s = this.shake;
+    for (const [x, v] of [[s.pos, s.vel], [s.rot, s.rotVel]]) {
+      v.addScaledVector(x, -s.stiffness * dt).multiplyScalar(Math.exp(-s.damping * dt));
+      x.addScaledVector(v, dt);
+    }
     if (this.freeLook) return;
     const k = damp(this.cfg.recenterRate, dt);
     this.yaw += (0 - this.yaw) * k;
@@ -52,7 +78,10 @@ export class PilotView {
     this.headQuat.setFromEuler(this.euler);
 
     // Head lag: the body moves, the head trails a little behind.
-    this.headOffset.set(0, pose.headY, pose.headZ);
+    this.headOffset.set(0, pose.headY, pose.headZ).add(this.shake.pos);
+    const r = this.shake.rot;
+    this.shakeQuat.setFromEuler(this.shakeEuler.set(r.x, r.y, r.z, 'YXZ'));
+    this.headQuat.premultiply(this.shakeQuat);
     this.cockpit.position.copy(this.headOffset);
     this.cockpit.quaternion.copy(this.headQuat);
 

@@ -8,6 +8,8 @@ import { raycastTerrain } from '../../sim/HitVolumes.js';
 import { ENERGY_PRESETS } from '../../data/systems.js';
 import { COMBAT } from '../../data/combat.js';
 import { CombatUnits } from './CombatUnits.js';
+import { MissileControl, angleTo } from './MissileControl.js';
+import { TargetTracking } from './TargetTracking.js';
 
 const AIM_DISTANCE = 800;
 const DEG = Math.PI / 180;
@@ -15,6 +17,9 @@ const RADIO = {
   blocked: { from: 'TECHNIK', text: 'Waffen gesichert oder ohne Reaktorleistung — Feuerfreigabe prüfen.' },
   armLost: { from: 'TECHNIK', text: 'Arm verloren! Waffen dort ausgefallen.' },
   legsLost: { from: 'TECHNIK', text: 'Beinantrieb zerstört — wir sind bewegungsunfähig.' },
+  noPod: { from: 'TECHNIK', text: 'Keine Zielkapsel an Bord — Komponentenwahl nicht möglich.' },
+  podLost: { from: 'TECHNIK', text: 'Zielkapsel ausgefallen — Komponentenwahl nicht möglich.' },
+  trackingOff: { from: 'TECHNIK', text: 'Zielnachführung aus — Ziel außerhalb des Torso-Schwenkbereichs.' },
 };
 const v1 = new THREE.Vector3();
 const v2 = new THREE.Vector3();
@@ -43,7 +48,16 @@ export class MissionCombat {
       sampler: world.sampler,
       units: () => this.units.all,
       onHit: (h) => this.onProjectileHit(h),
+      onEnd: (p, reason) => this.onMissileEnd(p, reason),
+      illuminated: (p) => this.missiles.illuminated(p),
     });
+    this.missiles = new MissileControl({
+      game, controls, targeting: this.targeting, weapons: this.weapons, player: this.player, units: this.units, sound: this.sound,
+    });
+    this.tracking = new TargetTracking({ controls, motion: this.player.motion, targeting: this.targeting, walker: this.player.walker, radio: () => radio(RADIO.trackingOff) });
+    this.missileEnds = []; // { serial, reason } for the missile camera
+    this.onPlayerHit = null; // set by CockpitHits
+    this.lastPodRadio = -Infinity;
     this.aimPoint = new THREE.Vector3();
     this.aimDir = new THREE.Vector3(0, 0, -1);
     this.eye = new THREE.Vector3();
@@ -75,6 +89,10 @@ export class MissionCombat {
     }
     if (input.wasPressed('shieldFront')) this.shiftShields(1);
     if (input.wasPressed('shieldRear')) this.shiftShields(-1);
+    if (input.wasPressed('missileGuidance')) this.missiles.cycleMode();
+    if (input.wasPressed('targetTracking') && this.controls.has('targetTracking')) this.controls.toggle('targetTracking');
+    if (input.wasPressed('targetComponent')) this.cycleComponent();
+    if (input.comboPressed('debugEmitting')) this.toggleEmitting();
     if (input.comboPressed('targetCycle')) this.targeting.cycle(this.units.all, this.eye, this.aimDir, this.sensorsRange);
     else if (input.wasPressed('targetSelect')) this.targeting.select(this.units.all, this.eye, this.aimDir, this.sensorsRange);
 
@@ -87,6 +105,45 @@ export class MissionCombat {
     t.all = canAim && input.isDown('fireAll');
     const now = t.chain || t.all || t.groups.some(Boolean);
     if (now && !was && !this.systems.canFire) this.blocked();
+  }
+
+  /** Tab: next component of the target (needs a working target pod). */
+  cycleComponent() {
+    const t = this.targeting;
+    if (!t.target) return;
+    if (!this.weapons.has('target-pod')) {
+      if (this.time - this.lastPodRadio > COMBAT.targeting.podRadioCooldown) {
+        this.lastPodRadio = this.time;
+        const had = this.weapons.equipment.some((e) => e.def.id === 'target-pod');
+        this.radio(had ? RADIO.podLost : RADIO.noPod);
+      }
+      this.game.audio.play('weapon.dryFire');
+      return;
+    }
+    t.cycleComponent();
+    this.game.audio.play('weapon.chain');
+  }
+
+  /** Debug Shift+F9: the locked target (or the one under the crosshair) starts/stops emitting. */
+  toggleEmitting() {
+    const u = this.targeting.target ?? this.aimUnit;
+    if (u) u.emitting = !u.emitting;
+  }
+
+  /** Pod component of the target or null (torso aim without pod). */
+  get podComponent() {
+    return this.targeting.target && this.weapons.has('target-pod') ? this.targeting.component : null;
+  }
+
+  /** Incoming threat for the radar (set by CockpitHits). */
+  get threat() {
+    return this.threatSource?.() ?? null;
+  }
+
+  /** Any trigger held this frame. */
+  get firing() {
+    const t = this.triggers;
+    return t.chain || t.all || t.groups.some(Boolean);
   }
 
   shiftShields(dir) {
@@ -118,7 +175,9 @@ export class MissionCombat {
     this.units.update(dt, { enabled: sys.flags.shieldsReady, rate: power * (preset.shields / 0.34) });
 
     this.beamDraw.clear();
+    this.missiles.updateModes();
     const heat = this.weapons.update(dt, {
+      holdReason: (slot) => this.missiles.holdReason(slot),
       canFire: sys.canFire,
       power,
       weaponShare: preset.weapons,
@@ -134,7 +193,8 @@ export class MissionCombat {
     }
     this.projectiles.update(dt);
     this.targeting.update(dt, this.eye, this.aimDir, this.sensorsRange);
-    this.checkLockTone();
+    this.tracking.update(dt, this.eye);
+    sys.trackingActive = this.tracking.active;
   }
 
   sideOf(slot) {
@@ -146,15 +206,19 @@ export class MissionCombat {
     const origin = this.player.mounts.muzzleWorld(slot.id, v1);
     v2.subVectors(this.aimPoint, origin).normalize();
     spreadDir(v2, d.spread);
-    const target = this.targeting.target;
-    const locked = target && this.targeting.lockTime >= d.lockTime;
-    const guided = d.guidance !== 'none' && (d.guidance === 'lofted' || locked);
-    const aimPoint = d.guidance === 'lofted' && target ? target.volumes.componentCenter('torso', v3).clone() : this.aimPoint.clone();
-    this.projectiles.spawn({ def: d, owner: this.player, origin, dir: v2, target: locked ? target : null, guided, aimPoint });
+    let proj;
+    if (d.missile) {
+      const params = this.missiles.spawnParams(slot, this.eye, this.aimDir);
+      proj = this.projectiles.spawn({ def: d, owner: this.player, origin, dir: v2, ...params });
+      this.missiles.launched(slot, proj);
+    } else {
+      proj = this.projectiles.spawn({ def: d, owner: this.player, origin, dir: v2, aimPoint: this.aimPoint.clone() });
+    }
     this.stats.shots++;
     if (shotIndex === 0 || d.kind === 'missile') {
       this.fx.muzzleFlash(origin, v2, d.visual.color, d.size === 'L');
       if (shotIndex === 0 || d.burstGap) this.sound.own(d.sound, this.sideOf(slot));
+      if (d.missile && shotIndex === 0) this.sound.own('weapon.missileLaunch', this.sideOf(slot), { gain: d.size === 'L' ? 1.2 : 0.7 });
     }
   }
 
@@ -188,7 +252,7 @@ export class MissionCombat {
   onProjectileHit({ proj, unit, hit, point, ground }) {
     const d = proj.def;
     const dir = v1.copy(proj.vel).normalize();
-    if (unit) this.hitUnit(unit, hit, d, dir, 1);
+    if (unit) this.hitUnit(unit, hit, d, dir, proj.damageFactor ?? 1);
     if (ground) {
       const big = d.kind === 'missile' || d.size === 'L';
       this.fx.groundHit(point, big ? 2 : 0.6);
@@ -213,7 +277,12 @@ export class MissionCombat {
     }
   }
 
-  /** One hit (scale = dt share for beams) through the damage pipeline, with effects. */
+  /** Missile down (hit, crashed, expired) — the missile camera shows static. */
+  onMissileEnd(p, reason) {
+    if (p.owner === this.player && this.missileEnds.length < 64) this.missileEnds.push({ serial: p.serial, reason });
+  }
+
+  /** One hit (scale = dt share for beams, or the semi-active bonus) through the damage pipeline, with effects. */
   hitUnit(unit, hit, d, dir, scale) {
     this.stats.hits += scale >= 1 ? 1 : 0;
     if (unit.wreck?.kind === 'reactor') {
@@ -237,13 +306,7 @@ export class MissionCombat {
       }
     }
     if (res.changes.length) this.units.apply(unit, res.changes);
-  }
-
-  checkLockTone() {
-    const need = Math.max(0, ...this.weapons.slots.filter((s) => s.def.guidance === 'track').map((s) => s.def.lockTime));
-    const locked = need > 0 && this.targeting.target && this.targeting.lockTime >= need;
-    if (locked && !this.lockAnnounced) this.game.audio.play('weapon.lock');
-    this.lockAnnounced = !!locked;
+    if (unit.isPlayer) this.onPlayerHit?.({ side, component: hit.component, res, show: showFx });
   }
 
   // ---- per frame ----
@@ -269,6 +332,16 @@ export class MissionCombat {
     } else if (g !== null) dist = g;
     this.aimPoint.copy(eye).addScaledVector(aimDir, dist);
     this.aimDistance = dist;
+    // Target pod: projectile weapons converge on the chosen component when the crosshair is near it
+    this.converging = false;
+    const comp = this.podComponent;
+    if (comp && !this.targeting.target.wreck) {
+      const c = this.targeting.target.volumes.componentCenter(comp, v2);
+      if (angleTo(eye, aimDir, c) <= COMBAT.targeting.podConvergeDeg) {
+        this.aimPoint.copy(c);
+        this.converging = true;
+      }
+    }
 
     this.player.mounts.aimArms(this.aimPoint);
     this.fx.update(dt); // first age the effects, then add this frame's beams and bolts
@@ -276,6 +349,8 @@ export class MissionCombat {
     for (const [id, b] of this.beamDraw) this.fx.beam(id, b.from, b.to, b.color, cam);
     for (const s of this.weapons.slots) if (s.def.kind === 'beam') this.sound.beam(s.id, s.beamOn);
     this.fx.drawProjectiles(this.projectiles, cam);
+    this.sound.missiles(this.projectiles, dt);
+    this.missiles.updateTones(dt, this.game.audio, this.systems.flags.busPowered && this.systems.flags.sensorsReady);
   }
 
   setViewportHeight(px) {
@@ -298,16 +373,24 @@ export class MissionCombat {
         tonnage: t.walker.tonnage,
         distance: this.targeting.distance ?? 0,
         lockTime: this.targeting.lockTime,
+        component: this.podComponent,
+        converging: this.converging,
         wreck: t.wreck?.kind ?? null,
       } : null,
       sensorsRange: this.sensorsRange,
       sensorsFlicker: p.stage('sensors') >= 2,
+      lockState: this.missiles.lockState,
+      lockProgress: this.missiles.lockProgress ?? 0,
+      guidance: this.missiles.selectedMode,
+      hasPod: this.weapons.has('target-pod'),
+      tracking: this.tracking.active,
     };
   }
 
   debugLines() {
     const t = this.targeting.target;
     const lines = [`Kampf: Geschosse ${this.projectiles.count}  Schüsse ${this.stats.shots}  Treffer ${this.stats.hits}  Abschüsse ${this.units.kills}  Partikel ${this.fx.stats.sparks}/${this.fx.stats.smoke}  Kondensator ${(this.weapons.capacitor).toFixed(0)}`];
+    lines.push(`Lenkung ${this.missiles.selectedMode}  Aufschaltung ${this.missiles.lockState}  Kapsel ${this.podComponent ?? '-'}  Nachführung ${this.tracking.active ? 'an' : 'aus'}  Strahler ${this.units.all.filter((u) => u.emitting).map((u) => u.id).join(',') || '-'}`);
     lines.push(`Hitze Kern ${this.systems.s.reactor.temp.toFixed(0)}°C  Waffen +${this.systems.s.reactor.weaponHeatRate.toFixed(1)} °C/s  Ziel ${t ? `${t.walker.name} ${Math.round(this.targeting.distance ?? 0)} m lock ${this.targeting.lockTime.toFixed(1)} s` : '-'}`);
     if (t) {
       const parts = Object.entries(t.damage.parts).map(([k, v]) => `${k} ${Math.round(v.armor)}+${Math.round(v.internal)} ${COMBAT.stages[v.stage].label}`).join(' · ');
@@ -321,6 +404,7 @@ export class MissionCombat {
   dispose() {
     this.offs.forEach((off) => off());
     this.sound.dispose();
+    this.missiles.dispose();
     this.fx.dispose();
     this.projectiles.clear();
   }

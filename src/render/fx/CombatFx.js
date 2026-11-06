@@ -12,6 +12,8 @@ const COLORS = {
 };
 const tmp = new THREE.Vector3();
 const tmp2 = new THREE.Vector3();
+const tmp3 = new THREE.Vector3();
+const tmp4 = new THREE.Vector3();
 const q = new THREE.Quaternion();
 const m4 = new THREE.Matrix4();
 const zAxis = new THREE.Vector3(0, 0, 1);
@@ -26,7 +28,7 @@ export class CombatFx {
   constructor(scene) {
     this.scene = scene;
     this.sparks = new ParticlePool(scene, 1400, { additive: true });
-    this.smoke = new ParticlePool(scene, 900);
+    this.smoke = new ParticlePool(scene, 1800);
 
     // Projectiles: one instanced unit box, scaled and coloured per instance
     this.boltMat = new THREE.MeshBasicMaterial({ toneMapped: false, fog: false });
@@ -102,16 +104,41 @@ export class CombatFx {
       this.bolts.setMatrixAt(n, m4);
       this.bolts.setColorAt(n, kind === 'missile' ? COLORS.smokeLight : this.color(v.color));
       n++;
-      if (kind === 'missile') {
-        // Exhaust: flame and a smoke trail
-        tmp2.copy(p.pos).addScaledVector(tmp, -len * 0.6);
-        this.sparks.spawn({ pos: tmp2, color: COLORS.fire, size: w * 6, life: 0.08 });
-        if (Math.random() < 0.7) this.smoke.spawn({ pos: tmp2, color: COLORS.smokeLight, size: w * 5, grow: 4, life: 1.2, alpha: 0.45, drag: 1 });
-      }
+      if (kind === 'missile') this.missileTrail(p, tmp, len, w);
     }
     this.bolts.count = n;
     this.bolts.instanceMatrix.needsUpdate = true;
     if (this.bolts.instanceColor) this.bolts.instanceColor.needsUpdate = true;
+  }
+
+  /**
+   * Exhaust flame and a continuous smoke band: puffs are laid at even
+   * spacing along the path flown since the last frame, so fast missiles
+   * leave an unbroken trail. Thin and short-lived once the motor is out.
+   */
+  missileTrail(p, dir, len, w) {
+    const burning = p.burnLeft > 0;
+    const big = p.def.size === 'L';
+    tmp2.copy(p.pos).addScaledVector(dir, -len * 0.6);
+    if (burning) this.sparks.spawn({ pos: tmp2, color: COLORS.fire, size: w * 6, life: 0.08 });
+    if (p.trailSerial !== p.serial) {
+      p.trailSerial = p.serial;
+      (p.trail ??= new THREE.Vector3()).copy(tmp2);
+      return;
+    }
+    const spacing = big ? 2.2 : 3.2;
+    const gap = p.trail.distanceTo(tmp2);
+    const steps = Math.min(16, Math.floor(gap / spacing));
+    if (!steps) return;
+    const size = big ? 1.6 : 0.9;
+    for (let i = 1; i <= steps; i++) {
+      tmp3.copy(p.trail).lerp(tmp2, i / steps);
+      this.smoke.spawn({
+        pos: tmp3, vel: tmp4.set(rand(0.3), 0.4 + Math.random() * 0.4, rand(0.3)), color: COLORS.smokeLight,
+        size: burning ? size : size * 0.6, grow: burning ? 2.2 : 1.2, life: burning ? (big ? 3.2 : 2.2) : 1.2, alpha: burning ? 0.42 : 0.2, drag: 1,
+      });
+    }
+    p.trail.copy(tmp2);
   }
 
   /** Shows a beam from a to b this frame (owner key keeps one beam per weapon). */

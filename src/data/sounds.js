@@ -69,6 +69,12 @@ export const SOUND_EVENTS = {
   'weapon.dryFire': { synth: 'tap', gain: 0.4, rate: [0.8, 0.85], bus: 'cockpit', cooldown: 0.25 },
   'weapon.chain': { synth: 'detent', gain: 0.45, rate: [1.1, 1.15], bus: 'cockpit' },
   'weapon.lock': { synth: 'lockTone', gain: 0.25, rate: [1, 1], bus: 'cockpit' },
+  'weapon.lockBeep': { synth: 'lockBeep', gain: 0.22, rate: [1, 1], bus: 'cockpit' },
+  'weapon.missileLaunch': { synth: 'rocket', samples: ['hiss_1', 'hiss_2', 'hiss_3'], gain: 0.5, rate: [0.75, 0.85], bus: 'world', cooldown: 0.05 },
+  'hit.shield': { synth: 'shieldHum', gain: 0.8, rate: [0.9, 1.05], bus: 'cockpit', cooldown: 0.05 },
+  'hit.armor': { synth: 'cockpitThud', samples: ['creak_1', 'creak_3'], gain: 0.9, rate: [0.85, 1.1], bus: 'cockpit', cooldown: 0.05 },
+  'hit.sparks': { synth: 'sparks', gain: 0.5, rate: [0.9, 1.2], bus: 'cockpit', cooldown: 0.05 },
+  'hit.smoke': { samples: ['hiss_1', 'hiss_2', 'hiss_3'], gain: 0.45, rate: [0.6, 0.7], bus: 'cockpit', cooldown: 1 },
   'weapon.shieldShift': { synth: 'buttonDown', gain: 0.35, rate: [1.2, 1.25], bus: 'cockpit' },
 
   // Impacts
@@ -115,6 +121,11 @@ export const SOUND_LOOPS = {
   alarmHeat: { sample: 'alarm_warble', gain: 0.22, bus: 'cockpit' },
   alarmCritical: { sample: 'alarm_critical', gain: 0.25, bus: 'cockpit' },
   beam: { synth: 'beamLoop', gain: 0.3, bus: 'world' },
+  lockTone: { synth: 'lockSteady', gain: 0.18, bus: 'cockpit' },
+  enemyLock: { synth: 'enemyLock', gain: 0.22, bus: 'cockpit' },
+  incoming: { synth: 'incoming', gain: 0.2, bus: 'cockpit' },
+  missileFlight: { synth: 'missileFlight', gain: 0.5, bus: 'world' },
+  camStatic: { synth: 'camStatic', gain: 0.12, bus: 'cockpit' },
 };
 
 /** How system values drive the machinery loops (rates are playback-rate ranges). */

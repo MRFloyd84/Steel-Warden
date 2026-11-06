@@ -48,6 +48,9 @@ export const COMBAT = {
     coneDeg: 32, // half angle of the torso cone for locking
     keepConeDeg: 45, // lock is kept while inside this angle
     maxRange: 1600,
+    podConvergeDeg: 8, // target pod: projectile weapons converge on the component when the crosshair is this close
+    trackingManualPause: 0.6, // ZIELNACHF. pauses this long after manual aiming
+    podRadioCooldown: 8,
   },
 
   explosion: { radius: 16, damage: 60 }, // reactor explosion, damages nearby walkers

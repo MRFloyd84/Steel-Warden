@@ -19,7 +19,8 @@ export class MissionHints extends Overlay {
       `[${k('cockpitLight')}] Licht`,
       `[${k('checklist')}] Checkliste`,
       '[LMT] Kette feuern', `[1–4] Gruppen`, `[${k('nextChain')}] Kette`, `[${k('fireAll')}] Alle`,
-      `[${k('targetSelect')}] Ziel`, `[${k('shieldRear')}/${k('shieldFront')}] Schild`,
+      `[${k('targetSelect')}] Ziel`, `[${k('targetComponent')}] Komponente`, `[${k('shieldRear')}/${k('shieldFront')}] Schild`,
+      `[${k('missileGuidance')}] Lenkart`, `[${k('missileCamera')}] Kamera`, `[${k('targetTracking')}] Nachführung`,
       '[Shift+S] Autostart',
       `[${k('debugFreeCam')}] Freiflug`,
       `[${k('toggleHints')}] Hilfe`,
@@ -27,6 +28,8 @@ export class MissionHints extends Overlay {
     this.root.innerHTML = `
       <div class="crosshair" data-role="reticle"></div>
       <div class="target-box" data-role="target"><span class="target-label"></span></div>
+      <div class="lock-ring" data-role="lock" hidden></div>
+      <div class="comp-box" data-role="comp" hidden><span></span></div>
       <div class="view-tag" data-role="tag"></div>
       <div class="hint-bar" data-role="bar">${esc(hints.join('   '))}</div>
       <div class="click-hint" data-role="click">Klick ins Bild, um die Maus zu fangen</div>`;
@@ -35,6 +38,9 @@ export class MissionHints extends Overlay {
     this.targetLabel = this.targetEl.querySelector('.target-label');
     this.targetEl.hidden = true;
     this.lastTargetLabel = '';
+    this.compEl = this.root.querySelector('[data-role="comp"]');
+    this.compLabel = this.compEl.querySelector('span');
+    this.lockEl = this.root.querySelector('[data-role="lock"]');
     this.tag = this.root.querySelector('[data-role="tag"]');
     this.bar = this.root.querySelector('[data-role="bar"]');
     this.clickHint = this.root.querySelector('[data-role="click"]');
@@ -61,6 +67,23 @@ export class MissionHints extends Overlay {
       }
     } else {
       this.targetEl.hidden = true;
+    }
+    // Target pod: small frame on the chosen component
+    const comp = target?.comp;
+    this.compEl.hidden = !comp;
+    if (comp) {
+      this.compEl.style.transform = `translate(${(comp.x - 9).toFixed(1)}px, ${(comp.y - 9).toFixed(1)}px)`;
+      this.compEl.classList.toggle('converging', comp.converging);
+      if (this.compLabel.textContent !== comp.label) this.compLabel.textContent = comp.label;
+    }
+    // Missile lock: ring closes in on the target while locking, turns red when locked
+    const lock = target?.lock;
+    this.lockEl.hidden = !lock;
+    if (lock) {
+      const r = target.half * (1 + (1 - lock.progress) * 1.5) + 6;
+      this.lockEl.style.width = this.lockEl.style.height = `${(r * 2).toFixed(0)}px`;
+      this.lockEl.style.transform = `translate(${(target.x - r).toFixed(1)}px, ${(target.y - r).toFixed(1)}px)`;
+      this.lockEl.classList.toggle('locked', lock.progress >= 1);
     }
     this.reticle.classList.toggle('on-target', aimOnUnit);
     if (reticle) {

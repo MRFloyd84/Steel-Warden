@@ -1,8 +1,8 @@
 import * as THREE from 'three';
+import { stepMissile } from './Guidance.js';
 
 const POOL = 256;
 const tmp = new THREE.Vector3();
-const want = new THREE.Vector3();
 const segEnd = new THREE.Vector3();
 
 /**
@@ -10,17 +10,20 @@ const segEnd = new THREE.Vector3();
  * no allocation per shot. Each step a projectile moves along a segment that
  * is tested against the terrain and the walkers' hit volumes.
  *
- * Missiles: 'track' steers toward the locked target once the lock was held
- * long enough, 'lofted' (SPEER) climbs first and then dives onto the target
- * or the aim point.
+ * Missiles fly with their own flight model and guidance (sim/Guidance.js);
+ * ctx gives guidance access to the units and to the player's lock
+ * (semi-active illumination).
  *
  * Hits are reported through onHit({ proj, unit|null, hit|null, point, ground }).
  */
 export class Projectiles {
-  constructor({ sampler, units, onHit }) {
+  constructor({ sampler, units, onHit, onEnd = null, illuminated = () => false }) {
     this.sampler = sampler;
     this.units = units; // () => array of combat units { id, volumes, wreck }
     this.onHit = onHit;
+    this.onEnd = onEnd; // (proj, reason: 'hit' | 'ground' | 'expired') — e.g. missile camera
+    this.guideCtx = { units, illuminated, dt: 0 };
+    this.serial = 0;
     this.pool = Array.from({ length: POOL }, () => ({
       active: false,
       pos: new THREE.Vector3(),
@@ -30,7 +33,14 @@ export class Projectiles {
       def: null,
       owner: null,
       target: null,
-      guided: false,
+      mode: 'dumb',
+      component: null,
+      lost: false,
+      burnLeft: 0,
+      searchT: 0,
+      steer: { yaw: 0, pitch: 0 },
+      damageFactor: 1,
+      serial: 0,
       age: 0,
       life: 0,
       speed: 0,
@@ -38,57 +48,59 @@ export class Projectiles {
     this.count = 0;
   }
 
-  /** Spawns a projectile; returns it or null if the pool is exhausted. */
-  spawn({ def, owner, origin, dir, target = null, guided = false, aimPoint = null }) {
+  /**
+   * Spawns a projectile; returns it or null if the pool is exhausted.
+   * Missiles: mode ('dumb' | 'active' | 'semiActive' | 'antiRadar' | 'optical'),
+   * target unit, component to home on, damageFactor (semi-active bonus).
+   */
+  spawn({ def, owner, origin, dir, target = null, mode = 'dumb', component = null, damageFactor = 1, aimPoint = null }) {
     const p = this.pool.find((x) => !x.active);
     if (!p) return null;
     p.active = true;
     p.def = def;
     p.owner = owner;
     p.target = target;
-    p.guided = guided;
+    p.mode = mode;
+    p.component = component;
+    p.damageFactor = damageFactor;
+    p.lost = false;
+    p.steer.yaw = 0;
+    p.steer.pitch = 0;
+    p.serial = ++this.serial;
     p.pos.copy(origin);
     p.prev.copy(origin);
-    p.speed = def.projectileSpeed;
+    const m = def.missile;
+    p.speed = m ? m.launchSpeed : def.projectileSpeed;
+    p.burnLeft = m ? m.burnTime : 0;
+    p.searchT = 0;
     p.vel.copy(dir).multiplyScalar(p.speed);
-    if (def.guidance === 'lofted') {
-      // Climb steeply first
-      p.vel.y = Math.max(p.vel.y, 0) + p.speed * 0.9;
-      p.vel.setLength(p.speed);
-    }
     p.aim.copy(aimPoint ?? tmp.copy(origin).addScaledVector(dir, def.range));
     p.age = 0;
-    p.life = (def.range / Math.max(1, def.projectileSpeed)) * (def.guidance === 'lofted' ? 2.2 : 1.25);
+    p.life = m ? m.burnTime + 14 : (def.range / Math.max(1, def.projectileSpeed)) * 1.25;
     this.count++;
     return p;
   }
 
+  /** Active player missile by serial (for the camera), or null. */
+  bySerial(serial) {
+    return this.pool.find((p) => p.active && p.serial === serial) ?? null;
+  }
+
   update(dt) {
     const units = this.units();
+    this.guideCtx.dt = dt;
     for (const p of this.pool) {
       if (!p.active) continue;
       p.age += dt;
       if (p.age > p.life) {
-        this.kill(p);
+        this.kill(p, 'expired');
         continue;
       }
-      if (p.def.kind === 'missile') this.steer(p, dt);
+      if (p.def.missile) stepMissile(p, dt, this.guideCtx);
       p.prev.copy(p.pos);
       p.pos.addScaledVector(p.vel, dt);
       this.collide(p, units);
     }
-  }
-
-  steer(p, dt) {
-    const d = p.def;
-    let goal = null;
-    if (p.guided && p.target && !p.target.wreck) goal = p.target.volumes.componentCenter('torso', want);
-    else if (d.guidance === 'lofted') goal = want.copy(p.aim);
-    if (!goal) return;
-    if (d.guidance === 'lofted' && p.age < 1.2) return; // still climbing
-    tmp.subVectors(goal, p.pos).normalize().multiplyScalar(p.speed);
-    const k = 1 - Math.exp(-(d.turnRate ?? 1.5) * dt);
-    p.vel.lerp(tmp, k).setLength(p.speed);
   }
 
   collide(p, units) {
@@ -108,15 +120,16 @@ export class Projectiles {
     }
     if (best && (tGround === null || best.hit.t <= tGround)) {
       this.onHit({ proj: p, unit: best.unit, hit: best.hit, point: best.hit.point, ground: false });
-      this.kill(p);
+      this.kill(p, 'hit');
     } else if (tGround !== null) {
       segEnd.copy(p.prev).lerp(p.pos, tGround);
       this.onHit({ proj: p, unit: null, hit: null, point: segEnd.clone(), ground: true });
-      this.kill(p);
+      this.kill(p, 'ground');
     }
   }
 
-  kill(p) {
+  kill(p, reason = 'expired') {
+    if (p.def?.missile) this.onEnd?.(p, reason);
     p.active = false;
     p.target = null;
     this.count--;

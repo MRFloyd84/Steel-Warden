@@ -3,6 +3,11 @@ import { WORLD_AUDIO } from '../data/sounds.js';
 
 const rel = new THREE.Vector3();
 const right = new THREE.Vector3();
+const camVel = new THREE.Vector3();
+const lastCam = new THREE.Vector3();
+const SPEED_OF_SOUND = 340;
+const FLIGHT_VOICES = 2;
+const FLIGHT_RANGE = 320;
 
 /**
  * Plays combat sounds positioned relative to the listener (the active
@@ -14,6 +19,51 @@ export class CombatAudio {
     this.audio = audio;
     this.camera = camera;
     this.beamLoops = new Map();
+    this.flight = [];
+    this.camInit = false;
+  }
+
+  /**
+   * Missile motors in flight: the nearest missiles get a roaring loop with
+   * distance gain, pan and Doppler shift (closing → higher, receding → lower).
+   */
+  missiles(projectiles, dt) {
+    const cam = this.camera.position;
+    if (!this.camInit || dt <= 0) {
+      lastCam.copy(cam);
+      this.camInit = true;
+    }
+    camVel.subVectors(cam, lastCam).divideScalar(Math.max(dt, 1e-3));
+    lastCam.copy(cam);
+    const near = [];
+    for (const p of projectiles.pool) {
+      if (!p.active || !p.def.missile || p.age < 0.05) continue;
+      const d = p.pos.distanceTo(cam);
+      if (d < FLIGHT_RANGE) near.push({ p, d });
+    }
+    near.sort((a, b) => a.d - b.d);
+    right.set(1, 0, 0).applyQuaternion(this.camera.quaternion);
+    for (let i = 0; i < FLIGHT_VOICES; i++) {
+      const n = near[i];
+      if (!this.flight[i]) {
+        if (!n) continue;
+        this.flight[i] = this.audio.loop('missileFlight');
+      }
+      const v = this.flight[i];
+      if (!n) {
+        v.setGain(0, 0.1);
+        continue;
+      }
+      rel.subVectors(n.p.pos, cam);
+      const dir = rel.divideScalar(Math.max(n.d, 0.1));
+      // Doppler: radial speeds of source (toward listener positive) and listener
+      const vs = -n.p.vel.dot(dir);
+      const vl = camVel.dot(dir);
+      const rate = Math.max(0.5, Math.min(2, (SPEED_OF_SOUND + vl) / Math.max(60, SPEED_OF_SOUND - vs)));
+      const burning = n.p.burnLeft > 0 ? 1 : 0.35;
+      v.setGain(burning * Math.max(0.05, 1 / (1 + n.d / 25)), 0.05);
+      v.setRate(rate * (n.p.def.size === 'L' ? 0.7 : 1), 0.05);
+    }
   }
 
   at(name, point, opts = {}) {
@@ -43,5 +93,7 @@ export class CombatAudio {
   dispose() {
     for (const v of this.beamLoops.values()) v.stop(0.1);
     this.beamLoops.clear();
+    for (const v of this.flight) v?.stop(0.1);
+    this.flight = [];
   }
 }

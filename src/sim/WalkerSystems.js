@@ -27,6 +27,11 @@ export class WalkerSystems {
     this.extraCircuit = extraCircuit && controls.has('reactor2Ignition');
     this.randomEvents = randomEvents;
     this.time = 0;
+    // Set by the mission's combat code; read by the lamps
+    this.missileWarning = null; // null | 'lock' | 'missile'
+    this.trackingActive = false;
+    this.criticalDamage = false;
+    this.missileCamOn = false;
     this.s = createState(this.cfg, monitorIds);
     // Weapon heat goes into the same core heat balance (see reactor.js).
     const h = COMBAT.heat;
@@ -208,6 +213,22 @@ export class WalkerSystems {
     updateLamps(this);
   }
 
+  /**
+   * Hit damage to a monitor: 'noise' (snow, rolling bars) or 'dead' (black).
+   * The MONITORE TEST reports it; SystemDisplay lists failed screens.
+   */
+  failMonitor(id, kind) {
+    const m = this.s.monitors.units[id];
+    if (!m || m.fault === 'dead') return false;
+    m.fault = kind;
+    this.emit('monitorFault');
+    return true;
+  }
+
+  get monitorFaults() {
+    return Object.entries(this.s.monitors.units).filter(([, m]) => m.fault).map(([id, m]) => ({ id, kind: m.fault }));
+  }
+
   /** One-line summary for the debug overlay. */
   debugLine() {
     const s = this.s;
@@ -227,7 +248,7 @@ function createState(cfg, monitorIds) {
   const units = {};
   for (const id of cfg.monitors.bootOrder) {
     if (monitorIds.length && !monitorIds.includes(id)) continue;
-    units[id] = { powered: false, avail: false, pending: false, bootAt: null, len: 0, lines: [] };
+    units[id] = { powered: false, avail: false, pending: false, bootAt: null, len: 0, lines: [], fault: null };
   }
   const order = cfg.monitors.bootOrder.filter((id) => units[id]);
   return {

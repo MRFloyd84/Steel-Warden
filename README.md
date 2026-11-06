@@ -51,6 +51,16 @@ Schnellstart-Parameter (Dev und Build):
   5 Stufen und Folgen (Arm ab, Beine, Sensoren, Reaktorexplosion), Feuerketten, Zielaufschaltung,
   Zielmonitor mit Drahtgitter, Effekte und Kampfsounds. Testmission „Schießstand“.
 
+- **Phase A2b (Lenkraketen, Raketenkamera, Zielkapsel, Treffer im Cockpit):** Raketen mit
+  eigenem Flugmodell (Schub, Brenndauer, Wendigkeit in °/s, danach ballistisch, Rauchband) und
+  fünf Lenkarten (ungelenkt, aktiv, halbaktiv, Anti-Radar, optisch), Wahl am Drehschalter
+  LENKUNG. Raketenkamera als zweiter Render-Pass (160×120, grün, Rauschen) auf dem Zielmonitor;
+  optische Raketen werden mit der Maus gelenkt. Zielkapsel als Ausrüstung: Komponente am Ziel
+  wählen, Geschosse laufen dort zusammen, Lenkraketen suchen sie. Zielnachführung des Torsos.
+  Treffer im Cockpit: Schildleuchten von der Trefferseite, Kamerastoß, Funken, Monitorflackern,
+  Risse in der Scheibe, Rauch, Monitorausfall mit Selbsttest-Meldung, kritischer Schaden mit
+  Notlicht und Hupe. Warnung bei feindlicher Aufschaltung und anfliegender Rakete.
+
 Fahrplan für die nächsten Phasen inklusive Stützpunkt, Bergung, Funk, Radar und Missionen:
 `docs/ROADMAP.md`.
 
@@ -76,7 +86,44 @@ Fahrplan für die nächsten Phasen inklusive Stützpunkt, Bergung, Funk, Radar u
 | `G` | Notfallkette: alle Waffen |
 | `T` / `Shift+T` | Ziel unter dem Fadenkreuz aufschalten, sonst das nächste im Torso-Kegel / durchschalten |
 | `,` / `.` | Schildenergie Richtung Heck / Front verschieben (je ±2 Stufen) |
+| `B` | Lenkart weiterschalten (Drehschalter LENKUNG: UNGEL · AKTIV · HALB · A-RAD · OPT) |
+| `Tab` | Zielkapsel: Komponente am Ziel wählen (Torso, Arm L, Arm R, Beine, Sensoren) |
+| `H` | Zielnachführung ein/aus (Schalter ZIELNACHF., Lampe NACHF.) |
+| `M` | Raketenkamera ein/aus (Taster KAM) |
 | Gamepad | RT feuern, LT nächste Kette |
+| `F8` / `Shift+F8` | Debug: Treffer auf mich (zufällig / schwer, Seiten der Reihe nach) |
+| `F9` / `Shift+F9` | Debug: nächster Gegner schaltet auf und feuert / Ziel strahlt (Anti-Radar) ein/aus |
+
+**Lenkraketen.** Welche Lenkarten ein Werfer kann, steht in `src/data/weapons.js`
+(`guidance`); kann er die gewählte nicht, schießt er ungelenkt (Waffenmonitor zeigt die Lenkart
+je Werfer).
+
+- *Aktiv:* braucht die volle Aufschaltung (steigende Pieptöne, dann Dauerton und roter Ring im
+  HUD); danach sucht die Rakete selbst, solange das Ziel in ihrem Suchkopfkegel bleibt.
+- *Halbaktiv:* mehr Schaden, aber das Ziel muss aufgeschaltet und im Torso-Kegel bleiben,
+  sonst fliegt sie geradeaus weiter.
+- *Anti-Radar:* ohne Aufschaltung; nimmt den nächsten strahlenden Walker im Torso-Kegel.
+- *Optisch (SPEER):* Feuer gedrückt halten, die Maus lenkt die Rakete (Torso steht still,
+  Schub geht weiter). Die Raketenkamera schaltet sich dazu selbst ein.
+
+**Zielkapsel.** BASTION (LA2) und KESTREL (RA) tragen ab Werk eine ZK-1. Mit `Tab` wird die
+Komponente gewählt: Zielmonitor rahmt sie ein und lässt sie blinken, im HUD sitzt ein kleiner
+Rahmen darauf. Liegt das Fadenkreuz in ihrer Nähe (8°), laufen alle Geschosse dort zusammen
+(◆ auf dem Zielmonitor, durchgezogener Rahmen). Ohne Kapsel meldet sich die Technik.
+
+**Zielnachführung.** Der Torso folgt dem aufgeschalteten Ziel (bzw. der gewählten Komponente)
+im Rahmen von Schwenkbereich und Drehrate, ohne Vorhalt. Mausbewegung hat Vorrang und pausiert
+die Nachführung kurz. Verlässt das Ziel den Schwenkbereich, fällt der Schalter auf AUS.
+
+**Treffer im Cockpit** (Stärken und Dauern in `config.js` → `hitFeedback`): Schildtreffer
+leuchten blau mit Wabenmuster von der Trefferseite und brummen tief. Panzertreffer stoßen den
+Kopf weg (Feder), Funken sprühen aus einem Paneel auf der Trefferseite, die Monitore flackern.
+Schwere Treffer können einen Monitor beschädigen (Schnee oder schwarz); der Monitortest meldet
+BILDRÖHRE bzw. ANZEIGEN FEHLER, der Systemmonitor listet die defekten Anzeigen. Bleibender
+schwerer Schaden: Sensoren → Radar verrauscht, Torso → Risse in der Scheibe und Rauch im
+Cockpit, Arm → dessen Waffen rot auf dem Waffenmonitor. Fällt die Reaktorabschirmung unter die
+Hälfte: rotes Notlicht, Hupe, WARNUNG blinkt, Funkspruch. Feindliche Aufschaltung: schnelles
+Piepen, RAKETE blinkt, roter Keil auf dem Radar; Rakete im Anflug: Dauerton, RAKETE leuchtet.
 
 Feuern geht nur mit WAFFEN SCHARF und laufendem Reaktor; sonst klickt es, VORSICHT blinkt und
 die Technik meldet sich. Waffen, Schaden, Hitze und Energie: `src/data/weapons.js`,
@@ -95,6 +142,48 @@ die Technik meldet sich. Waffen, Schaden, Hitze und Energie: `src/data/weapons.j
 4. *Überhitzen und neu starten:* `G` gedrückt halten. HITZE leuchtet, der Hitzebalken auf dem
    Systemmonitor steigt, nach etwa 9 s (BASTION) folgt die Notabschaltung. Danach Neustart
    laut Klemmbrett (`C`): Pumpen prüfen, VORH, Zündkappe zu/auf, ZÜND, Hauptbus REAKT, BETR.
+
+**Testanleitung A2b** (Schießstand, `?mission=range&start=hot`; der Hügel liegt links vorn,
+dahinter steht verdeckt ein MARDER; GOLIATH (560 m, stehend) und der laufende BASTION strahlen):
+
+1. *Ungelenkt:* `B` bis UNGEL, den laufenden MARDER (250 m) aufschalten, `3` — die Raketen
+   fliegen geradeaus, gegen das bewegte Ziel geht das meiste daneben.
+2. *Aktiv:* `B` auf AKTIV, MARDER mit `T` aufschalten und im Kegel halten: Pieptöne werden
+   schneller, dann Dauerton und roter Ring. `M` (Kamera an), `3` feuern und sofort den Torso
+   wegdrehen — die HABICHT treffen trotzdem, die Kamera zeigt AUFG. Vorher (ohne volle
+   Aufschaltung) zeigt der Waffenmonitor AUFSCHALT. und es startet nichts.
+3. *Halbaktiv:* `B` auf HALB, aufschalten, feuern und das Ziel im Kegel halten → Treffer mit
+   mehr Schaden. Zweiter Versuch: nach dem Start wegdrehen → die Raketen verlieren das Ziel
+   und schlagen im Gelände ein.
+4. *Anti-Radar:* `B` auf A-RAD, ohne Aufschaltung grob Richtung GOLIATH (links, 560 m) zielen,
+   `3` — die Raketen schwenken auf ihn ein. `Shift+F9` macht das aufgeschaltete Ziel zum
+   Strahler oder schaltet es ab (`F3` zeigt die Strahler).
+5. *Optisch hinter den Hügel:* Walker HALBERD (`?walker=halberd`), `B` auf OPT. Knapp über
+   den Hügel zielen, `3` gedrückt halten: der Zielmonitor schaltet auf die Raketenkamera
+   (H = Höhe über Grund, BRENN = Restbrenndauer). Mit der Maus über den Hügelkamm lenken, dann
+   auf den verdeckten MARDER stürzen. Einschlag → Weißrauschen, danach wieder Zielmonitor.
+   Loslassen der Feuertaste: die Rakete fliegt geradeaus weiter.
+6. *Beine mit der Zielkapsel:* BASTION, MARDER (190 m) aufschalten, `Tab` bis BEINE
+   (Zielmonitor rahmt BEINE ein, im HUD sitzt der kleine Rahmen auf den Beinen). Fadenkreuz
+   grob auf den Walker, `2` halten — die Autokanonen- und Schrot-Treffer laufen auf die Beine
+   zusammen, bis er abkniet (im Test nach etwa 25 s). Mit einem Walker ohne Kapsel (MARDER)
+   meldet `Tab` „Keine Zielkapsel an Bord“.
+7. *Treffer auf allen vier Seiten:* `Shift+F8` viermal (vorn, rechts, hinten, links): zuerst
+   blaues Leuchten mit Brummen auf der jeweiligen Seite (Schild), sobald der Schild leer ist
+   Kopfstoß, Funken aus dem Paneel der Seite und Monitorflackern. Weiter `Shift+F8` bis der
+   Torso schwer ist: Risse in der Scheibe, Rauch zieht auf, bei kritischem Reaktor rotes
+   Notlicht, Hupe, WARNUNG blinkt. Noch mehr Treffer zerstören den Reaktor (der Walker ist dann
+   ein Wrack; ein Missionsende dafür kommt mit Phase B).
+8. *Monitorausfall:* `F8` mehrmals (ab 20 Schaden fällt mit 18 % ein Monitor aus) — oder
+   schneller über die Konsole `steelWarden.states.current.hits.breakMonitor('mfdRadar','noise')`.
+   Ein Monitor zeigt Schnee oder bleibt schwarz, der Systemmonitor meldet ANZEIGE DEFEKT,
+   MONITORE TEST zeigt BILDRÖHRE / ANZEIGEN … FEHLER.
+9. *Feindliche Aufschaltung:* `F9`: der nächste Gegner schaltet auf (schnelles Piepen, RAKETE
+   blinkt, roter Keil auf dem Radar), nach 3,5 s startet er eine Rakete (Dauerton, RAKETE
+   leuchtet), die einschlägt.
+10. *Zielnachführung:* MARDER aufschalten, `H` (Lampe NACHF.): der Torso folgt. Mit der Maus
+   gegensteuern — kurz Vorrang, dann zieht die Nachführung zurück. Mit den Beinen wegdrehen,
+   bis das Ziel hinter dem Schwenkbereich liegt: Schalter fällt auf AUS, Lampe aus, Funkspruch.
 
 ## Startprozedur
 
@@ -133,8 +222,12 @@ eingebettet, damit der Offline-Build per `file://` funktioniert. Klang und Misch
 - `src/data/walkerModels.js` – Baupläne der Walker-Modelle (Profil, Beine, Arme, Aufbauten, Farben)
 - `src/data/cockpits.js` – Cockpit-Varianten standard/compact/heavy: Kanzel, Paneele, Sitz, Kabel, Licht
 - `src/data/panelLayouts.js` – Schalter, Lampen, Monitore und Hebel auf den Paneelen
-- `src/data/weapons.js` – die 10 Waffen (Schaden, Faktoren gegen Schild/Panzer, Feuerrate, Munition, Hitze)
-- `src/data/combat.js` – Schadensstufen, Schildverschiebung, Energiepuffer, Hitze, Folgen, Aufschaltkegel
+- `src/data/weapons.js` – die 10 Waffen (Schaden, Faktoren gegen Schild/Panzer, Feuerrate, Munition, Hitze),
+  Lenkarten und Flugmodell der Raketen (`guidance`, `missile`), Ausrüstung (Zielkapsel)
+- `src/data/combat.js` – Schadensstufen, Schildverschiebung, Energiepuffer, Hitze, Folgen, Aufschaltkegel,
+  Zielkapsel-Konvergenz, Pause der Zielnachführung
+- `src/data/config.js` → `hitFeedback` (Treffer im Cockpit), `missileCam` (Raketenkamera)
+- `src/data/missions.js` – Missionen; `hills` legt zusätzliche Hügel an, `emitting` lässt eine Einheit strahlen
 - `src/data/sounds.js` – Sound-Ereignisse, Loops, Mischpult, Bewegungs- und Systemsounds
 - `src/data/systems.js` – Startprozedur: Werte, Checklisten, Automatik-Skript, Funksprüche
 - `src/data/theaters.js` – Schauplätze: Geländeform, Farbpalette, Himmel, Nebel

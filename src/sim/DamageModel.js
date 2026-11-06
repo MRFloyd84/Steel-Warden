@@ -86,10 +86,10 @@ export class DamageModel {
 
   /**
    * hit: { component, side, damage, vsShield, vsArmor, effect }
-   * Returns { shieldHit, armorHit, changes: [{ component, from, to }] }
+   * Returns { shieldHit, armorHit, shieldDamage, armorDamage, changes: [{ component, from, to }] }
    */
   applyHit(hit) {
-    const result = { shieldHit: false, armorHit: false, changes: [] };
+    const result = { shieldHit: false, armorHit: false, shieldDamage: 0, armorDamage: 0, changes: [] };
     this.lastHit = this.time;
     this.stats.hits++;
 
@@ -110,6 +110,7 @@ export class DamageModel {
       this.shields.value[hit.side] = shield - absorbed;
       this.stats.shieldAbsorbed += absorbed;
       result.shieldHit = true;
+      result.shieldDamage = absorbed;
       raw = (eff - absorbed) / hit.vsShield;
     }
     if (raw <= 1e-6) return result;
@@ -118,6 +119,7 @@ export class DamageModel {
     let dmg = raw * hit.vsArmor;
     this.stats.armorDamage += dmg;
     result.armorHit = true;
+    result.armorDamage = dmg;
     const fromArmor = Math.min(part.armor, dmg);
     part.armor -= fromArmor;
     dmg -= fromArmor;

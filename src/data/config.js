@@ -83,6 +83,31 @@ export const CONFIG = {
     mountOffset: [0, -1.6, -1.2], // relative to the eye, torso frame
   },
 
+  // Cockpit reactions to hits on the player (strengths, durations in s).
+  hitFeedback: {
+    shieldFlash: { intensity: 6, time: 0.6, color: '#6fc4ff', glassTint: 0.6 },
+    shake: { perDamage: 0.006, tonnageRef: 50, maxOffset: 0.09, maxAngle: 4, stiffness: 120, damping: 9 },
+    sparks: { count: 18, minDamage: 6 },
+    monitorFlicker: 0.35,
+    monitorFailChance: 0.18, // per armour hit on the torso above minDamage
+    monitorFailMinDamage: 20,
+    cracksPerHeavyHit: 2, // canopy cracks added per torso hit while the torso is 'heavy'
+    maxCracks: 14,
+    smoke: { fogNear: 0.4, fogFarClear: 30, fogFarHeavy: 2.2, color: '#5d5a52', particles: 3, buildTime: 6 }, // heavy torso damage
+    critical: { torsoInternal: 0.5, lightColor: '#ff2a1a', lightIntensity: 2.2, pulseHz: 1.2 }, // reactor below this share = critical
+    criticalRadioCooldown: 20,
+    debug: { minDamage: 12, maxDamage: 45, heavyDamage: 90 }, // F8 random hit, Shift+F8 heavy hit (sides in turn)
+    enemyLock: { lockTime: 3.5, weapon: 'habicht-8', missileDamage: 35 }, // F9: nearest enemy locks on, then fires one missile
+  },
+
+  missileCam: {
+    resolution: [160, 120],
+    fov: 50,
+    hz: 15,
+    staticTime: 0.6, // white noise after impact
+    steerSensitivity: 1.6, // mouse → missile turn
+  },
+
   // Debug free camera (F7).
   testRig: {
     eyeHeight: 9,

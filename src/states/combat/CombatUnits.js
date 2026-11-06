@@ -35,7 +35,8 @@ export class CombatUnits {
       const w = u.walker;
       u.isPlayer = isPlayer;
       const ws = new WeaponSystem(w, { loadout: w.defaultLoadout, groups: w.defaultGroups, chains: w.defaultChains });
-      u.mounts = new WeaponMounts(u.model, ws.slots);
+      u.mounts = new WeaponMounts(u.model, [...ws.slots, ...ws.equipment]);
+      u.emitting = !!u.spawnEmitting; // radar emitting (A4 sets this from the radar mode)
       if (isPlayer) u.weapons = ws;
       u.volumes = new HitVolumes(u.model);
       u.damage = new DamageModel(w);

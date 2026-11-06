@@ -51,6 +51,11 @@ export function startMonitorTest(sys) {
   s.monitors.order.forEach((id, i) => {
     const m = s.monitors.units[id];
     const lines = (k.selfTest[id] ?? []).map(([label, flag]) => [label, flag === 'always' || !!sys.flags[flag]]);
+    if (m.fault) lines.push(['BILDRÖHRE', false]);
+    if (id === k.batteryMonitor || id === 'mfdSystem') {
+      const faults = Object.values(s.monitors.units).filter((u) => u.fault && u !== m).length;
+      if (faults) lines.push([`ANZEIGEN (${faults})`, false]);
+    }
     startBoot(m, sys.time + i * k.stagger, bootLen + lines.length * k.lineTime, lines);
     m.pending = true;
   });
@@ -66,14 +71,16 @@ function startBoot(m, at, len, lines) {
 /** What a monitor shows right now: off, boot sequence or its normal page. */
 export function monitorStatus(sys, id) {
   const m = sys.s.monitors.units[id];
-  if (!m || !m.powered) return OFF;
+  if (!m || !m.powered || m.fault === 'dead') return OFF;
   const t = sys.time;
   if (m.bootAt !== null && t >= m.bootAt && t < m.bootAt + m.len) {
-    return { mode: 'boot', t: t - m.bootAt, len: m.len, lines: m.lines, timing: sys.cfg.monitors };
+    return { mode: 'boot', t: t - m.bootAt, len: m.len, lines: m.lines, timing: sys.cfg.monitors, noise: m.fault === 'noise' };
   }
+  if (m.fault === 'noise' && m.avail) return NOISE;
   return m.avail ? ON : OFF;
 }
 const OFF = { mode: 'off' };
+const NOISE = { mode: 'noise' };
 const ON = { mode: 'on' };
 
 export function startGyro(sys) {

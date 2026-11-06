@@ -79,6 +79,30 @@ export const RadarDisplay = {
       p.text(nav.id[0], x + 8, y - 6, { size: 10, alpha: a });
     }
 
+    // Threat: wedge on the outer ring pointing at the enemy lock / incoming missile
+    if (d.threat) {
+      const k = 1 / Math.max(1, d.threat.dist);
+      const [tx, ty] = toScreen(d.threat.dx * k * range, d.threat.dz * k * range);
+      const ang = Math.atan2(tx - cx, -(ty - cy));
+      const blink = d.threat.kind === 'missile' || Math.floor(d.time * 8) % 2 === 0;
+      const r0 = R * 0.78;
+      const r1 = R * 1.0;
+      const spread = 0.16;
+      const pt = (r, a) => [cx + Math.sin(a) * r, cy - Math.cos(a) * r];
+      if (blink) p.poly([pt(r1, ang - spread), pt(r1, ang + spread), pt(r0, ang)], 1, true, '#ff5a3a');
+      p.text(d.threat.kind === 'missile' ? 'RAKETE' : 'ERFASST', w / 2, h - 28, { size: 11, align: 'center', alpha: blink ? 1 : 0.4, color: '#ff5a3a' });
+      if (d.threat.dist <= range) {
+        const [mx, my] = toScreen(d.threat.dx, d.threat.dz);
+        if (d.threat.kind === 'missile') p.circle(mx, my, 3, 1, true, 0, Math.PI * 2, '#ff5a3a');
+      }
+    }
+    // Damaged sensors: snow and drifting false echoes
+    if (d.sensorsHeavy) {
+      p.static(0.45);
+      for (let i = 0; i < 3; i++) p.rect(cx + (Math.random() - 0.5) * R * 1.6, cy + (Math.random() - 0.5) * R * 1.6, 4, 4, 0.6, true);
+      p.text('SENSOR GESTÖRT', w / 2, 28, { size: 10, align: 'center', alpha: Math.floor(d.time * 2) % 2 ? 1 : 0.5 });
+    }
+
     p.text('RADAR', 8, 12, { size: 11 });
     p.text(`${range} m`, w - 8, 12, { size: 11, align: 'right' });
     p.text(`KURS ${String(Math.round(d.headingDeg)).padStart(3, '0')}`, 8, h - 12, { size: 11 });

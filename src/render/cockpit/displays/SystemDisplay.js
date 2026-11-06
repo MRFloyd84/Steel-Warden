@@ -8,6 +8,8 @@ const COMPASS_LABELS = { 0: 'N', 90: 'O', 180: 'S', 270: 'W' };
  * Energy preset and radio channel come from the console knobs.
  * Reactor/heat/coolant bars join once the startup systems exist.
  */
+const MONITOR_SHORT = { mfdRadar: 'RADAR', mfdDamage: 'SCHADEN', mfdTarget: 'ZIEL', mfdWeapons: 'WAFFEN', mfdEnergy: 'ENERGIE', mfdSystem: 'SYSTEM' };
+
 export const SystemDisplay = {
   persistence: 0.45,
 
@@ -40,6 +42,10 @@ export const SystemDisplay = {
     const grade = Math.round(d.grade * 100);
     p.text(`STEIGUNG ${grade >= 0 ? '+' : ''}${grade} %`, w - 8, h - 30, { size: 10, align: 'right', alpha: Math.abs(grade) > 40 ? 1 : 0.7 });
     p.text(`ENERGIE ${d.energyPreset}  FUNK ${d.radioChannel}`, 8, h - 30, { size: 10, alpha: 0.7 });
+    if (d.monitorFaults?.length) {
+      const names = d.monitorFaults.map((f) => MONITOR_SHORT[f.id] ?? f.id).join(' ');
+      p.text(`ANZEIGE DEFEKT: ${names}`, 8, h - 46, { size: 10, alpha: Math.floor(d.time * 2) % 2 ? 1 : 0.5, color: '#ff6a3a' });
+    }
     if (d.sys) drawHeat(p, d.sys, w - 18, 54, h - 112);
     const nav = d.navPoints.find((n) => n.active);
     if (nav) {
