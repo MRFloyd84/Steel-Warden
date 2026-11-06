@@ -23,6 +23,7 @@ export const DEFAULT_BINDINGS = {
     centerTorso: ['KeyE'],
     freeLookToggle: ['KeyV'],
     interact: ['KeyF'],
+    checklist: ['KeyC'],
     cockpitLight: ['KeyN'],
     moveUp: ['Space'],
     moveDown: ['KeyQ'],
@@ -33,6 +34,11 @@ export const DEFAULT_BINDINGS = {
     debugFreeCam: ['F7'],
     pause: ['Escape', 'KeyP'],
     confirm: ['Enter', 'NumpadEnter'],
+  },
+
+  // Key + modifier combinations (checked with InputManager.comboPressed).
+  combos: {
+    autoStart: { key: 'KeyS', shift: true },
   },
 
   mouseButtons: {
@@ -89,6 +95,7 @@ export const ACTION_LABELS = {
   centerTorso: 'Torso zentrieren',
   freeLookToggle: 'Freier Blick (umschalten)',
   interact: 'Bedienen (im freien Blick)',
+  checklist: 'Checkliste holen/weglegen',
   cockpitLight: 'Innenlicht Tag/Nacht',
   toggleHints: 'Tastenhilfe',
   toggleDebug: 'Debug-Overlay',

@@ -1,3 +1,5 @@
+import { drawStartupPage } from './StartupPage.js';
+
 const COMPASS_LABELS = { 0: 'N', 90: 'O', 180: 'S', 270: 'W' };
 
 /**
@@ -10,6 +12,10 @@ export const SystemDisplay = {
   persistence: 0.45,
 
   draw(p, d) {
+    if (d.sys && !d.sys.startComplete) {
+      drawStartupPage(p, d.sys);
+      return;
+    }
     const { w, h } = p;
     drawCompass(p, d, w);
     drawThrottle(p, d, 18, 58, 34, h - 92);
@@ -24,7 +30,12 @@ export const SystemDisplay = {
     p.text('km/h', 64, 136, { size: 10, alpha: 0.7 });
     p.text('NEIG', 64, 160, { size: 10, alpha: 0.7 });
     const pitch = Math.round(d.pitchDeg);
-    p.text(`${pitch >= 0 ? '+' : ''}${pitch}°`, 64, 176, { size: 14 });
+    p.text(d.gyroAligned ? `${pitch >= 0 ? '+' : ''}${pitch}°` : '--', 64, 176, { size: 14 });
+    if (d.sys) {
+      p.text(`R ${Math.round(d.sys.power * 100)}% ${Math.round(d.sys.temp)}°C H ${Math.round(d.sys.hydraulics)}`, 64, 196, {
+        size: 10, alpha: d.sys.alert ? 1 : 0.7,
+      });
+    }
 
     const grade = Math.round(d.grade * 100);
     p.text(`STEIGUNG ${grade >= 0 ? '+' : ''}${grade} %`, w - 8, h - 30, { size: 10, align: 'right', alpha: Math.abs(grade) > 40 ? 1 : 0.7 });

@@ -4,7 +4,7 @@ import { DEG } from '../util/math.js';
 
 /**
  * Mission sound glue: control clicks (panned to where the control sits),
- * footsteps, torso servo, reactor and ventilation loops, and the walker's
+ * footsteps, torso servo and ventilation loops, and the walker's
  * structural noises (creaks when braking hard, thump at the torso stop,
  * hydraulic settle when coming to a halt).
  */
@@ -48,13 +48,12 @@ export class CockpitAudio {
     ];
 
     this.airflow = audio.loop('airflow');
-    this.airflow.setGain(1, 0.5);
     this.servo = audio.loop('servo');
-    this.reactor = audio.loop('reactor');
   }
 
-  /** Per-frame modulation from the walker's motion state. */
-  update(motion) {
+  /** Per-frame modulation from the walker's motion state; ventilation needs bus power. */
+  update(motion, busPowered = true) {
+    this.airflow.setGain(busPowered ? 1 : 0, 0.8);
     const m = MOTION_AUDIO;
     const w = this.walker;
 
@@ -64,11 +63,6 @@ export class CockpitAudio {
     const servo = Math.min(1, Math.max(twist, pitch * 0.7));
     this.servo.setGain(servo, 0.05);
     this.servo.setRate((m.servoRateMin + (m.servoRateMax - m.servoRateMin) * servo) * this.profile.servoPitch, 0.08);
-
-    // Reactor: idles at a hum, rises with drive load.
-    const load = Math.abs(motion.throttle.value);
-    this.reactor.setGain((m.reactorIdle + (1 - m.reactorIdle) * load) * this.profile.reactorHum, 0.4);
-    this.reactor.setRate(0.94 + 0.12 * (Math.abs(motion.speed) / w.maxSpeed), 0.6);
 
     if (motion.accel < -m.creakBrake) this.audio.play('structure.creak');
 
@@ -90,6 +84,6 @@ export class CockpitAudio {
 
   dispose() {
     this.offs.forEach((off) => off());
-    for (const v of [this.airflow, this.servo, this.reactor]) v.stop(0.2);
+    for (const v of [this.airflow, this.servo]) v.stop(0.2);
   }
 }

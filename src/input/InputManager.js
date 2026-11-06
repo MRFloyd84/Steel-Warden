@@ -52,6 +52,16 @@ export class InputManager {
     return buttons?.some((b) => this.gamepad.wasReleased(b)) ?? false;
   }
 
+  /** Key + modifier combination from bindings.combos, e.g. Shift+S. */
+  comboPressed(name) {
+    const combo = this.bindings.combos?.[name];
+    if (!combo || !this.keyboard.wasPressed(combo.key)) return false;
+    const kb = this.keyboard;
+    const shift = kb.isDown('ShiftLeft') || kb.isDown('ShiftRight');
+    const ctrl = kb.isDown('ControlLeft') || kb.isDown('ControlRight');
+    return !!combo.shift === shift && !!combo.ctrl === ctrl;
+  }
+
   /** Composite axis in [-1, 1] from keys plus any mapped gamepad axes. */
   axis(name) {
     let value = 0;
@@ -118,7 +128,7 @@ function applyDeadzone(v, dz) {
 function mergeBindings(defaults, overrides) {
   const merged = structuredClone(defaults);
   if (!overrides || typeof overrides !== 'object') return merged;
-  for (const section of ['keys', 'mouseButtons', 'keyAxes', 'mouse']) {
+  for (const section of ['keys', 'combos', 'mouseButtons', 'keyAxes', 'mouse']) {
     if (overrides[section]) Object.assign(merged[section], overrides[section]);
   }
   if (overrides.gamepad) {

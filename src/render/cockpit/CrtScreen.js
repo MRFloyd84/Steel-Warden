@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import { makeCanvas, canvasTexture, MONO_FONT } from './canvasKit.js';
 import { colored, merge } from './geometry.js';
+import { drawBoot } from './displays/BootScreen.js';
+
+const ON = { mode: 'on' };
 
 export const PHOSPHORS = {
   amber: { rgb: [255, 176, 58], bg: [10, 6, 2] },
@@ -13,10 +16,15 @@ export const PHOSPHORS = {
  * display module into a persistent "phosphor" canvas (old frames fade
  * instead of clearing → afterglow), then composited with scanlines and
  * vignette into the texture. Redraws at a fixed low rate.
+ *
+ * Power comes from data.monitorStatus(id): 'off' lets the picture fade to
+ * black, 'boot' runs the power-on sequence, 'on' draws the display page.
  */
 export class CrtScreen {
-  constructor({ width, display, phosphor = 'amber', resolution = [320, 240], refreshHz = 15, phaseOffset = 0 }) {
+  constructor({ id, width, display, phosphor = 'amber', resolution = [320, 240], refreshHz = 15, phaseOffset = 0 }) {
     const [rw, rh] = resolution;
+    this.id = id;
+    this.flicker = false; // set from outside (e.g. reactor ignition)
     this.display = display;
     this.p = PHOSPHORS[phosphor] ?? PHOSPHORS.amber;
     this.interval = 1 / refreshHz;
@@ -53,9 +61,19 @@ export class CrtScreen {
     ctx.globalAlpha = 1;
     ctx.fillStyle = `rgba(${r},${g},${b},${1 - this.persistence})`;
     ctx.fillRect(0, 0, this.phosphor.width, this.phosphor.height);
-    this.painter.begin();
-    this.display.draw(this.painter, data);
-    this.painter.end();
+    const status = data.monitorStatus ? data.monitorStatus(this.id) : ON;
+    let brightness = this.flicker ? 0.35 + Math.random() * 0.9 : 1;
+    if (status.mode !== 'off') {
+      this.painter.begin();
+      if (status.mode === 'boot') {
+        drawBoot(this.painter, this.id, status);
+        if (status.t < status.timing.flickerTime) brightness = 0.3 + Math.random() * 1.2;
+      } else {
+        this.display.draw(this.painter, data);
+      }
+      this.painter.end();
+    }
+    this.screenMat.color.setScalar(brightness);
 
     this.octx.drawImage(this.phosphor, 0, 0);
     this.octx.drawImage(this.overlay, 0, 0);

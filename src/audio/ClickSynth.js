@@ -34,6 +34,12 @@ const RECIPES = {
     noise: { amp: 0.35, decay: 0.002, highpass: 0.6 },
     partials: [[980, 0.35, 0.01], [2300, 0.2, 0.006]],
   },
+  // Radio squelch: band-limited noise burst with a short decay
+  squelch: {
+    length: 0.28,
+    noise: { amp: 0.9, decay: 0.12, highpass: 0.2 },
+    partials: [[1800, 0.08, 0.05]],
+  },
   guard: {
     length: 0.12,
     noise: { amp: 0.6, decay: 0.004, highpass: 0.5 },

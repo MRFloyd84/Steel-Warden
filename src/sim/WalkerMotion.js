@@ -45,8 +45,19 @@ export class WalkerMotion {
     this.headY = new Spring(feel.headSpring);
     this.headZ = new Spring(feel.headSpring);
 
+    // Set by WalkerSystems every step: what the machinery currently allows.
+    this.limits = { throttleLocked: false, canMove: true, canTwist: true, speedFactor: 1, stance: 1 };
+    this.standUpHeight = 0;
+    this.slumpPitch = 0;
+
     this.pose = makePose();
     this.prevPose = makePose();
+  }
+
+  /** How far the walker sags when depressurised (from data/systems.js). */
+  setStanceRange(height, pitchDeg) {
+    this.standUpHeight = height;
+    this.slumpPitch = pitchDeg * DEG;
   }
 
   place(x, z, heading) {
@@ -79,13 +90,16 @@ export class WalkerMotion {
     const f = this.feel;
     copyPose(this.prevPose, this.pose);
 
-    this.throttle.update(dt, input.throttleRate, input.throttleAbs);
-    this.turnInput = input.turn;
+    const lim = this.limits;
+    if (lim.throttleLocked) this.throttle.value = 0;
+    else this.throttle.update(dt, input.throttleRate, input.throttleAbs);
+    const turn = lim.canMove ? input.turn : 0;
+    this.turnInput = turn;
 
     // Leg heading
     const speedFrac = Math.abs(this.speed) / w.maxSpeed;
     const turnRate = w.turnRate * DEG * (1 + (f.turnAtSpeed - 1) * speedFrac);
-    this.legYaw -= input.turn * turnRate * dt;
+    this.legYaw -= turn * turnRate * dt;
 
     // Speed with slope influence
     const fx = -Math.sin(this.legYaw);
@@ -97,8 +111,8 @@ export class WalkerMotion {
     const t = this.throttle.value;
     let target = t >= 0 ? t * w.maxSpeed : t * w.maxReverseSpeed;
     const slope = clamp(1 - Math.max(0, this.grade) * f.uphillDrag + Math.max(0, -this.grade) * f.downhillBoost, 0.2, 1.2);
-    target *= slope;
-    if (this.grade > f.maxGrade) target = 0;
+    target *= slope * lim.speedFactor;
+    if (this.grade > f.maxGrade || !lim.canMove) target = 0;
 
     const prevSpeed = this.speed;
     const speedingUp = Math.abs(target) > Math.abs(this.speed) && Math.sign(target) !== -Math.sign(this.speed);
@@ -112,6 +126,10 @@ export class WalkerMotion {
     this.distance += Math.abs(this.speed) * dt;
 
     // Torso twist and pitch move toward their targets at the walker's rates
+    if (!lim.canTwist) {
+      this.twistTarget = this.twist;
+      this.pitchTarget = this.pitch;
+    }
     const twistStep = w.torsoTwistRate * DEG * dt;
     const twistDelta = clamp(this.twistTarget - this.twist, -twistStep, twistStep);
     this.twist += twistDelta;
@@ -125,7 +143,7 @@ export class WalkerMotion {
 
     // Weight: braking pitches the torso forward and it rocks back; turning leans
     this.pitchSpring.step(dt, this.accel * f.brakePitch);
-    this.rollSpring.step(dt, input.turn * speedFrac * f.turnRoll);
+    this.rollSpring.step(dt, turn * speedFrac * f.turnRoll);
     this.headY.step(dt);
     this.headZ.step(dt);
     this.headZ.kick(-this.accel * 0.004);
@@ -155,9 +173,10 @@ export class WalkerMotion {
     const s = Math.sin(this.stepPhase);
     p.x = this.x;
     p.z = this.z;
-    p.y = ground + this.w.cockpit.eyeHeight + this.bobAmp * Math.abs(s) * this.motionAmount;
+    const sag = 1 - this.limits.stance;
+    p.y = ground + this.w.cockpit.eyeHeight - sag * this.standUpHeight + this.bobAmp * Math.abs(s) * this.motionAmount;
     p.yaw = this.legYaw + this.twist;
-    p.pitch = this.pitch + this.pitchSpring.value;
+    p.pitch = this.pitch + this.pitchSpring.value - sag * this.slumpPitch;
     p.roll = this.swayAmp * s * this.motionAmount + this.rollSpring.value;
     p.aimPitch = this.pitch;
     p.headY = this.headY.value;

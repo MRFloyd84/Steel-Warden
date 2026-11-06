@@ -17,6 +17,8 @@ export class MissionHints extends Overlay {
       `[RMT/${k('freeLookToggle')}] Umsehen + Bedienen (Klick, Mausrad)`,
       `[${k('centerTorso')}] Zentrieren`,
       `[${k('cockpitLight')}] Licht`,
+      `[${k('checklist')}] Checkliste`,
+      '[Shift+S] Autostart',
       `[${k('debugFreeCam')}] Freiflug`,
       `[${k('toggleHints')}] Hilfe`,
     ];

@@ -14,13 +14,23 @@ import { CockpitInteraction } from '../ui/CockpitInteraction.js';
 import { CockpitControls } from '../sim/CockpitControls.js';
 import { CockpitAudio } from '../audio/CockpitAudio.js';
 import { Floodlight } from '../render/Floodlight.js';
-import { wireControlEffects } from './controlEffects.js';
+import { WalkerSystems } from '../sim/WalkerSystems.js';
+import { StartupChecklist } from '../sim/StartupChecklist.js';
+import { StartupAutomation } from '../sim/StartupAutomation.js';
+import { SystemsAudio } from '../audio/SystemsAudio.js';
+import { RadioLog } from '../ui/RadioLog.js';
+import { RADIO } from '../data/systems.js';
+import { SystemsLink } from './SystemsLink.js';
+import { createCockpitData, updateCockpitData, compassDeg } from './cockpitData.js';
 import { DEG, damp } from '../util/math.js';
 
-const compassDeg = (yaw) => ((((-yaw / DEG) % 360) + 360) % 360);
 const AIM_DISTANCE = 800;
+const START_MODES = ['full', 'simple', 'auto'];
 
-/** In-mission state: walker sim, pilot view, cockpit + controls, audio, pause, stats. */
+/**
+ * In-mission state: walker sim and systems, pilot view, cockpit + controls,
+ * startup procedure, audio, pause, stats.
+ */
 export class MissionState extends State {
   enter({ missionId }) {
     const game = this.game;
@@ -41,8 +51,36 @@ export class MissionState extends State {
     this.controls = new CockpitControls(this.cockpit.layout, game.bus);
     this.cockpit.bindControls(this.controls, game.bus);
     this.floodlight = new Floodlight(this.world.scene, cfg.floodlight);
-    this.unsubEffects = wireControlEffects(game.bus, this.controls, { cockpit: this.cockpit, floodlight: this.floodlight });
+
+    // Startup procedure
+    const params = new URLSearchParams(window.location.search);
+    const urlMode = params.get('startmode');
+    this.startMode = START_MODES.includes(urlMode) ? urlMode : cfg.startup.mode;
+    this.systems = new WalkerSystems(this.controls, game.bus, {
+      randomEvents: cfg.startup.randomEvents,
+      monitorIds: this.cockpit.monitors.map((m) => m.id),
+    });
+    const hot = params.get('start') === 'hot';
+    if (hot) this.systems.forceHot();
+    this.checklist = new StartupChecklist(this.startMode);
+    if (hot) this.checklist.markAllDone();
+    this.checklist.update(this.systems.flags);
+    this.automation = new StartupAutomation(this.controls, this.startMode);
+    if (this.startMode === 'simple' && !hot) this.automation.start('simple');
+    this.radioLog = new RadioLog(game.container);
+    this.link = new SystemsLink({
+      systems: this.systems,
+      controls: this.controls,
+      cockpit: this.cockpit,
+      floodlight: this.floodlight,
+      motion: this.motion,
+      bus: game.bus,
+      radio: (msg) => this.radioMessage(msg),
+    });
+    this.motion.place(start.x, start.z, start.heading); // again, now with the real stance
+
     this.cockpitAudio = new CockpitAudio(game.audio, game.bus, this.cockpit, this.walker);
+    this.systemsAudio = new SystemsAudio(game.audio, game.bus, this.systems, this.walker);
     this.debugRig = new TestRig(game.renderer.camera, this.world.sampler, cfg.testRig);
     this.freeCam = false;
 
@@ -56,6 +94,7 @@ export class MissionState extends State {
       renderer: game.renderer,
       cursor: this.cursor,
       throttle: this.motion.throttle,
+      onClipboard: () => this.cockpit.clipboard?.toggle(),
     });
     this.pauseScreen = new PauseScreen(game.container, {
       onResume: () => this.setPaused(false),
@@ -69,7 +108,7 @@ export class MissionState extends State {
     this.stats = { duration: 0, fpsSum: 0, fpsFrames: 0 };
     this.stickVisual = { x: 0, y: 0, twist: 0 };
     this.aimRate = { x: 0, y: 0 };
-    this.data = this.createCockpitData();
+    this.data = createCockpitData(this.walker, this.mission, this.systems);
     this.tmpVec = new THREE.Vector3();
     this.tmpProj = new THREE.Vector3();
 
@@ -77,6 +116,10 @@ export class MissionState extends State {
       if (!this.paused) game.input.mouse.requestLock();
     };
     game.renderer.canvas.addEventListener('click', this.onCanvasClick);
+    if (!hot) {
+      const intro = { simple: RADIO.coldStartSimple, auto: RADIO.coldStartAuto }[this.startMode] ?? RADIO.coldStart;
+      this.radioMessage(intro);
+    }
     this.unsubLock = game.bus.on('pointer:lock', ({ locked }) => {
       if (!locked && !this.paused) {
         this.lockLostAt = performance.now();
@@ -92,7 +135,11 @@ export class MissionState extends State {
     game.input.mouse.releaseLock();
     game.audio.setPaused(false);
     this.cockpitAudio.dispose();
-    this.unsubEffects();
+    this.systemsAudio.dispose();
+    this.automation.stop();
+    this.link.dispose();
+    this.systems.dispose();
+    this.radioLog.destroy();
     this.floodlight.dispose();
     this.hints.destroy();
     this.cursor.destroy();
@@ -114,6 +161,11 @@ export class MissionState extends State {
       this.game.input.mouse.requestLock();
       this.game.time.resetAccumulator();
     }
+  }
+
+  radioMessage({ from, text }) {
+    this.radioLog.push(from, text, this.stats?.duration ?? 0);
+    this.game.audio.play('radio.squelch');
   }
 
   finish(result) {
@@ -154,6 +206,11 @@ export class MissionState extends State {
     if (input.wasPressed('freeLookToggle')) this.view.toggleLatch();
     if (input.wasPressed('centerTorso')) this.motion.centerTorso();
     if (input.wasPressed('throttleStop')) this.motion.throttle.stop();
+    if (input.wasPressed('checklist')) this.cockpit.clipboard?.toggle();
+    if (input.comboPressed('autoStart') && !this.systems.flags.legsReleased) {
+      this.automation.start('auto');
+      this.radioMessage(RADIO.autoStart);
+    }
 
     this.view.setHold(input.isDown('freeLookHold') && !this.freeCam);
     if (this.view.freeLook) this.interaction.activate();
@@ -203,6 +260,7 @@ export class MissionState extends State {
   update(dt) {
     if (this.paused) return;
     const input = this.game.input;
+    this.link.update();
     if (this.freeCam) {
       this.debugRig.update(dt, input);
       this.motion.update(dt, { throttleRate: 0, throttleAbs: null, turn: 0 });
@@ -215,6 +273,9 @@ export class MissionState extends State {
       });
       this.world.update(this.motion.pose);
     }
+    this.systems.update(dt);
+    this.checklist.update(this.systems.flags);
+    this.automation.update(dt, this.systems.flags);
     this.view.update(dt);
     this.stats.duration += dt;
   }
@@ -235,12 +296,18 @@ export class MissionState extends State {
     lerpPose(this.renderPose, this.motion.prevPose, this.motion.pose, a);
     this.view.apply(this.renderPose);
     this.floodlight.update(this.renderPose, this.view.torsoQuat, this.view.aimDir);
-    this.updateCockpitData(this.paused ? 0 : this.frameDt);
-    this.cockpit.update(this.paused ? 0 : this.frameDt, this.data, this.view.torsoQuat);
+    const fdt = this.paused ? 0 : this.frameDt;
+    this.link.frame();
+    updateCockpitData(this.data, fdt, { motion: this.motion, controls: this.controls, systems: this.systems, stick: this.stickVisual });
+    this.cockpit.update(fdt, this.data, this.view.torsoQuat, this.checklist, renderer.cockpitCamera);
     this.world.beforeRender(renderer.camera);
     renderer.renderWithCockpit(this.world.scene, this.cockpit.scene);
     this.interaction.updateHover();
-    if (!this.paused) this.cockpitAudio.update(this.motion);
+    if (!this.paused) {
+      this.cockpitAudio.update(this.motion, this.systems.flags.busPowered);
+      this.systemsAudio.update();
+    }
+    this.radioLog.update(this.stats.duration);
 
     const p = this.renderPose;
     this.tmpVec.set(p.x, p.y, p.z).addScaledVector(this.view.aimDir, AIM_DISTANCE);
@@ -250,54 +317,6 @@ export class MissionState extends State {
       tag: this.view.freeLook ? 'FREIER BLICK · BEDIENEN' : null,
       locked: game.input.mouse.locked || this.paused,
     });
-  }
-
-  createCockpitData() {
-    const w = this.walker;
-    return {
-      walkerName: w.name,
-      maxSpeed: w.maxSpeed,
-      maxReverseSpeed: w.maxReverseSpeed,
-      twistLimit: w.torsoTwistLimit,
-      armor: w.armor,
-      health: { torso: 1, armL: 1, armR: 1, legs: 1, sensors: 1, reactor: 1 },
-      shields: { front: 1, rear: 1, left: 1, right: 1 },
-      hardpoints: w.hardpoints.map((hp) => ({ ...hp, weapon: null })),
-      loadoutWeight: 0,
-      maxLoadoutWeight: w.maxLoadoutWeight,
-      navPoints: (this.mission.navPoints ?? []).map((n, i) => ({ ...n, active: i === 0, dx: 0, dz: 0, dist: 0, bearingDeg: 0 })),
-      time: 0,
-    };
-  }
-
-  updateCockpitData(dt) {
-    const m = this.motion;
-    const d = this.data;
-    d.time += dt;
-    d.throttle = m.throttle.value;
-    d.speed = m.speed;
-    d.torsoYaw = m.torsoYaw;
-    d.headingDeg = compassDeg(m.torsoYaw);
-    d.legHeadingDeg = compassDeg(m.legYaw);
-    d.twist = m.twist;
-    d.twistDeg = m.twist / DEG;
-    d.pitchDeg = m.pitch / DEG;
-    d.grade = m.grade;
-    d.stickX = this.stickVisual.x;
-    d.stickY = this.stickVisual.y;
-    d.stickTwist = this.stickVisual.twist;
-
-    const c = this.controls;
-    d.radarRange = c.has('radarRange') ? Number(c.positionLabel('radarRange')) : 1000;
-    d.weaponsArmed = c.has('weaponsArm') && c.value('weaponsArm') === 1;
-    d.energyPreset = c.has('energyPreset') ? c.positionLabel('energyPreset') : '';
-    d.radioChannel = c.has('radioChannel') ? c.positionLabel('radioChannel') : '';
-    for (const nav of d.navPoints) {
-      nav.dx = nav.x - m.x;
-      nav.dz = nav.z - m.z;
-      nav.dist = Math.hypot(nav.dx, nav.dz);
-      nav.bearingDeg = ((Math.atan2(nav.dx, -nav.dz) / DEG) + 360) % 360;
-    }
   }
 
   debugInfo() {
@@ -314,6 +333,8 @@ export class MissionState extends State {
       `Hover ${this.interaction.hover?.id ?? '-'}${this.interaction.hover?.part ? '/' + this.interaction.hover.part : ''}  held ${this.interaction.held?.id ?? '-'}  flood ${this.floodlight.on ? 'on' : 'off'}`,
       `Chunks ${t.chunks} (LOD ${t.perLod.join('/')})  queue ${t.queued}  cam ${this.freeCam ? 'free' : 'cockpit'}`,
       `Entities 1  Wireframe ${this.wireframe ? 'on' : 'off'} [F4]`,
+      this.systems.debugLine(),
+      `${this.checklist.debugLine()}  Start ${this.startMode}${this.automation.active ? ` · Automatik ${this.automation.currentStep}` : ''}`,
     ];
   }
 }

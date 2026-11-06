@@ -28,6 +28,15 @@ export const CONFIG = {
     skirtDepth: 14, // hides cracks between neighbouring LODs
   },
 
+  // Startup procedure. mode: 'full' (every switch yourself), 'simple'
+  // (battery → reactor → systems → weapons → legs, the rest runs by itself)
+  // or 'auto' (Shift+S runs the whole procedure). URL: ?start=hot skips it,
+  // ?startmode=simple|auto|full overrides the mode.
+  startup: {
+    mode: 'full',
+    randomEvents: false, // pump 2 fails on the first try, gyro needs two runs
+  },
+
   cockpit: {
     near: 0.02, // separate render pass, so the world keeps its depth precision
     far: 30,

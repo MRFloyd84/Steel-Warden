@@ -20,9 +20,11 @@ const THROTTLE_DETENT_PX = 24; // extra drag needed to push through the zero det
  *   button   held while the interact button is held (momentary)
  *   lamp     held = lamp test
  *   throttle drag up/down to move the lever, wheel for 5 % steps
+ *   clipboard click brings the checklist up / puts it away
  */
 export class CockpitInteraction {
-  constructor({ cockpit, controls, camera, renderer, cursor, throttle }) {
+  constructor({ cockpit, controls, camera, renderer, cursor, throttle, onClipboard }) {
+    this.onClipboard = onClipboard;
     this.cockpit = cockpit;
     this.controls = controls;
     this.camera = camera;
@@ -100,6 +102,10 @@ export class CockpitInteraction {
     const h = this.hover;
     if (!h) return;
     const c = this.controls;
+    if (h.id === 'clipboard') {
+      this.onClipboard?.();
+      return;
+    }
     if (h.id === 'throttle') {
       this.held = { id: h.id, kind: 'throttle' };
       this.dragDetent = 0;
@@ -174,6 +180,7 @@ export class CockpitInteraction {
     const active = !!this.held;
     if (id === 'throttle') return { title: `SCHUBHEBEL ${Math.round(this.throttle.value * 100)} %`, hint: 'ziehen: auf/ab · Mausrad: 5 %', active };
     if (id === 'stick') return { title: 'STEUERKNÜPPEL', hint: 'folgt Maus und Lenkung' };
+    if (id === 'clipboard') return { title: 'CHECKLISTE', hint: 'Klick: heranholen / weglegen · Taste C' };
     if (id === 'nameplate') return { title: 'TYPENSCHILD', hint: this.cockpit.walker.name };
     const extra = this.cockpit.extraParts.get(id);
     if (extra?.item.type === 'monitor') return { title: DISPLAY_NAMES[extra.item.display] ?? extra.item.display };

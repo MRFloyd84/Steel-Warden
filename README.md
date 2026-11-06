@@ -31,6 +31,13 @@ Schnellstart-Parameter (Dev und Build):
   Schalterzustände als Simulationszustand (`sim/CockpitControls.js`). Hybride Audio-Engine:
   eingebettete Samples plus prozedurale Klicks; Schritte, Servo, Reaktor, Lüftung, Knarzen.
 
+- **Erweiterung Schritt 3 (Startprozedur):** Der Walker startet kalt. `sim/WalkerSystems.js`
+  simuliert Batterie, Hilfsaggregat, Hauptbus, Kühlpumpen, Reaktor (Vorheizen, Zündung,
+  Leerlauf/Vollast, Wärmebilanz, Notabschaltung mit Sperre), Hydraulik, Monitore, Gyro,
+  Sensoren, Schilde, Waffen und Beinsperre mit stetigen Werten. Falsche Reihenfolge hat
+  physikalische Folgen statt Sperren. Checkliste auf einem 3D-Klemmbrett, Startmodi
+  voll/einfach/auto, Neustart nach Notabschaltung, Funkmeldungen, Maschinengeräusche.
+
 ## Bedienung im Cockpit
 
 - Rechte Maustaste halten oder `V`: freier Blick mit Cockpit-Cursor; Maus über den Bildrand
@@ -38,6 +45,31 @@ Schnellstart-Parameter (Dev und Build):
 - Linksklick (oder `F`, Pad A): Schalter umlegen, Schutzkappe öffnen, offene Kappe schließen
 - Drehregler: linke/rechte Hälfte anklicken oder Mausrad
 - Taster und Lampen: gedrückt halten (Lampentest); Schubhebel: anklicken und ziehen
+- `C` oder Klick aufs Klemmbrett (links an der Wand): Checkliste holen und weglegen
+- `Shift+S`: automatische Startprozedur (Schalter bewegen sich sichtbar)
+
+## Startprozedur
+
+Reihenfolge (Checkliste im Spiel): Batterie → Hilfsaggregat START halten → Kühlpumpen 1+2 →
+BETRIEBSART VORH bis VORHEIZ OK → Zündkappe auf, ZÜND → Hauptbus REAKT → Hydraulik →
+Monitore TEST → Gyro ausrichten → Sensoren → Schilde → Waffen scharf → Beinsperre LÖSEN →
+BETRIEBSART BETR für volle Leistung.
+
+- Startmodus in `src/data/config.js` (`startup.mode`: `full`, `simple`, `auto`) oder per
+  URL `?startmode=simple`; Zufallsereignisse mit `startup.randomEvents`
+- `?start=hot` überspringt den Start (alle Systeme bereit)
+- Alle Zeiten, Schwellen und Raten: `src/data/systems.js`
+
+**Testszenarien**
+
+1. *Korrekter Start:* Checkliste (`C`) Punkt für Punkt abarbeiten. Am Ende sind alle
+   Statuslampen links aus, Funkspruch „Bereit zum Ausrücken", der Walker fährt.
+2. *Zündung ohne Kühlung:* Batterie, Hilfsaggregat, VORH — Pumpen auslassen — zünden.
+   Die Kerntemperatur steigt über 700 °C (HITZE, WARNUNG, Alarm), bei 900 °C Notabschaltung:
+   BETRIEBSART springt auf AUS, Hauptbus auf HILFS, Hilfsaggregat startet von selbst.
+3. *Neustart:* nach der Notabschaltung Pumpen ein, abkühlen lassen, VORH bis VORHEIZ OK.
+   Zünden geht erst, nachdem die Zündkappe einmal geschlossen und wieder geöffnet wurde.
+   Dann ZÜND, Hauptbus REAKT, BETR — das Klemmbrett zeigt solange die Neustart-Liste.
 
 ## Sounds
 
@@ -52,7 +84,8 @@ eingebettet, damit der Offline-Build per `file://` funktioniert. Klang und Misch
 - `src/data/walkers.js` – Walker-Werte (bisher BASTION MW-1)
 - `src/data/cockpits.js` – Cockpit-Varianten: Kanzel, Paneele, Sitz, Kabel, Innenlicht
 - `src/data/panelLayouts.js` – Schalter, Lampen, Monitore und Hebel auf den Paneelen
-- `src/data/sounds.js` – Sound-Ereignisse, Loops, Mischpult, Bewegungs-Sounds
+- `src/data/sounds.js` – Sound-Ereignisse, Loops, Mischpult, Bewegungs- und Systemsounds
+- `src/data/systems.js` – Startprozedur: Werte, Checklisten, Automatik-Skript, Funksprüche
 - `src/data/theaters.js` – Schauplätze: Geländeform, Farbpalette, Himmel, Nebel
 - `src/data/lighting.js` – Tageszeiten
 - `src/data/missions.js` – Einsätze

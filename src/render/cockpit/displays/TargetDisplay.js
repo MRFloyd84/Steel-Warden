@@ -12,6 +12,10 @@ export const TargetDisplay = {
     const r = h * 0.3;
     p.text('ZIELMONITOR', 8, 12, { size: 11 });
     p.line(8, 22, w - 8, 22, 0.4);
+    if (d.sensors < 1) {
+      p.text('KEINE SENSORDATEN', w / 2, h / 2, { size: 13, align: 'center', alpha: 0.7 });
+      return;
+    }
 
     // Rotating acquisition brackets
     const a = d.time * 0.8;

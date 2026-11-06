@@ -13,7 +13,10 @@
  * blocks     axis-aligned boxes (min/max), optional rot [x, y, z] degrees
  * beams      boxes from a to b with width/height; up orients the width
  * cables     tube bundles through the given points
- * lighting   interior light presets selected by the INNENLICHT knob
+ * lighting   interior light presets: off/night/day follow the INNENLICHT knob,
+ *            emergency is the red battery-independent light of a cold walker
+ * clipboard  checklist board: resting position, tilt (degrees) after facing
+ *            the pilot, and how far in front of the eyes it is held
  */
 export const COCKPITS = {
   standard: {
@@ -110,7 +113,10 @@ export const COCKPITS = {
       off: { ambient: 0.12, ambientColor: '#55606a', flood: 0, floodColor: '#ffb060', sun: 0.35 },
       night: { ambient: 0.22, ambientColor: '#5a6070', flood: 0.55, floodColor: '#ff9a3a', sun: 0.25 },
       day: { ambient: 0.75, ambientColor: '#c6cabd', flood: 0.35, floodColor: '#ffd49a', sun: 0.45 },
+      emergency: { ambient: 0.14, ambientColor: '#6a1d14', flood: 0.3, floodColor: '#ff3418', sun: 0.35 },
     },
+
+    clipboard: { position: [-0.86, -0.3, -0.24], tilt: [-8, 0, 3], heldDistance: 0.36 },
   },
 };
 

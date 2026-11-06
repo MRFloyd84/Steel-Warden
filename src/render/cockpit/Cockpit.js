@@ -9,7 +9,9 @@ import { ThrottleLever, SideStick } from './Levers.js';
 import { CrtScreen } from './CrtScreen.js';
 import { buildNameplate } from './Nameplate.js';
 import { getDisplay } from './displays/index.js';
+import { Clipboard } from './Clipboard.js';
 
+/** INNENLICHT knob positions → lighting presets ('emergency' is set by the power state). */
 export const LIGHT_MODES = ['off', 'night', 'day'];
 
 /**
@@ -41,6 +43,7 @@ export class Cockpit {
     this.monitors = [];
     this.pickables = [];
     this.mountItems(config);
+    this.mountClipboard();
     this.createLights();
 
     this.worldSun = new THREE.Vector3(0, 1, 0);
@@ -88,6 +91,7 @@ export class Cockpit {
       switch (item.type) {
         case 'monitor': {
           const crt = new CrtScreen({
+            id: item.id,
             width: item.width,
             display: getDisplay(item.display),
             phosphor: item.phosphor,
@@ -133,6 +137,20 @@ export class Cockpit {
     }
   }
 
+  mountClipboard() {
+    if (!this.variant.clipboard) return;
+    this.clipboard = new Clipboard(this.variant.clipboard, this.walker);
+    this.scene.add(this.clipboard.object);
+    for (const mesh of this.clipboard.pickables) mesh.userData.controlId = 'clipboard';
+    this.pickables.push(...this.clipboard.pickables);
+    this.extraParts.set('clipboard', { item: { id: 'clipboard', type: 'clipboard' }, object: this.clipboard.object, pickables: this.clipboard.pickables });
+  }
+
+  /** Flickers all monitors (e.g. while the reactor ignites). */
+  setMonitorFlicker(on) {
+    for (const crt of this.monitors) crt.flicker = on;
+  }
+
   createLights() {
     this.ambient = new THREE.HemisphereLight(0xffffff, 0x303030, 1);
     // Instrument flood lights under the glareshield and above the consoles
@@ -166,10 +184,12 @@ export class Cockpit {
   }
 
   /**
-   * @param data       instrument snapshot (see MissionState.buildCockpitData)
+   * @param data       instrument snapshot (see states/cockpitData.js)
    * @param torsoQuat  torso orientation in the world, for sunlight direction
+   * @param checklist  StartupChecklist for the clipboard; camera = cockpit camera
    */
-  update(dt, data, torsoQuat) {
+  update(dt, data, torsoQuat, checklist, camera) {
+    if (this.clipboard && checklist) this.clipboard.update(dt, checklist, camera);
     this.sun.position.copy(this.worldSun).applyQuaternion(tmpQ.copy(torsoQuat).invert()).multiplyScalar(5);
     this.sun.color.copy(this.worldSunColor);
     this.sun.intensity = this.worldSunIntensity * this.sunFactor;
@@ -182,6 +202,7 @@ export class Cockpit {
   /** Frees all GPU resources; disposing shared resources twice is harmless. */
   dispose() {
     this.unbind?.();
+    this.clipboard?.dispose();
     this.scene.traverse((o) => {
       o.geometry?.dispose();
       const mats = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];

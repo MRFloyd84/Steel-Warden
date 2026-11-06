@@ -7,10 +7,11 @@
  *   control:changed { id, type, value, prev, cause }  switch/knob position
  *   control:guard   { id, open, cause }                flip cover
  *   control:pressed { id, pressed, cause }             momentary button
- *   control:lamp    { id, lit }                        lamp/cap illumination
+ *   control:lamp    { id, lit, test? }                 lamp/cap illumination (as seen)
  *   control:blocked { id, reason }                     user tried something impossible
  *
- * cause is 'user' (cockpit cursor / key) or 'system' (simulation, scripts).
+ * cause is 'user' (cockpit cursor / key), 'auto' (start automation) or
+ * 'system' (simulation). Only 'user' is stopped by a closed switch guard.
  */
 const STATEFUL = new Set(['toggle', 'rotary', 'button', 'lamp']);
 
@@ -18,6 +19,7 @@ export class CockpitControls {
   constructor(layout, bus) {
     this.bus = bus;
     this.states = new Map();
+    this.lampPower = true; // lamps and caps can only light while powered
     for (const item of layout.items) {
       if (!STATEFUL.has(item.type)) continue;
       this.states.set(item.id, {
@@ -116,13 +118,27 @@ export class CockpitControls {
     const s = this.get(id);
     if (s.lit === lit) return;
     s.lit = lit;
-    this.bus.emit('control:lamp', { id, lit: s.lit || s.testing });
+    this.bus.emit('control:lamp', { id, lit: this.shows(s) });
   }
 
-  /** Press-to-test: a held lamp lights regardless of its state. */
+  /** Press-to-test: a held lamp lights regardless of its state (if powered). */
   setTesting(s, on) {
     s.testing = on;
-    this.bus.emit('control:lamp', { id: s.id, lit: s.lit || s.testing, test: on });
+    this.bus.emit('control:lamp', { id: s.id, lit: this.shows(s), test: on });
+  }
+
+  /** Lamp supply (battery bus). Without it nothing lights, not even a lamp test. */
+  setLampPower(on) {
+    if (this.lampPower === on) return;
+    this.lampPower = on;
+    for (const s of this.states.values()) {
+      if (s.lit || s.testing) this.bus.emit('control:lamp', { id: s.id, lit: this.shows(s) });
+    }
+  }
+
+  /** Whether a lamp is visibly lit right now. */
+  shows(s) {
+    return this.lampPower && (s.lit || s.testing);
   }
 
   /** Plain data for save games. */

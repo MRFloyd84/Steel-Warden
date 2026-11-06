@@ -8,6 +8,12 @@ export const RadarDisplay = {
 
   draw(p, d) {
     const { w, h } = p;
+    if (d.sensors < 1) {
+      p.text('RADAR', 8, 12, { size: 11 });
+      const msg = d.sensors > 0 ? `SENSOREN INIT ${Math.round(d.sensors * 100)} %` : 'SENSOREN AUS';
+      p.text(msg, w / 2, h / 2, { size: 13, align: 'center', alpha: Math.floor(d.time * 2) % 2 ? 1 : 0.5 });
+      return;
+    }
     const cx = w / 2;
     const cy = h * 0.56;
     const R = h * 0.42;
@@ -47,15 +53,17 @@ export const RadarDisplay = {
     p.line(cx, cy, cx + lx * R * 0.22, cy - ly * R * 0.22, 0.9);
     p.poly([[cx - 5, cy + 6], [cx + 5, cy + 6], [cx, cy - 6]], 1, true);
 
-    // Nav points
-    for (const nav of d.navPoints) {
+    // Nav points fade in during the first sweeps after the sensors came up
+    const navAlpha = Math.min(1, d.sensorsReadyFor / 2.4);
+    for (const nav of navAlpha > 0 ? d.navPoints : []) {
       const dist = nav.dist;
       const k = dist > range ? range / dist : 1;
       const [x, y] = toScreen(nav.dx * k, nav.dz * k);
       const outside = dist > range;
       const s = 5;
-      p.poly([[x, y - s], [x + s, y], [x, y + s], [x - s, y]], outside ? 0.5 : 1, nav.active && !outside);
-      p.text(nav.id[0], x + 8, y - 6, { size: 10, alpha: outside ? 0.5 : 1 });
+      const a = (outside ? 0.5 : 1) * navAlpha;
+      p.poly([[x, y - s], [x + s, y], [x, y + s], [x - s, y]], a, nav.active && !outside && navAlpha >= 1);
+      p.text(nav.id[0], x + 8, y - 6, { size: 10, alpha: a });
     }
 
     p.text('RADAR', 8, 12, { size: 11 });
