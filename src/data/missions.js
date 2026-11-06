@@ -1,9 +1,29 @@
 /**
  * Mission definitions. Used so far: id/name/theater/timeOfDay/seed/briefing,
- * playerStart { x, z, heading (rad), walker } and navPoints [{ id, x, z }].
- * spawns, triggers, objectives etc. follow with the mission system.
+ * playerStart { x, z, heading (rad), walker }, navPoints [{ id, x, z }] and
+ * spawns [{ id, unit (walker id), at: [x, z], heading, behavior }] — units are
+ * driven by DummyDriver until the AI exists. Triggers, objectives etc. follow
+ * with the mission system.
  */
 export const MISSIONS = [
+  {
+    id: 'test-parade',
+    name: 'Paradeplatz Brenn-Süd',
+    theater: 'industrial',
+    timeOfDay: 'day',
+    seed: 90210,
+    briefing: 'Alle sechs Walker-Typen in Bewegung. Außenkamera mit K, Freiflug mit F7.',
+    playerStart: { x: 0, z: 30, heading: 0, walker: 'bastion' },
+    navPoints: [{ id: 'ALPHA', x: 0, z: -400 }],
+    spawns: [
+      { id: 'p1', unit: 'kestrel', at: [-45, -40], heading: 0, behavior: { type: 'circle', radius: 22, throttle: 0.45 } },
+      { id: 'p2', unit: 'marder', at: [-15, -55], heading: 0.4, behavior: { type: 'circle', radius: -26, throttle: 0.5 } },
+      { id: 'p3', unit: 'bastion', at: [18, -40], heading: 0, behavior: { type: 'pace', distance: 35, throttle: 0.6 } },
+      { id: 'p4', unit: 'halberd', at: [50, -60], heading: -0.6, behavior: { type: 'circle', radius: 32, throttle: 0.7 } },
+      { id: 'p5', unit: 'goliath', at: [-30, -110], heading: 0, behavior: { type: 'circle', radius: -38, throttle: 0.8 } },
+      { id: 'p6', unit: 'koloss', at: [30, -115], heading: 0, behavior: { type: 'turn', rate: 0.5 } },
+    ],
+  },
   {
     id: 'test-ice',
     name: 'Testgelände Kalvik',

@@ -39,7 +39,9 @@ export function updateReactor(sys, dt) {
         sys.emit('reactorShutdown');
         break;
       }
-      const target = mode === 2 ? k.fullPower : k.idlePower;
+      // Assault walkers: without the second circuit only part of the full power is available.
+      const cap = sys.extraCircuit && s.reactor2.mode !== 'running' ? k.singleCircuitMax : k.fullPower;
+      const target = mode === 2 ? cap : k.idlePower;
       r.power = approach(r.power, target, k.powerRate * dt);
       break;
     }
@@ -54,6 +56,8 @@ export function updateReactor(sys, dt) {
     default:
       break;
   }
+
+  updateCircuit2(sys, dt);
 
   // Heat balance
   const core = r.power > 0 ? k.heatBase * Math.min(1, r.power / k.idlePower) + k.heatPerPower * r.power : 0;
@@ -96,6 +100,36 @@ export function tryIgnite(sys) {
   sys.emit('ignition');
 }
 
+/** Second reactor circuit (assault class): ignites only on a running reactor carrying the main bus. */
+export function tryIgniteCircuit2(sys) {
+  const { s } = sys;
+  const r2 = s.reactor2;
+  if (r2.mode !== 'off') return;
+  if (s.reactor.mode !== 'running' || s.power.source !== 'main') {
+    s.reactor.failUntil = sys.time + sys.cfg.reactor.failBlinkTime;
+    sys.emit('ignitionFailed', { reason: 'circuit2' });
+    return;
+  }
+  r2.mode = 'igniting';
+  r2.t = 0;
+  s.reactor.flickerUntil = sys.time + sys.cfg.reactor.flickerTime * 0.6;
+  sys.emit('ignition', { circuit: 2 });
+}
+
+function updateCircuit2(sys, dt) {
+  const { s, c } = sys;
+  const r2 = s.reactor2;
+  if (!sys.extraCircuit || r2.mode === 'off') return;
+  if (s.reactor.mode !== 'running' || c.value('reactor2Ignition') === 0) {
+    r2.mode = 'off';
+    return;
+  }
+  if (r2.mode === 'igniting') {
+    r2.t += dt;
+    if (r2.t >= sys.cfg.reactor.circuit2Time) r2.mode = 'running';
+  }
+}
+
 /** Emergency shutdown: power collapses, BETRIEBSART drops to AUS, bus trips to HILFS. */
 export function scram(sys) {
   const { s, c } = sys;
@@ -104,6 +138,7 @@ export function scram(sys) {
   r.lockout = true;
   r.scramAt = sys.time;
   r.restartNeeded = true;
+  s.reactor2.mode = 'off';
   sys.emit('scram');
   c.setValue('reactorMode', 0, 'system');
   if (c.value('mainBus') === 1) {

@@ -1,5 +1,5 @@
 const NAMES = {
-  mfdSystem: 'SYSTEMSTATUS', mfdRadar: 'RADAR', mfdDamage: 'SCHADENSMODELL', mfdTarget: 'ZIELMONITOR', mfdWeapons: 'WAFFENSTATUS',
+  mfdSystem: 'SYSTEMSTATUS', mfdRadar: 'RADAR', mfdDamage: 'SCHADENSMODELL', mfdTarget: 'ZIELMONITOR', mfdWeapons: 'WAFFENSTATUS', mfdEnergy: 'ENERGIE',
 };
 
 /**

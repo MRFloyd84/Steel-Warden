@@ -184,7 +184,8 @@ function litMaterial(text, aspect, colorName) {
   const tex = labelFaceTexture(text ?? '', aspect);
   return new THREE.MeshLambertMaterial({
     map: tex,
-    color: lit.clone().multiplyScalar(0.08),
+    // Unlit: dark tinted glass (colour values are linear — keep this small).
+    color: lit.clone().lerp(new THREE.Color(0.2, 0.2, 0.2), 0.35).multiplyScalar(0.03),
     emissive: lit,
     emissiveMap: tex,
     emissiveIntensity: 0,

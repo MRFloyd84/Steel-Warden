@@ -29,12 +29,13 @@ export function updateLamps(sys) {
   const hydraulicsOnAux = c.value('hydraulics') === 1 && s.power.source === 'aux';
   const legsWaiting = c.value('legLock') === 1 && !s.legs.released;
   set('lampHeat', f.heatWarning);
-  set('lampReactor', (ignitionFail && blink) || f.scrammed);
+  set('lampReactor', (ignitionFail && blink) || f.scrammed || (sys.extraCircuit && f.reactorRunning && !f.reactor2Running && s.reactor2.mode === 'igniting' && blink));
   set('lampMasterWarning', (f.heatWarning || scramRecent || s.power.fault) && blink);
   set('lampMasterCaution', ignitionFail || hydraulicsOnAux || legsWaiting);
   set('lampShield', c.value('shields') === 1 && !f.shieldsReady);
   set('lampMissile', false);
 
+  set('lampReactor2', f.reactor2Running);
   set('lampStatReactor', !f.reactorRunning);
   set('lampStatCoolant', !f.coolantOk);
   set('lampStatHydraulic', !f.hydraulicsReady);

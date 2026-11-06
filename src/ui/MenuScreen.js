@@ -2,6 +2,7 @@ import { Overlay, esc, keyLabel } from './Overlay.js';
 import { MISSIONS } from '../data/missions.js';
 import { getTheater } from '../data/theaters.js';
 import { ACTION_LABELS } from '../data/inputBindings.js';
+import { WALKERS, WALKER_ORDER, CLASS_LABELS } from '../data/walkers.js';
 
 const TIME_LABELS = { day: 'Tag', dusk: 'Dämmerung', night: 'Nacht' };
 
@@ -36,6 +37,12 @@ export class MenuScreen extends Overlay {
             <h2>Erprobungseinsätze</h2>
             <div class="mission-list">${missions}</div>
             <p class="mission-briefing" data-role="briefing"></p>
+            <label class="walker-pick">Walker
+              <select data-role="walker">${WALKER_ORDER.map((id) => {
+                const w = WALKERS[id];
+                return `<option value="${esc(id)}">${esc(w.name)} — ${esc(CLASS_LABELS[w.class])}, ${w.tonnage} t, ${esc(w.role)}</option>`;
+              }).join('')}</select>
+            </label>
             <button class="btn primary" data-role="start">Einsatz starten</button>
           </section>
           <section>
@@ -45,10 +52,13 @@ export class MenuScreen extends Overlay {
             </table>
           </section>
         </div>
-        <footer class="menu-footer">Ausbaustufe 1 · Grundgerüst</footer>
+        <footer class="menu-footer">Erprobung · Walker und Cockpit</footer>
       </div>`;
 
     this.items = [...this.root.querySelectorAll('.mission-item')];
+    this.walkerSelect = this.root.querySelector('[data-role="walker"]');
+    this.walkerSelect.value = 'bastion';
+    this.walkerSelect.addEventListener('keydown', (e) => e.stopPropagation());
     this.briefing = this.root.querySelector('[data-role="briefing"]');
     this.items.forEach((el) => {
       el.addEventListener('click', () => this.select(Number(el.dataset.index)));
@@ -69,6 +79,6 @@ export class MenuScreen extends Overlay {
   }
 
   start() {
-    this.onStart(MISSIONS[this.selected].id);
+    this.onStart(MISSIONS[this.selected].id, this.walkerSelect.value);
   }
 }

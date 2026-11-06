@@ -32,6 +32,7 @@ export const DEFAULT_BINDINGS = {
     toggleDebug: ['F3'],
     toggleWireframe: ['F4'],
     debugFreeCam: ['F7'],
+    externalView: ['KeyK'],
     pause: ['Escape', 'KeyP'],
     confirm: ['Enter', 'NumpadEnter'],
   },
@@ -101,6 +102,7 @@ export const ACTION_LABELS = {
   toggleDebug: 'Debug-Overlay',
   toggleWireframe: 'Drahtgitter',
   debugFreeCam: 'Debug-Freiflug',
+  externalView: 'Außenkamera',
   pause: 'Pause',
   confirm: 'Bestätigen',
 };

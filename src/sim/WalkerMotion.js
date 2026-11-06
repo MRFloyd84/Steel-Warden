@@ -152,7 +152,9 @@ export class WalkerMotion {
   }
 
   updateGait(dt) {
-    const speedAbs = Math.abs(this.speed);
+    // Turning on the spot also makes the legs step.
+    const yawSpeed = Math.abs(this.turnInput) * this.w.turnRate * DEG * this.feel.turnStepRadius;
+    const speedAbs = Math.abs(this.speed) + yawSpeed;
     this.motionAmount += (Math.min(1, speedAbs / (this.w.maxSpeed * 0.3)) - this.motionAmount) * damp(4, dt);
     this.stepPhase += (speedAbs / this.stride) * Math.PI * dt;
     const steps = Math.floor(this.stepPhase / Math.PI);
@@ -179,6 +181,10 @@ export class WalkerMotion {
     p.pitch = this.pitch + this.pitchSpring.value - sag * this.slumpPitch;
     p.roll = this.swayAmp * s * this.motionAmount + this.rollSpring.value;
     p.aimPitch = this.pitch;
+    p.legYaw = this.legYaw;
+    p.stepPhase = this.stepPhase;
+    p.motionAmount = this.motionAmount;
+    p.speed = this.speed;
     p.headY = this.headY.value;
     p.headZ = this.headZ.value;
   }
@@ -194,7 +200,10 @@ export class WalkerMotion {
 }
 
 function makePose() {
-  return { x: 0, y: 0, z: 0, yaw: 0, pitch: 0, roll: 0, aimPitch: 0, headY: 0, headZ: 0 };
+  return {
+    x: 0, y: 0, z: 0, yaw: 0, pitch: 0, roll: 0, aimPitch: 0, headY: 0, headZ: 0,
+    legYaw: 0, stepPhase: 0, motionAmount: 0, speed: 0,
+  };
 }
 
 function copyPose(dst, src) {
@@ -204,8 +213,10 @@ function copyPose(dst, src) {
 /** Interpolates two poses; yaw is unwrapped so it never spins the long way. */
 export function lerpPose(out, a, b, t) {
   for (const k in a) out[k] = a[k] + (b[k] - a[k]) * t;
-  let dy = b.yaw - a.yaw;
-  dy = Math.atan2(Math.sin(dy), Math.cos(dy));
-  out.yaw = a.yaw + dy * t;
+  for (const k of ['yaw', 'legYaw']) {
+    let d = b[k] - a[k];
+    d = Math.atan2(Math.sin(d), Math.cos(d));
+    out[k] = a[k] + d * t;
+  }
   return out;
 }

@@ -9,6 +9,7 @@ export const compassDeg = (yaw) => ((((-yaw / DEG) % 360) + 360) % 360);
 export function createCockpitData(walker, mission, systems) {
   return {
     walkerName: walker.name,
+    reactorOutput: walker.reactorOutput,
     maxSpeed: walker.maxSpeed,
     maxReverseSpeed: walker.maxReverseSpeed,
     twistLimit: walker.torsoTwistLimit,
@@ -54,6 +55,8 @@ export function updateCockpitData(d, dt, { motion: m, controls: c, systems, stic
   d.energyPreset = c.has('energyPreset') ? c.positionLabel('energyPreset') : '';
   d.radioChannel = c.has('radioChannel') ? c.positionLabel('radioChannel') : '';
   d.sensors = s.sensors.level;
+  d.extraCircuit = systems.extraCircuit;
+  d.circuit2 = f.reactor2Running;
   d.sensorsReadyFor = f.sensorsReady ? d.sensorsReadyFor + dt : 0;
   for (const side of ['front', 'rear', 'left', 'right']) d.shields[side] = s.shields.level;
   for (const nav of d.navPoints) {

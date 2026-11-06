@@ -1,6 +1,6 @@
 import { SYSTEMS } from '../data/systems.js';
 import { updateElectrical } from './systems/electrical.js';
-import { updateCoolant, updateReactor, tryIgnite, resetIgnitionLockout } from './systems/reactor.js';
+import { updateCoolant, updateReactor, tryIgnite, tryIgniteCircuit2, resetIgnitionLockout } from './systems/reactor.js';
 import {
   updateHydraulics, updateMonitors, startMonitorTest, monitorStatus,
   startGyro, updateGyro, updateSubsystems,
@@ -19,13 +19,14 @@ import { updateLamps } from './systems/lamps.js';
  * consequences.
  */
 export class WalkerSystems {
-  constructor(controls, bus, { randomEvents = false, monitorIds = [] } = {}) {
+  constructor(controls, bus, { randomEvents = false, monitorIds = [], overrides = {}, extraCircuit = false } = {}) {
     this.c = controls;
     this.bus = bus;
-    this.cfg = SYSTEMS;
+    this.cfg = deepMerge(structuredClone(SYSTEMS), overrides);
+    this.extraCircuit = extraCircuit && controls.has('reactor2Ignition');
     this.randomEvents = randomEvents;
     this.time = 0;
-    this.s = createState(SYSTEMS, monitorIds);
+    this.s = createState(this.cfg, monitorIds);
     this.flags = {};
     this.applyingHot = false;
     this.offs = [
@@ -48,6 +49,9 @@ export class WalkerSystems {
         break;
       case 'reactorIgnition':
         if (value === 1 && prev === 0) tryIgnite(this);
+        break;
+      case 'reactor2Ignition':
+        if (value === 1 && prev === 0 && this.extraCircuit) tryIgniteCircuit2(this);
         break;
       case 'mainBus':
         // A trip by the system has its own event (busTrip).
@@ -107,7 +111,9 @@ export class WalkerSystems {
     f.preheatOk = (r.mode === 'cold' || r.mode === 'shutdown') && mode >= 1 && r.temp >= k.ignitionMinTemp && r.temp <= k.preheatMaxTemp && f.busPowered;
     f.reactorRunning = r.mode === 'running';
     f.onReactorBus = s.power.source === 'main';
-    f.reactorFull = f.reactorRunning && mode === 2 && r.power >= k.fullPower * 0.95;
+    f.extraCircuit = this.extraCircuit;
+    f.reactor2Running = s.reactor2.mode === 'running';
+    f.reactorFull = f.reactorRunning && mode === 2 && r.power >= k.fullPower * 0.95 && (!this.extraCircuit || f.reactor2Running);
     f.hydraulicsReady = s.hydraulics.pressure >= cfg.hydraulics.readyPressure;
     f.monitorsTested = !!s.monitors.tested;
     f.gyroAligned = s.gyro.mode === 'aligned';
@@ -149,7 +155,9 @@ export class WalkerSystems {
     const c = this.c;
     this.applyingHot = true;
     for (const id of ['batteryMaster', 'reactorIgnition', 'weaponsArm', 'legLock']) if (c.has(id)) c.setGuard(id, true, 'system');
+    if (c.has('reactor2Ignition')) c.setGuard('reactor2Ignition', true, 'system');
     const finalPositions = {
+      reactor2Ignition: 1,
       batteryMaster: 1, coolantPump1: 1, coolantPump2: 1, reactorMode: 2, reactorIgnition: 1,
       mainBus: 1, hydraulics: 1, sensors: 1, shields: 1, weaponsArm: 1, legLock: 1,
     };
@@ -165,6 +173,7 @@ export class WalkerSystems {
     s.coolant.flow = 1;
     s.reactor.mode = 'running';
     s.reactor.power = k.fullPower;
+    s.reactor2.mode = this.extraCircuit ? 'running' : 'off';
     s.reactor.temp = k.coolantSetpoint + (k.heatBase + k.heatPerPower * k.fullPower) / k.coolingPerFlow;
     s.hydraulics.pressure = cfg.hydraulics.maxPressure;
     for (const m of Object.values(s.monitors.units)) {
@@ -188,7 +197,7 @@ export class WalkerSystems {
     const s = this.s;
     const r = s.reactor;
     return `Sys ${s.battery.volts.toFixed(1)}V ${s.power.source}${s.power.fault ? '!' : ''}  APU ${(s.apu.rpm * 100).toFixed(0)}% ${s.apu.mode}  `
-      + `K ${s.coolant.p1.toFixed(1)}/${s.coolant.p2.toFixed(1)}  R ${r.mode} ${r.temp.toFixed(0)}°C ${(r.power * 100).toFixed(0)}%${r.lockout ? ' SPERRE' : ''}  `
+      + `K ${s.coolant.p1.toFixed(1)}/${s.coolant.p2.toFixed(1)}  R ${r.mode} ${r.temp.toFixed(0)}°C ${(r.power * 100).toFixed(0)}%${r.lockout ? ' SPERRE' : ''}${this.extraCircuit ? ` K2 ${s.reactor2.mode}` : ''}  `
       + `H ${s.hydraulics.pressure.toFixed(0)}  G ${(s.gyro.align * 100).toFixed(0)}%  S/Sch/W ${s.sensors.level.toFixed(1)}/${s.shields.level.toFixed(1)}/${s.weapons.level.toFixed(1)}  `
       + `Beine ${s.legs.released ? 'frei' : 'fest'}`;
   }
@@ -214,6 +223,7 @@ function createState(cfg, monitorIds) {
       temp: cfg.reactor.ambient, power: 0, mode: 'cold', ignT: 0, heater: false,
       lockout: false, failUntil: -Infinity, flickerUntil: -Infinity, scramAt: -Infinity, restartNeeded: false,
     },
+    reactor2: { mode: 'off', t: 0 },
     hydraulics: { pressure: 0, rising: 0 },
     monitors: { units, order, testing: false, tested: false },
     gyro: { align: 0, mode: 'off', willFail: false },
@@ -223,4 +233,13 @@ function createState(cfg, monitorIds) {
     legs: { released: false },
     random: { pump2Tried: false, gyroTried: false },
   };
+}
+
+/** Merges plain-object overrides into target (arrays and values replace). */
+function deepMerge(target, src) {
+  for (const [k, v] of Object.entries(src ?? {})) {
+    if (v && typeof v === 'object' && !Array.isArray(v) && target[k] && typeof target[k] === 'object') deepMerge(target[k], v);
+    else target[k] = v;
+  }
+  return target;
 }

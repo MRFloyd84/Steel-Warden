@@ -3,6 +3,7 @@ import { SystemDisplay } from './SystemDisplay.js';
 import { DamageDisplay } from './DamageDisplay.js';
 import { TargetDisplay } from './TargetDisplay.js';
 import { WeaponDisplay } from './WeaponDisplay.js';
+import { EnergyDisplay } from './EnergyDisplay.js';
 
 /** Display modules referenced by monitor items in panelLayouts.js (display: '<name>'). */
 export const DISPLAYS = {
@@ -11,6 +12,7 @@ export const DISPLAYS = {
   damage: DamageDisplay,
   target: TargetDisplay,
   weapons: WeaponDisplay,
+  energy: EnergyDisplay,
 };
 
 export function getDisplay(name) {

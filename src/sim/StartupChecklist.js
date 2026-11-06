@@ -7,9 +7,10 @@ import { CHECKLISTS } from '../data/systems.js';
  * complete. Pure evaluation — it never blocks anything.
  */
 export class StartupChecklist {
-  constructor(mode) {
+  constructor(mode, features = {}) {
     this.mode = mode === 'simple' ? 'simple' : 'full';
-    this.lists = { main: CHECKLISTS[this.mode], restart: CHECKLISTS.restart };
+    const has = (step) => !step.requires || features[step.requires];
+    this.lists = { main: CHECKLISTS[this.mode].filter(has), restart: CHECKLISTS.restart.filter(has) };
     this.done = { main: new Set(), restart: new Set() };
     this.active = 'main';
     this.version = 0; // bumps on every visible change (for redraws)

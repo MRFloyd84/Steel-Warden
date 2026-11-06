@@ -63,6 +63,8 @@ export const SYSTEMS = {
     scramPowerRate: 1.5,
     failBlinkTime: 5, // REAKTOR lamp blinks this long after a failed ignition
     flickerTime: 1.2, // cockpit lights flicker after ignition
+    singleCircuitMax: 0.6, // assault class: power limit until circuit 2 runs
+    circuit2Time: 2.5,
   },
 
   hydraulics: {
@@ -77,7 +79,7 @@ export const SYSTEMS = {
   },
 
   monitors: {
-    bootOrder: ['mfdSystem', 'mfdRadar', 'mfdDamage', 'mfdTarget', 'mfdWeapons'],
+    bootOrder: ['mfdSystem', 'mfdRadar', 'mfdDamage', 'mfdTarget', 'mfdEnergy', 'mfdWeapons'],
     batteryMonitor: 'mfdSystem', // runs on battery alone, without the test
     stagger: 1.1, // s between monitors during the test
     flickerTime: 0.5,
@@ -91,6 +93,7 @@ export const SYSTEMS = {
       mfdDamage: [['RAM', 'always'], ['SENSORNETZ', 'busPowered'], ['REAKTOR', 'reactorRunning'], ['KÜHLUNG', 'coolantOk']],
       mfdTarget: [['RAM', 'always'], ['VIDEO', 'always'], ['ZIELRECHNER', 'onReactorBus']],
       mfdWeapons: [['RAM', 'always'], ['FEUERLEITUNG', 'onReactorBus'], ['HYDRAULIK', 'hydraulicsReady']],
+      mfdEnergy: [['RAM', 'always'], ['LEISTUNGSMESSUNG', 'reactorRunning'], ['KÜHLKREIS', 'coolantOk']],
     },
   },
 
@@ -111,6 +114,16 @@ export const SYSTEMS = {
   },
 };
 
+/**
+ * Reactor power split per ENERGIE knob position (shields / weapons / drive).
+ * Shown on the energy monitor now; the weapons step makes it effective.
+ */
+export const ENERGY_PRESETS = {
+  SCHILD: { shields: 0.5, weapons: 0.25, drive: 0.25 },
+  AUSGL: { shields: 0.34, weapons: 0.33, drive: 0.33 },
+  WAFFE: { shields: 0.25, weapons: 0.5, drive: 0.25 },
+};
+
 /** Radio lines (sender, text) for system events. */
 export const RADIO = {
   coldStart: { from: 'TECHNIK', text: 'Walker ist kalt. Checkliste mit C, Schalter im freien Blick (V).' },
@@ -126,7 +139,8 @@ export const RADIO = {
 /**
  * Checklists. Each step names a flag from WalkerSystems.flags; a step is
  * ticked the first time its flag becomes true. `restart` replaces the
- * display after an emergency shutdown.
+ * display after an emergency shutdown. `requires` limits a step to walkers
+ * with that feature (e.g. the assault class's second reactor circuit).
  */
 export const CHECKLISTS = {
   full: [
@@ -143,6 +157,7 @@ export const CHECKLISTS = {
     { text: 'SCHILDE — EIN', flag: 'shieldsReady' },
     { text: 'WAFFEN — KAPPE AUF, SCHARF', flag: 'weaponsReady' },
     { text: 'BEINSPERRE — LÖSEN', flag: 'legsReleased' },
+    { text: 'ZÜNDUNG KREIS 2 — KAPPE AUF, ZÜNDEN', flag: 'reactor2Running', requires: 'extraCircuit' },
     { text: 'BETRIEBSART — BETR (VOLLE LEISTUNG)', flag: 'reactorFull' },
   ],
   simple: [
@@ -158,6 +173,7 @@ export const CHECKLISTS = {
     { text: 'ZÜNDKAPPE — SCHLIESSEN, ÖFFNEN', flag: 'ignitionReset' },
     { text: 'ZÜNDUNG — NEU ZÜNDEN', flag: 'reactorRunning' },
     { text: 'HAUPTBUS — REAKT', flag: 'onReactorBus' },
+    { text: 'ZÜNDUNG KREIS 2 — NEU ZÜNDEN', flag: 'reactor2Running', requires: 'extraCircuit' },
     { text: 'BETRIEBSART — BETR', flag: 'reactorFull' },
   ],
 };
@@ -184,5 +200,6 @@ export const STARTUP_SCRIPT = [
   { id: 'shields', actions: [['set', 'shields', 1]], flag: 'shieldsReady' },
   { id: 'weapons', player: ['simple'], actions: [['guard', 'weaponsArm', true], ['set', 'weaponsArm', 1]], flag: 'weaponsReady' },
   { id: 'legs', player: ['simple'], actions: [['guard', 'legLock', true], ['set', 'legLock', 1]], flag: 'legsReleased' },
+  { id: 'circuit2', requires: 'extraCircuit', actions: [['guard', 'reactor2Ignition', true], ['set', 'reactor2Ignition', 1]], flag: 'reactor2Running', timeout: 8 },
   { id: 'fullPower', actions: [['set', 'reactorMode', 2]], flag: 'reactorFull' },
 ];

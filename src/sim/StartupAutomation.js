@@ -53,7 +53,7 @@ export class StartupAutomation {
       this.stop();
       return;
     }
-    const done = flags[step.flag] || (step.skipIf ?? []).some((f) => flags[f]);
+    const done = flags[step.flag] || (step.skipIf ?? []).some((f) => flags[f]) || (step.requires && !flags[step.requires]);
 
     switch (this.phase) {
       case 'next':

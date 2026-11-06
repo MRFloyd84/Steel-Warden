@@ -21,8 +21,12 @@ import { SystemsAudio } from '../audio/SystemsAudio.js';
 import { RadioLog } from '../ui/RadioLog.js';
 import { RADIO } from '../data/systems.js';
 import { SystemsLink } from './SystemsLink.js';
-import { createCockpitData, updateCockpitData, compassDeg } from './cockpitData.js';
-import { DEG, damp } from '../util/math.js';
+import { MissionEntities } from './MissionEntities.js';
+import { missionDebugLines } from './missionDebug.js';
+import { ChaseCamera } from '../render/ChaseCamera.js';
+import { WALKERS } from '../data/walkers.js';
+import { createCockpitData, updateCockpitData } from './cockpitData.js';
+import { damp } from '../util/math.js';
 
 const AIM_DISTANCE = 800;
 const START_MODES = ['full', 'simple', 'auto'];
@@ -32,12 +36,14 @@ const START_MODES = ['full', 'simple', 'auto'];
  * startup procedure, audio, pause, stats.
  */
 export class MissionState extends State {
-  enter({ missionId }) {
+  enter({ missionId, walkerId }) {
     const game = this.game;
     const cfg = game.config;
+    const params = new URLSearchParams(window.location.search);
     this.mission = getMission(missionId);
     this.world = new World(this.mission, cfg.terrain);
-    this.walker = getWalker(this.mission.playerStart.walker ?? 'bastion');
+    const chosen = walkerId ?? params.get('walker');
+    this.walker = getWalker(WALKERS[chosen] ? chosen : this.mission.playerStart.walker ?? 'bastion');
 
     const start = this.mission.playerStart;
     this.motion = new WalkerMotion(this.walker, this.world.sampler, cfg.feel, game.bus);
@@ -53,16 +59,17 @@ export class MissionState extends State {
     this.floodlight = new Floodlight(this.world.scene, cfg.floodlight);
 
     // Startup procedure
-    const params = new URLSearchParams(window.location.search);
     const urlMode = params.get('startmode');
     this.startMode = START_MODES.includes(urlMode) ? urlMode : cfg.startup.mode;
     this.systems = new WalkerSystems(this.controls, game.bus, {
       randomEvents: cfg.startup.randomEvents,
       monitorIds: this.cockpit.monitors.map((m) => m.id),
+      overrides: this.walker.systems,
+      extraCircuit: !!this.walker.cockpit.extraCircuit,
     });
     const hot = params.get('start') === 'hot';
     if (hot) this.systems.forceHot();
-    this.checklist = new StartupChecklist(this.startMode);
+    this.checklist = new StartupChecklist(this.startMode, { extraCircuit: this.systems.extraCircuit });
     if (hot) this.checklist.markAllDone();
     this.checklist.update(this.systems.flags);
     this.automation = new StartupAutomation(this.controls, this.startMode);
@@ -78,6 +85,15 @@ export class MissionState extends State {
       radio: (msg) => this.radioMessage(msg),
     });
     this.motion.place(start.x, start.z, start.heading); // again, now with the real stance
+    this.entities = new MissionEntities({
+      scene: this.world.scene,
+      sampler: this.world.sampler,
+      feel: cfg.feel,
+      mission: this.mission,
+      player: { walker: this.walker, motion: this.motion },
+    });
+    this.viewMode = 'cockpit'; // 'cockpit' | 'external'
+    this.chase = new ChaseCamera(game.renderer.camera, this.world.sampler);
 
     this.cockpitAudio = new CockpitAudio(game.audio, game.bus, this.cockpit, this.walker);
     this.systemsAudio = new SystemsAudio(game.audio, game.bus, this.systems, this.walker);
@@ -141,6 +157,7 @@ export class MissionState extends State {
     this.systems.dispose();
     this.radioLog.destroy();
     this.floodlight.dispose();
+    this.entities.dispose();
     this.hints.destroy();
     this.cursor.destroy();
     this.pauseScreen.destroy();
@@ -194,6 +211,8 @@ export class MissionState extends State {
     }
 
     if (input.wasPressed('debugFreeCam')) this.toggleFreeCam();
+    if (input.wasPressed('externalView')) this.viewMode = this.viewMode === 'cockpit' ? 'external' : 'cockpit';
+    const external = this.viewMode === 'external';
     if (input.wasPressed('toggleWireframe')) {
       this.wireframe = !this.wireframe;
       this.world.terrain.setWireframe(this.wireframe);
@@ -213,13 +232,18 @@ export class MissionState extends State {
     }
 
     this.view.setHold(input.isDown('freeLookHold') && !this.freeCam);
-    if (this.view.freeLook) this.interaction.activate();
+    if (this.view.freeLook && !external) this.interaction.activate();
     else this.interaction.deactivate();
 
     let look = { x: 0, y: 0 };
     if (this.freeCam) {
       look = input.lookDelta(dt);
       this.debugRig.look(look.x, look.y);
+    } else if (this.view.freeLook && external) {
+      // Outside view: free look orbits the camera around the walker.
+      look = input.lookDelta(dt);
+      this.view.look(look.x, look.y);
+      look = { x: 0, y: 0 };
     } else if (this.view.freeLook) {
       // Mouse moves the cockpit cursor; pushing past the screen edge turns the head.
       const m = input.mouse.consumeDelta();
@@ -273,6 +297,7 @@ export class MissionState extends State {
       });
       this.world.update(this.motion.pose);
     }
+    this.entities.update(dt);
     this.systems.update(dt);
     this.checklist.update(this.systems.flags);
     this.automation.update(dt, this.systems.flags);
@@ -285,6 +310,10 @@ export class MissionState extends State {
     const renderer = game.renderer;
     const a = this.paused ? 1 : alpha;
 
+    const fdt = this.paused ? 0 : this.frameDt;
+    const external = this.viewMode === 'external';
+    this.entities.render(a, fdt, this.freeCam || external);
+
     if (this.freeCam) {
       this.debugRig.apply(a);
       this.world.beforeRender(renderer.camera);
@@ -295,8 +324,20 @@ export class MissionState extends State {
 
     lerpPose(this.renderPose, this.motion.prevPose, this.motion.pose, a);
     this.view.apply(this.renderPose);
+    if (external) {
+      this.chase.apply(this.renderPose, this.walker.cockpit.eyeHeight, this.view, fdt);
+      this.link.frame();
+      this.world.beforeRender(renderer.camera);
+      renderer.render(this.world.scene);
+      if (!this.paused) {
+        this.cockpitAudio.update(this.motion, this.systems.flags.busPowered);
+        this.systemsAudio.update();
+      }
+      this.radioLog.update(this.stats.duration);
+      this.hints.update({ reticle: null, tag: 'AUSSENKAMERA', locked: game.input.mouse.locked || this.paused });
+      return;
+    }
     this.floodlight.update(this.renderPose, this.view.torsoQuat, this.view.aimDir);
-    const fdt = this.paused ? 0 : this.frameDt;
     this.link.frame();
     updateCockpitData(this.data, fdt, { motion: this.motion, controls: this.controls, systems: this.systems, stick: this.stickVisual });
     this.cockpit.update(fdt, this.data, this.view.torsoQuat, this.checklist, renderer.cockpitCamera);
@@ -320,22 +361,7 @@ export class MissionState extends State {
   }
 
   debugInfo() {
-    const m = this.motion;
-    const p = m.pose;
-    const t = this.world.terrain.stats;
-    const ground = this.world.sampler.heightAt(p.x, p.z);
-    return [
-      `Mission ${this.mission.id}  ${this.mission.theater}/${this.mission.timeOfDay}  walker ${this.walker.id}`,
-      `Pos ${p.x.toFixed(1)} ${p.y.toFixed(1)} ${p.z.toFixed(1)}  ground ${ground.toFixed(1)}  grade ${m.grade.toFixed(2)}`,
-      `Throttle ${m.throttle.value.toFixed(2)}${m.throttle.detentHold ? ' (Raste)' : ''}  speed ${(m.speed * 3.6).toFixed(1)} km/h`,
-      `Legs ${compassDeg(m.legYaw).toFixed(0)}°  twist ${(m.twist / DEG).toFixed(1)}°  pitch ${(m.pitch / DEG).toFixed(1)}°`,
-      `Head ${(this.view.yaw / DEG).toFixed(0)}/${(this.view.pitch / DEG).toFixed(0)}°  freeLook ${this.view.freeLook ? 'on' : 'off'}  light ${this.cockpit.lightMode}`,
-      `Hover ${this.interaction.hover?.id ?? '-'}${this.interaction.hover?.part ? '/' + this.interaction.hover.part : ''}  held ${this.interaction.held?.id ?? '-'}  flood ${this.floodlight.on ? 'on' : 'off'}`,
-      `Chunks ${t.chunks} (LOD ${t.perLod.join('/')})  queue ${t.queued}  cam ${this.freeCam ? 'free' : 'cockpit'}`,
-      `Entities 1  Wireframe ${this.wireframe ? 'on' : 'off'} [F4]`,
-      this.systems.debugLine(),
-      `${this.checklist.debugLine()}  Start ${this.startMode}${this.automation.active ? ` · Automatik ${this.automation.currentStep}` : ''}`,
-    ];
+    return missionDebugLines(this);
   }
 }
 

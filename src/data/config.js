@@ -69,6 +69,7 @@ export const CONFIG = {
     uphillDrag: 1.6, // speed loss per unit of grade
     downhillBoost: 0.4,
     maxGrade: 1.1, // steeper than this blocks movement
+    turnStepRadius: 2.5, // m — turning on the spot steps like walking this fast per rad/s
   },
 
   // Torso-mounted searchlight (SCHEINWERFER switch).

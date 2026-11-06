@@ -194,3 +194,9 @@ td:first-child { color: var(--green-dim); }
   background: rgba(0, 0, 0, 0.6); border-left: 2px solid var(--green-dim);
 }
 .radio-from { color: var(--amber); letter-spacing: 0.1em; }
+
+.walker-pick { display: block; margin-top: 12px; font-size: 11px; color: var(--green-dim); letter-spacing: 0.1em; text-transform: uppercase; }
+.walker-pick select {
+  display: block; width: 100%; margin-top: 4px; padding: 6px 8px; font: inherit; font-size: 12px;
+  text-transform: none; letter-spacing: 0; color: var(--amber); background: #0c140e; border: 1px solid var(--line);
+}

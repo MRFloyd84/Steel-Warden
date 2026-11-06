@@ -1,22 +1,97 @@
 /**
  * Playable walkers. Units: tonnage t, speeds m/s, accelerations m/s²,
- * angles degrees, rates degrees/s, positions metres in model space
- * (origin at ground between the feet, -Z forward).
+ * angles degrees, rates degrees/s.
  *
- * hardpoint.type: 'energy' | 'ballistic' | 'missile' | 'universal'
- * hardpoint.size: 'S' | 'M' | 'L'
- * hardpoint.arc:  aim limits relative to the torso { yaw: [min, max], pitch: [min, max] }
- *
- * Only BASTION exists so far; the other five follow with the walker builder.
+ * hardpoint.type:  'energy' | 'ballistic' | 'missile' | 'universal'
+ * hardpoint.size:  'S' | 'M' | 'L'
+ * hardpoint.mount: attachment point on the model ('armL.0', 'shoulderR', 'torsoC', …).
+ *                  The 3D position follows from the model (walkerModels.js), so data and
+ *                  geometry can't drift apart; WalkerModel exposes it as hardpointPositions.
+ * hardpoint.arc:   aim limits relative to the torso { yaw: [min, max], pitch: [min, max] }
+ * build:           cost in scrap and build time in missions (workshop, campaign phase)
+ * systems:         overrides for data/systems.js — light walkers start faster, heavy ones slower
+ * cockpit.extraCircuit: second reactor circuit (assault class) — needs the 'assault' panel layout
  */
+const ARM = { yaw: [-10, 10], pitch: [-15, 20] };
+const FIXED = { yaw: [0, 0], pitch: [0, 0] };
+
 export const WALKERS = {
+  kestrel: {
+    id: 'kestrel',
+    name: 'KESTREL LW-2',
+    manufacturer: 'Aldenburg Leichtbau',
+    class: 'light',
+    role: 'Aufklärer',
+    tonnage: 25,
+    maxSpeed: 24,
+    maxReverseSpeed: 8,
+    acceleration: 7,
+    turnRate: 75,
+    torsoTwistLimit: 100,
+    torsoTwistRate: 110,
+    torsoPitchLimit: [-20, 26],
+    torsoPitchRate: 70,
+    reactorOutput: 180,
+    heatCapacity: 60,
+    heatDissipation: 6,
+    shields: { front: 80, rear: 40, left: 60, right: 60, rechargeRate: 6 },
+    armor: { torso: 120, armL: 60, armR: 60, legs: 100, sensors: 50, reactor: 70 },
+    hardpoints: [
+      { id: 'LA', location: 'armL', size: 'S', type: 'energy', mount: 'armL.0', arc: ARM },
+      { id: 'RA', location: 'armR', size: 'S', type: 'universal', mount: 'armR.0', arc: ARM },
+      { id: 'CT', location: 'torso', size: 'S', type: 'missile', mount: 'torsoC', arc: FIXED },
+    ],
+    maxLoadoutWeight: 6,
+    jumpJets: { thrust: 14, fuel: 4 },
+    cockpit: { variant: 'compact', eyeHeight: 6.2, canopyShape: 'bubble', panelLayout: 'compact', serial: 'LW2-25-1183' },
+    sound: { stepPitch: 1.4, servoPitch: 1.3, reactorHum: 0.75 },
+    geometry: 'kestrel',
+    build: { scrap: 140, missions: 1 },
+    systems: { apu: { crankRate: 0.3 }, reactor: { preheatRate: 70 }, gyro: { alignTime: 6 }, hydraulics: { mainRate: 55 } },
+  },
+
+  marder: {
+    id: 'marder',
+    name: 'MARDER LW-4',
+    manufacturer: 'Aldenburg Leichtbau',
+    class: 'light',
+    role: 'Jäger',
+    tonnage: 35,
+    maxSpeed: 20,
+    maxReverseSpeed: 7,
+    acceleration: 6,
+    turnRate: 65,
+    torsoTwistLimit: 110,
+    torsoTwistRate: 130,
+    torsoPitchLimit: [-20, 24],
+    torsoPitchRate: 65,
+    reactorOutput: 230,
+    heatCapacity: 75,
+    heatDissipation: 6.5,
+    shields: { front: 100, rear: 50, left: 70, right: 70, rechargeRate: 7 },
+    armor: { torso: 170, armL: 90, armR: 90, legs: 140, sensors: 55, reactor: 100 },
+    hardpoints: [
+      { id: 'LA', location: 'armL', size: 'M', type: 'ballistic', mount: 'armL.0', arc: ARM },
+      { id: 'RA', location: 'armR', size: 'M', type: 'energy', mount: 'armR.0', arc: ARM },
+      { id: 'LT', location: 'torso', size: 'S', type: 'energy', mount: 'torsoL', arc: FIXED },
+      { id: 'RT', location: 'torso', size: 'S', type: 'missile', mount: 'torsoR', arc: FIXED },
+    ],
+    maxLoadoutWeight: 10,
+    jumpJets: null,
+    cockpit: { variant: 'compact', eyeHeight: 6.9, canopyShape: 'wedge', panelLayout: 'compact', serial: 'LW4-35-0562' },
+    sound: { stepPitch: 1.25, servoPitch: 1.2, reactorHum: 0.85 },
+    geometry: 'marder',
+    build: { scrap: 190, missions: 1 },
+    systems: { apu: { crankRate: 0.28 }, reactor: { preheatRate: 62 }, gyro: { alignTime: 7 }, hydraulics: { mainRate: 50 } },
+  },
+
   bastion: {
     id: 'bastion',
     name: 'BASTION MW-1',
     manufacturer: 'Vossberg Maschinenbau',
     class: 'medium',
+    role: 'Allrounder',
     tonnage: 50,
-
     maxSpeed: 16,
     maxReverseSpeed: 6,
     acceleration: 4.5,
@@ -25,36 +100,140 @@ export const WALKERS = {
     torsoTwistRate: 75,
     torsoPitchLimit: [-18, 24],
     torsoPitchRate: 45,
-
     reactorOutput: 320,
     heatCapacity: 100,
     heatDissipation: 7,
-
     shields: { front: 120, rear: 60, left: 90, right: 90, rechargeRate: 8 },
     armor: { torso: 240, armL: 120, armR: 120, legs: 200, sensors: 60, reactor: 140 },
-
     hardpoints: [
-      { id: 'LA1', location: 'armL', size: 'M', type: 'energy', position: [-2.3, 6.4, -0.9], arc: { yaw: [-10, 10], pitch: [-15, 20] } },
-      { id: 'LA2', location: 'armL', size: 'S', type: 'universal', position: [-2.3, 5.8, -0.7], arc: { yaw: [-10, 10], pitch: [-15, 20] } },
-      { id: 'RA1', location: 'armR', size: 'M', type: 'ballistic', position: [2.3, 6.4, -0.9], arc: { yaw: [-10, 10], pitch: [-15, 20] } },
-      { id: 'RA2', location: 'armR', size: 'S', type: 'universal', position: [2.3, 5.8, -0.7], arc: { yaw: [-10, 10], pitch: [-15, 20] } },
-      { id: 'LS', location: 'torso', size: 'M', type: 'missile', position: [-1.3, 8.9, 0.2], arc: { yaw: [0, 0], pitch: [0, 0] } },
-      { id: 'RS', location: 'torso', size: 'M', type: 'missile', position: [1.3, 8.9, 0.2], arc: { yaw: [0, 0], pitch: [0, 0] } },
+      { id: 'LA1', location: 'armL', size: 'M', type: 'energy', mount: 'armL.0', arc: ARM },
+      { id: 'LA2', location: 'armL', size: 'S', type: 'universal', mount: 'armL.1', arc: ARM },
+      { id: 'RA1', location: 'armR', size: 'M', type: 'ballistic', mount: 'armR.0', arc: ARM },
+      { id: 'RA2', location: 'armR', size: 'S', type: 'universal', mount: 'armR.1', arc: ARM },
+      { id: 'LS', location: 'torso', size: 'M', type: 'missile', mount: 'shoulderL', arc: FIXED },
+      { id: 'RS', location: 'torso', size: 'M', type: 'missile', mount: 'shoulderR', arc: FIXED },
     ],
     maxLoadoutWeight: 16,
     jumpJets: null,
-
-    cockpit: {
-      variant: 'standard',
-      eyeHeight: 9.2,
-      canopyShape: 'faceted',
-      panelLayout: 'standard',
-      serial: 'MW1-50-0417',
-    },
+    cockpit: { variant: 'standard', eyeHeight: 9.2, canopyShape: 'faceted', panelLayout: 'standard', serial: 'MW1-50-0417' },
     sound: { stepPitch: 1.0, servoPitch: 1.0, reactorHum: 1.0 },
     geometry: 'bastion',
+    build: { scrap: 260, missions: 2 },
+    systems: {},
+  },
+
+  halberd: {
+    id: 'halberd',
+    name: 'HALBERD MW-3',
+    manufacturer: 'Vossberg Maschinenbau',
+    class: 'medium',
+    role: 'Unterstützung',
+    tonnage: 60,
+    maxSpeed: 13.5,
+    maxReverseSpeed: 5,
+    acceleration: 3.8,
+    turnRate: 38,
+    torsoTwistLimit: 110,
+    torsoTwistRate: 50,
+    torsoPitchLimit: [-15, 22],
+    torsoPitchRate: 35,
+    reactorOutput: 340,
+    heatCapacity: 110,
+    heatDissipation: 7.5,
+    shields: { front: 140, rear: 70, left: 100, right: 100, rechargeRate: 9 },
+    armor: { torso: 280, armL: 130, armR: 130, legs: 230, sensors: 70, reactor: 160 },
+    hardpoints: [
+      { id: 'LS', location: 'torso', size: 'L', type: 'missile', mount: 'shoulderL', arc: FIXED },
+      { id: 'RS', location: 'torso', size: 'L', type: 'missile', mount: 'shoulderR', arc: FIXED },
+      { id: 'LA', location: 'armL', size: 'M', type: 'universal', mount: 'armL.0', arc: ARM },
+      { id: 'RA', location: 'armR', size: 'M', type: 'energy', mount: 'armR.0', arc: ARM },
+    ],
+    maxLoadoutWeight: 20,
+    jumpJets: null,
+    cockpit: { variant: 'standard', eyeHeight: 9.8, canopyShape: 'faceted', panelLayout: 'standard', serial: 'MW3-60-0230' },
+    sound: { stepPitch: 0.92, servoPitch: 0.85, reactorHum: 1.05 },
+    geometry: 'halberd',
+    build: { scrap: 320, missions: 2 },
+    systems: {},
+  },
+
+  goliath: {
+    id: 'goliath',
+    name: 'GOLIATH HW-2',
+    manufacturer: 'Hartwerk Schwermaschinen',
+    class: 'heavy',
+    role: 'Frontlinie',
+    tonnage: 80,
+    maxSpeed: 11,
+    maxReverseSpeed: 4,
+    acceleration: 2.6,
+    turnRate: 30,
+    torsoTwistLimit: 120,
+    torsoTwistRate: 45,
+    torsoPitchLimit: [-15, 20],
+    torsoPitchRate: 30,
+    reactorOutput: 450,
+    heatCapacity: 140,
+    heatDissipation: 9,
+    shields: { front: 200, rear: 100, left: 150, right: 150, rechargeRate: 12 },
+    armor: { torso: 420, armL: 220, armR: 220, legs: 340, sensors: 90, reactor: 240 },
+    hardpoints: [
+      { id: 'LA', location: 'armL', size: 'L', type: 'ballistic', mount: 'armL.0', arc: ARM },
+      { id: 'RA', location: 'armR', size: 'L', type: 'energy', mount: 'armR.0', arc: ARM },
+      { id: 'LT', location: 'torso', size: 'M', type: 'missile', mount: 'torsoL', arc: FIXED },
+      { id: 'RT', location: 'torso', size: 'M', type: 'ballistic', mount: 'torsoR', arc: FIXED },
+      { id: 'CT', location: 'torso', size: 'M', type: 'energy', mount: 'torsoC', arc: FIXED },
+    ],
+    maxLoadoutWeight: 28,
+    jumpJets: null,
+    cockpit: { variant: 'heavy', eyeHeight: 11.2, canopyShape: 'slit', panelLayout: 'heavy', serial: 'HW2-80-0071' },
+    sound: { stepPitch: 0.78, servoPitch: 0.75, reactorHum: 1.15 },
+    geometry: 'goliath',
+    build: { scrap: 430, missions: 2 },
+    systems: { apu: { crankRate: 0.17 }, reactor: { preheatRate: 38 }, gyro: { alignTime: 12 }, hydraulics: { mainRate: 28 } },
+  },
+
+  koloss: {
+    id: 'koloss',
+    name: 'KOLOSS AW-1',
+    manufacturer: 'Hartwerk Schwermaschinen',
+    class: 'assault',
+    role: 'Belagerung',
+    tonnage: 100,
+    maxSpeed: 8.5,
+    maxReverseSpeed: 3,
+    acceleration: 1.9,
+    turnRate: 24,
+    torsoTwistLimit: 90,
+    torsoTwistRate: 35,
+    torsoPitchLimit: [-12, 18],
+    torsoPitchRate: 24,
+    reactorOutput: 560,
+    heatCapacity: 180,
+    heatDissipation: 11,
+    shields: { front: 260, rear: 140, left: 200, right: 200, rechargeRate: 15 },
+    armor: { torso: 560, armL: 300, armR: 300, legs: 440, sensors: 120, reactor: 320 },
+    hardpoints: [
+      { id: 'LA', location: 'armL', size: 'L', type: 'energy', mount: 'armL.0', arc: ARM },
+      { id: 'RA', location: 'armR', size: 'L', type: 'ballistic', mount: 'armR.0', arc: ARM },
+      { id: 'LS', location: 'torso', size: 'L', type: 'missile', mount: 'shoulderL', arc: FIXED },
+      { id: 'RS', location: 'torso', size: 'L', type: 'missile', mount: 'shoulderR', arc: FIXED },
+      { id: 'LT', location: 'torso', size: 'M', type: 'universal', mount: 'torsoL', arc: FIXED },
+      { id: 'RT', location: 'torso', size: 'M', type: 'universal', mount: 'torsoR', arc: FIXED },
+    ],
+    maxLoadoutWeight: 38,
+    jumpJets: null,
+    cockpit: { variant: 'heavy', eyeHeight: 13.6, canopyShape: 'tower', panelLayout: 'assault', serial: 'AW1-100-0009', extraCircuit: true },
+    sound: { stepPitch: 0.66, servoPitch: 0.65, reactorHum: 1.25 },
+    geometry: 'koloss',
+    build: { scrap: 560, missions: 3 },
+    systems: { apu: { crankRate: 0.15 }, reactor: { preheatRate: 32, ignitionTime: 4 }, gyro: { alignTime: 13 }, hydraulics: { mainRate: 24 } },
   },
 };
+
+export const WALKER_ORDER = ['kestrel', 'marder', 'bastion', 'halberd', 'goliath', 'koloss'];
+
+export const CLASS_LABELS = { light: 'Leicht', medium: 'Mittel', heavy: 'Schwer', assault: 'Sturm' };
 
 export function getWalker(id) {
   const walker = WALKERS[id];

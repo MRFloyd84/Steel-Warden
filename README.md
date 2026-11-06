@@ -38,6 +38,15 @@ Schnellstart-Parameter (Dev und Build):
   physikalische Folgen statt Sperren. Checkliste auf einem 3D-Klemmbrett, Startmodi
   voll/einfach/auto, Neustart nach Notabschaltung, Funkmeldungen, Maschinengeräusche.
 
+- **Erweiterung Schritt 4 (Walker-Builder):** 6 Walker (KESTREL, MARDER, BASTION, HALBERD,
+  GOLIATH, KOLOSS) als prozedurale Low-Poly-Modelle aus Bauplänen (`data/walkerModels.js`),
+  Laufanimation mit Fuß-IK auf dem Gelände, Trefferzonen je Komponente, Hardpoint-Sockel.
+  Cockpit-Varianten compact/standard/heavy, Energiemonitor, zweiter Reaktorkreis (KOLOSS),
+  Startdauer je Klasse, Außenkamera, Walker-Wahl im Menü, Testmission „Paradeplatz".
+
+Fahrplan für die nächsten Phasen inklusive Stützpunkt, Bergung, Funk, Radar und Missionen:
+`docs/ROADMAP.md`.
+
 ## Bedienung im Cockpit
 
 - Rechte Maustaste halten oder `V`: freier Blick mit Cockpit-Cursor; Maus über den Bildrand
@@ -47,6 +56,8 @@ Schnellstart-Parameter (Dev und Build):
 - Taster und Lampen: gedrückt halten (Lampentest); Schubhebel: anklicken und ziehen
 - `C` oder Klick aufs Klemmbrett (links an der Wand): Checkliste holen und weglegen
 - `Shift+S`: automatische Startprozedur (Schalter bewegen sich sichtbar)
+- `K`: Außenkamera an/aus (rechte Maustaste/`V` kreist dann um den Walker), `F7`: Debug-Freiflug
+- Walker im Menü wählen oder per URL `?walker=kestrel|marder|bastion|halberd|goliath|koloss`
 
 ## Startprozedur
 
@@ -81,8 +92,9 @@ eingebettet, damit der Offline-Build per `file://` funktioniert. Klang und Misch
 ## Datenpflege
 
 - `src/data/config.js` – Engine-Einstellungen und Fahrgefühl (`feel`, `view`, `cockpit`)
-- `src/data/walkers.js` – Walker-Werte (bisher BASTION MW-1)
-- `src/data/cockpits.js` – Cockpit-Varianten: Kanzel, Paneele, Sitz, Kabel, Innenlicht
+- `src/data/walkers.js` – Walker-Werte, Hardpoints, Baukosten, Startdauer-Abweichungen
+- `src/data/walkerModels.js` – Baupläne der Walker-Modelle (Profil, Beine, Arme, Aufbauten, Farben)
+- `src/data/cockpits.js` – Cockpit-Varianten standard/compact/heavy: Kanzel, Paneele, Sitz, Kabel, Licht
 - `src/data/panelLayouts.js` – Schalter, Lampen, Monitore und Hebel auf den Paneelen
 - `src/data/sounds.js` – Sound-Ereignisse, Loops, Mischpult, Bewegungs- und Systemsounds
 - `src/data/systems.js` – Startprozedur: Werte, Checklisten, Automatik-Skript, Funksprüche

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 const DISPLAY_NAMES = {
-  radar: 'RADAR', system: 'SYSTEMSTATUS', damage: 'SCHADENSMODELL', target: 'ZIELMONITOR', weapons: 'WAFFENSTATUS',
+  radar: 'RADAR', system: 'SYSTEMSTATUS', damage: 'SCHADENSMODELL', target: 'ZIELMONITOR', weapons: 'WAFFENSTATUS', energy: 'ENERGIE',
 };
 const EDGE_MARGIN = 6; // px kept between cursor and screen edge
 const THROTTLE_PER_PX = 0.004;

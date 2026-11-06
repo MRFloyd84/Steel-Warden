@@ -8,7 +8,7 @@ export class MenuState extends State {
   enter() {
     const game = this.game;
     this.screen = new MenuScreen(game.container, game.input.bindings, {
-      onStart: (missionId) => game.states.change('mission', { missionId }),
+      onStart: (missionId, walkerId) => game.states.change('mission', { missionId, walkerId }),
     });
     this.screen.show();
 
