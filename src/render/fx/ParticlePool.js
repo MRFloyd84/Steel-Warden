@@ -65,6 +65,9 @@ export class ParticlePool {
     });
     this.points = new THREE.Points(g, this.material);
     this.points.frustumCulled = false;
+    // Effects are never hit by raycasts (cockpit picking would hit idle particles at the eye)
+    this.points.raycast = () => {};
+    this.points.userData.noPick = true;
     this.points.renderOrder = additive ? 6 : 5;
     scene.add(this.points);
     this.scene = scene;

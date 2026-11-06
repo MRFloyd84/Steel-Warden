@@ -57,6 +57,10 @@ export class CockpitDamageFx {
     this.haze = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 8), this.hazeMat);
     this.haze.renderOrder = 20;
     this.haze.visible = false;
+    for (const m of [this.glow, this.haze]) {
+      m.raycast = () => {};
+      m.userData.noPick = true;
+    }
     this.scene.add(this.glow, this.haze);
     this.emergency = new THREE.PointLight(cfg.critical.lightColor, 0, 3, 1.5);
     this.emergency.position.set(0, 0.25, -0.2);
