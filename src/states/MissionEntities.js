@@ -11,6 +11,8 @@ import { getWalker } from '../data/walkers.js';
  * step; they get their own event bus so their footsteps don't play in the
  * player's cockpit.
  */
+const IDLE = { throttleRate: 0, throttleAbs: null, turn: 0 };
+
 export class MissionEntities {
   constructor({ scene, sampler, feel, mission, player }) {
     this.scene = scene;
@@ -36,16 +38,22 @@ export class MissionEntities {
   }
 
   update(dt) {
-    for (const u of this.units) u.motion.update(dt, u.driver.next(dt, u.motion));
+    for (const u of this.units) {
+      if (u.immobile) {
+        u.motion.throttle.value = 0;
+        u.motion.update(dt, IDLE);
+      } else {
+        u.motion.update(dt, u.driver.next(dt, u.motion));
+      }
+    }
   }
 
   render(alpha, dt, showPlayer) {
+    // The player's model is posed even when hidden: muzzles and hit zones live on it.
     const p = this.player;
     p.model.setVisible(showPlayer);
-    if (showPlayer) {
-      lerpPose(p.renderPose, p.motion.prevPose, p.motion.pose, alpha);
-      p.model.update(p.renderPose, dt);
-    }
+    lerpPose(p.renderPose, p.motion.prevPose, p.motion.pose, alpha);
+    p.model.update(p.renderPose, dt);
     for (const u of this.units) {
       lerpPose(u.renderPose, u.motion.prevPose, u.motion.pose, alpha);
       u.model.update(u.renderPose, dt);

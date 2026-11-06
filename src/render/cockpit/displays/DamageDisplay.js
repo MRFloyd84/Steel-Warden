@@ -6,6 +6,7 @@ const PARTS = {
   armR: [[0.66, 0.25, 0.14, 0.33]],
   legs: [[0.34, 0.55, 0.11, 0.35], [0.51, 0.55, 0.11, 0.35]],
 };
+const STAGE_SHORT = ['OK', 'LEICHT', 'MITTEL', 'SCHWER', 'ZERST'];
 const LABELS = { torso: 'TORSO', armL: 'ARM L', armR: 'ARM R', legs: 'BEINE', sensors: 'SENSOR', reactor: 'REAKTOR' };
 
 export function healthColor(f) {
@@ -49,21 +50,24 @@ export const DamageDisplay = {
     }
     p.circle(sx * 0.48, h * 0.37, 7, 1, true, 0, Math.PI * 2, healthColor(health.reactor));
 
-    // Armour table
+    // Armour table: remaining armour and damage stage
     const tx = sx + 6;
     p.text(d.walkerName, tx, 14, { size: 11 });
     p.line(tx, 24, w - 6, 24, 0.5);
     let y = 38;
     for (const key of ['torso', 'armL', 'armR', 'legs', 'sensors', 'reactor']) {
       const f = health[key];
+      const st = d.stages?.[key] ?? 0;
       p.text(LABELS[key], tx, y, { size: 10, alpha: 0.75 });
-      p.text(String(Math.round(d.armor[key] * f)), w - 6, y, { size: 11, align: 'right', color: healthColor(f) });
+      p.text(STAGE_SHORT[st], w - 40, y, { size: 9, align: 'right', color: healthColor(f) });
+      p.text(String(Math.round(d.armorNow?.[key] ?? d.armor[key] * f)), w - 6, y, { size: 10, align: 'right', color: healthColor(f) });
       y += 17;
     }
     p.line(tx, y - 6, w - 6, y - 6, 0.5);
-    p.text('SCHILD', tx, y + 6, { size: 10, alpha: 0.75 });
+    const front = Math.round((d.frontShare ?? 0.5) * 100);
+    p.text(`SCHILD V${front}/H${100 - front}`, tx, y + 6, { size: 10, alpha: 0.75 });
     const avg = (d.shields.front + d.shields.rear + d.shields.left + d.shields.right) / 4;
-    p.text(`${Math.round(avg * 100)} %`, w - 6, y + 6, { size: 11, align: 'right', color: healthColor(avg) });
+    p.text(`${Math.round(avg * 100)} %`, w - 6, y + 22, { size: 11, align: 'right', color: healthColor(avg) });
   },
 };
 

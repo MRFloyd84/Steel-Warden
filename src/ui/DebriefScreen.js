@@ -24,6 +24,7 @@ export class DebriefScreen extends Overlay {
       ['Zurückgelegte Strecke', `${(stats.distance / 1000).toFixed(2)} km`],
       ['Ø Bildrate', `${stats.avgFps.toFixed(0)} FPS`],
     ];
+    if (stats.kills !== undefined) rows.splice(5, 0, ['Ausgeschaltete Ziele', String(stats.kills)]);
     this.root.innerHTML = `
       <div class="small-panel crt">
         <h2>Nachbesprechung</h2>

@@ -23,6 +23,7 @@ export class MenuScreen extends Overlay {
     }).join('');
 
     const controls = Object.entries(bindings.keys)
+      .filter(([action]) => ACTION_LABELS[action])
       .map(([action, codes]) => `<tr><td>${esc(ACTION_LABELS[action] ?? action)}</td><td>${codes.map((c) => `<kbd>${esc(keyLabel(c))}</kbd>`).join(' ')}</td></tr>`)
       .join('');
 
@@ -47,12 +48,12 @@ export class MenuScreen extends Overlay {
           </section>
           <section>
             <h2>Steuerung</h2>
-            <table class="controls">${controls}
-              <tr><td>Umsehen</td><td><kbd>Maus</kbd> (Klick fängt Zeiger)</td></tr>
-            </table>
+            <div class="controls-scroll"><table class="controls">${controls}
+              <tr><td>Torso drehen / Kette feuern</td><td><kbd>Maus</kbd> (Klick fängt Zeiger)</td></tr>
+            </table></div>
           </section>
         </div>
-        <footer class="menu-footer">Erprobung · Walker und Cockpit</footer>
+        <footer class="menu-footer">Erprobung · Waffen und Schaden</footer>
       </div>`;
 
     this.items = [...this.root.querySelectorAll('.mission-item')];

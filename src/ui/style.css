@@ -200,3 +200,21 @@ td:first-child { color: var(--green-dim); }
   display: block; width: 100%; margin-top: 4px; padding: 6px 8px; font: inherit; font-size: 12px;
   text-transform: none; letter-spacing: 0; color: var(--amber); background: #0c140e; border: 1px solid var(--line);
 }
+
+/* ---- Target frame ---- */
+.target-box {
+  position: absolute; left: 0; top: 0; border: 1px solid var(--amber); will-change: transform;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
+}
+.target-box[hidden] { display: none; }
+.target-box.wreck { border-style: dashed; opacity: 0.6; }
+.target-label {
+  position: absolute; left: 0; top: 100%; margin-top: 3px; white-space: nowrap;
+  font-size: 11px; color: var(--amber); text-shadow: 0 0 3px #000;
+}
+.crosshair.on-target { border-color: var(--amber); }
+.crosshair.on-target::after { background: var(--amber); }
+
+.menu-panel { max-height: 96vh; display: flex; flex-direction: column; }
+.menu-columns { min-height: 0; }
+.controls-scroll { max-height: calc(96vh - 190px); overflow-y: auto; padding-right: 6px; }

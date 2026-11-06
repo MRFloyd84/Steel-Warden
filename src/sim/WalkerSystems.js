@@ -1,4 +1,5 @@
 import { SYSTEMS } from '../data/systems.js';
+import { COMBAT } from '../data/combat.js';
 import { updateElectrical } from './systems/electrical.js';
 import { updateCoolant, updateReactor, tryIgnite, tryIgniteCircuit2, resetIgnitionLockout } from './systems/reactor.js';
 import {
@@ -19,7 +20,7 @@ import { updateLamps } from './systems/lamps.js';
  * consequences.
  */
 export class WalkerSystems {
-  constructor(controls, bus, { randomEvents = false, monitorIds = [], overrides = {}, extraCircuit = false } = {}) {
+  constructor(controls, bus, { randomEvents = false, monitorIds = [], overrides = {}, extraCircuit = false, heat = {} } = {}) {
     this.c = controls;
     this.bus = bus;
     this.cfg = deepMerge(structuredClone(SYSTEMS), overrides);
@@ -27,6 +28,11 @@ export class WalkerSystems {
     this.randomEvents = randomEvents;
     this.time = 0;
     this.s = createState(this.cfg, monitorIds);
+    // Weapon heat goes into the same core heat balance (see reactor.js).
+    const h = COMBAT.heat;
+    this.degPerHeatUnit = h.degPerUnit * Math.sqrt(h.referenceCapacity / (heat.capacity ?? h.referenceCapacity));
+    // Heat sinks: more dissipation cools the core faster (damped, so light walkers stay below HITZE at full power)
+    this.coolingFactor = 1 + 0.5 * ((heat.dissipation ?? h.referenceDissipation) / h.referenceDissipation - 1);
     this.flags = {};
     this.applyingHot = false;
     this.offs = [
@@ -108,7 +114,7 @@ export class WalkerSystems {
     f.apuReady = !!s.power.aux;
     f.busPowered = !!s.power.bus;
     f.coolantOk = s.coolant.p1 >= cfg.coolant.okPressure && s.coolant.p2 >= cfg.coolant.okPressure;
-    f.preheatOk = (r.mode === 'cold' || r.mode === 'shutdown') && mode >= 1 && r.temp >= k.ignitionMinTemp && r.temp <= k.preheatMaxTemp && f.busPowered;
+    f.preheatOk = (r.mode === 'cold' || r.mode === 'shutdown' || (r.mode === 'scram' && r.power === 0)) && mode >= 1 && r.temp >= k.ignitionMinTemp && r.temp <= k.preheatMaxTemp && f.busPowered;
     f.reactorRunning = r.mode === 'running';
     f.onReactorBus = s.power.source === 'main';
     f.extraCircuit = this.extraCircuit;
@@ -126,6 +132,16 @@ export class WalkerSystems {
     f.scrammed = r.mode === 'scram';
     f.restartNeeded = r.restartNeeded;
     f.lightsNormal = f.batteryBus;
+  }
+
+  /** Heat units from firing weapons; added to the core temperature next step. */
+  addWeaponHeat(units) {
+    if (units > 0) this.s.reactor.pendingHeat += units * this.degPerHeatUnit;
+  }
+
+  /** Weapons may fire: armed and a reactor that carries the load. */
+  get canFire() {
+    return this.flags.weaponsReady && this.flags.reactorRunning;
   }
 
   /** Limits WalkerMotion has to respect. */
@@ -174,7 +190,7 @@ export class WalkerSystems {
     s.reactor.mode = 'running';
     s.reactor.power = k.fullPower;
     s.reactor2.mode = this.extraCircuit ? 'running' : 'off';
-    s.reactor.temp = k.coolantSetpoint + (k.heatBase + k.heatPerPower * k.fullPower) / k.coolingPerFlow;
+    s.reactor.temp = k.coolantSetpoint + (k.heatBase + k.heatPerPower * k.fullPower) / (k.coolingPerFlow * this.coolingFactor);
     s.hydraulics.pressure = cfg.hydraulics.maxPressure;
     for (const m of Object.values(s.monitors.units)) {
       m.avail = true;
@@ -220,7 +236,7 @@ function createState(cfg, monitorIds) {
     power: { aux: false, main: false, bus: false, batteryBus: false, fault: false, faultAt: -Infinity, source: 'none' },
     coolant: { p1: 0, p2: 0, flow: 0, pump2Failed: false },
     reactor: {
-      temp: cfg.reactor.ambient, power: 0, mode: 'cold', ignT: 0, heater: false,
+      temp: cfg.reactor.ambient, power: 0, mode: 'cold', ignT: 0, heater: false, pendingHeat: 0, weaponHeatRate: 0,
       lockout: false, failUntil: -Infinity, flickerUntil: -Infinity, scramAt: -Infinity, restartNeeded: false,
     },
     reactor2: { mode: 'off', t: 0 },

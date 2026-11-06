@@ -61,11 +61,16 @@ export function updateReactor(sys, dt) {
 
   // Heat balance
   const core = r.power > 0 ? k.heatBase * Math.min(1, r.power / k.idlePower) + k.heatPerPower * r.power : 0;
-  r.heater = r.mode === 'cold' && s.power.bus && mode >= 1 && r.temp < k.preheatTarget;
+  // The preheater also works after an emergency shutdown — the lockout only blocks ignition.
+  const coldCore = r.mode === 'cold' || (r.mode === 'scram' && r.power === 0);
+  r.heater = coldCore && s.power.bus && mode >= 1 && r.temp < k.preheatTarget;
   const heatIn = core + (r.heater ? k.preheatRate : 0);
-  const cooling = k.coolingPerFlow * s.coolant.flow * Math.max(0, r.temp - k.coolantSetpoint)
+  const cooling = k.coolingPerFlow * s.coolant.flow * sys.coolingFactor * Math.max(0, r.temp - k.coolantSetpoint)
     + k.passiveCooling * (r.temp - k.ambient);
-  r.temp += (heatIn - cooling) * dt;
+  // Weapon heat (°C collected since the last step), smoothed rate for the displays
+  r.weaponHeatRate += (r.pendingHeat / dt - r.weaponHeatRate) * Math.min(1, dt * 1.5);
+  r.temp += (heatIn - cooling) * dt + r.pendingHeat;
+  r.pendingHeat = 0;
 
   if (r.mode !== 'scram' && r.temp >= k.scramTemp) scram(sys);
 

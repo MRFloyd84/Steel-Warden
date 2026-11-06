@@ -18,16 +18,23 @@ export class MissionHints extends Overlay {
       `[${k('centerTorso')}] Zentrieren`,
       `[${k('cockpitLight')}] Licht`,
       `[${k('checklist')}] Checkliste`,
+      '[LMT] Kette feuern', `[1–4] Gruppen`, `[${k('nextChain')}] Kette`, `[${k('fireAll')}] Alle`,
+      `[${k('targetSelect')}] Ziel`, `[${k('shieldRear')}/${k('shieldFront')}] Schild`,
       '[Shift+S] Autostart',
       `[${k('debugFreeCam')}] Freiflug`,
       `[${k('toggleHints')}] Hilfe`,
     ];
     this.root.innerHTML = `
       <div class="crosshair" data-role="reticle"></div>
+      <div class="target-box" data-role="target"><span class="target-label"></span></div>
       <div class="view-tag" data-role="tag"></div>
       <div class="hint-bar" data-role="bar">${esc(hints.join('   '))}</div>
       <div class="click-hint" data-role="click">Klick ins Bild, um die Maus zu fangen</div>`;
     this.reticle = this.root.querySelector('[data-role="reticle"]');
+    this.targetEl = this.root.querySelector('[data-role="target"]');
+    this.targetLabel = this.targetEl.querySelector('.target-label');
+    this.targetEl.hidden = true;
+    this.lastTargetLabel = '';
     this.tag = this.root.querySelector('[data-role="tag"]');
     this.bar = this.root.querySelector('[data-role="bar"]');
     this.clickHint = this.root.querySelector('[data-role="click"]');
@@ -40,7 +47,22 @@ export class MissionHints extends Overlay {
   }
 
   /** @param reticle {x, y} in CSS pixels or null to hide */
-  update({ reticle, tag, locked }) {
+  update({ reticle, tag, locked, target = null, aimOnUnit = false }) {
+    if (target) {
+      this.targetEl.hidden = false;
+      const size = target.half * 2;
+      this.targetEl.style.width = `${size.toFixed(0)}px`;
+      this.targetEl.style.height = `${size.toFixed(0)}px`;
+      this.targetEl.style.transform = `translate(${(target.x - target.half).toFixed(1)}px, ${(target.y - target.half).toFixed(1)}px)`;
+      this.targetEl.classList.toggle('wreck', target.wreck);
+      if (target.label !== this.lastTargetLabel) {
+        this.targetLabel.textContent = target.label;
+        this.lastTargetLabel = target.label;
+      }
+    } else {
+      this.targetEl.hidden = true;
+    }
+    this.reticle.classList.toggle('on-target', aimOnUnit);
     if (reticle) {
       this.reticle.hidden = false;
       this.reticle.style.transform = `translate(${reticle.x.toFixed(1)}px, ${reticle.y.toFixed(1)}px)`;

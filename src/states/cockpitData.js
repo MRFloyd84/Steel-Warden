@@ -1,4 +1,6 @@
 import { DEG } from '../util/math.js';
+import { COMBAT } from '../data/combat.js';
+import { CLASS_LABELS } from '../data/walkers.js';
 
 /**
  * The instrument snapshot handed to all cockpit displays each frame.
@@ -15,6 +17,13 @@ export function createCockpitData(walker, mission, systems) {
     twistLimit: walker.torsoTwistLimit,
     armor: walker.armor,
     health: { torso: 1, armL: 1, armR: 1, legs: 1, sensors: 1, reactor: 1 },
+    stages: { torso: 0, armL: 0, armR: 0, legs: 0, sensors: 0, reactor: 0 },
+    armorNow: { ...walker.armor },
+    frontShare: 0.5,
+    contacts: [],
+    target: null,
+    weaponsReadout: null,
+    coneDeg: COMBAT.targeting.coneDeg,
     shields: { front: 0, rear: 0, left: 0, right: 0 },
     hardpoints: walker.hardpoints.map((hp) => ({ ...hp, weapon: null })),
     loadoutWeight: 0,
@@ -28,7 +37,7 @@ export function createCockpitData(walker, mission, systems) {
   };
 }
 
-export function updateCockpitData(d, dt, { motion: m, controls: c, systems, stick }) {
+export function updateCockpitData(d, dt, { motion: m, controls: c, systems, stick, combat }) {
   const s = systems.s;
   const f = systems.flags;
   const k = systems.cfg;
@@ -58,7 +67,8 @@ export function updateCockpitData(d, dt, { motion: m, controls: c, systems, stic
   d.extraCircuit = systems.extraCircuit;
   d.circuit2 = f.reactor2Running;
   d.sensorsReadyFor = f.sensorsReady ? d.sensorsReadyFor + dt : 0;
-  for (const side of ['front', 'rear', 'left', 'right']) d.shields[side] = s.shields.level;
+  if (combat) updateCombatData(d, m, combat);
+  else for (const side of ['front', 'rear', 'left', 'right']) d.shields[side] = s.shields.level;
   for (const nav of d.navPoints) {
     nav.dx = nav.x - m.x;
     nav.dz = nav.z - m.z;
@@ -107,4 +117,44 @@ function phase(systems) {
     return [r.power < 0.95 ? 'REAKTOR LEERLAUF' : 'REAKTOR VOLLAST', false];
   }
   return ['HILFSSTROM', false];
+}
+
+function updateCombatData(d, m, combat) {
+  const r = combat.readout();
+  Object.assign(d.shields, r.shields);
+  d.frontShare = r.frontShare;
+  for (const [k, part] of Object.entries(r.parts)) {
+    d.health[k] = (part.armor + part.internal) / (part.maxArmor + part.maxInternal);
+    d.stages[k] = part.stage;
+    d.armorNow[k] = part.armor;
+  }
+  // Torso internal structure is the reactor
+  const t = r.parts.torso;
+  d.health.reactor = t.internal / t.maxInternal;
+  d.stages.reactor = t.internal <= 0 ? 4 : t.internal / t.maxInternal > 0.8 ? 0 : t.internal / t.maxInternal > 0.55 ? 1 : t.internal / t.maxInternal > 0.3 ? 2 : 3;
+  d.armorNow.reactor = t.internal;
+  d.radarRange *= r.sensorsRange;
+  d.weaponsReadout = r.weapons;
+  d.loadoutWeight = r.weapons.slots.reduce((sum, sl) => sum + combat.weapons.byId[sl.id].def.weight, 0);
+
+  // Radar contacts (all other walkers; data link and passive radar come with A4)
+  d.contacts.length = 0;
+  for (const u of combat.units.enemies) {
+    const p = u.motion.pose;
+    const dx = p.x - m.x;
+    const dz = p.z - m.z;
+    d.contacts.push({ dx, dz, dist: Math.hypot(dx, dz), locked: u === r.target?.unit, wreck: !!u.wreck });
+  }
+
+  const tg = r.target;
+  if (tg) {
+    const u = tg.unit;
+    d.target = {
+      name: tg.name, cls: CLASS_LABELS[tg.cls] ?? tg.cls, tonnage: tg.tonnage, distance: tg.distance, lockTime: tg.lockTime,
+      wreck: tg.wreck, unit: u,
+      stages: Object.fromEntries(Object.entries(u.damage.parts).map(([k, p]) => [k, p.stage])),
+      shields: { front: u.damage.shieldFraction('front'), rear: u.damage.shieldFraction('rear'), left: u.damage.shieldFraction('left'), right: u.damage.shieldFraction('right') },
+      needLock: Math.max(0, ...combat.weapons.slots.filter((s) => s.def.guidance === 'track').map((s) => s.def.lockTime)),
+    };
+  } else d.target = null;
 }

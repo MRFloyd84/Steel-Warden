@@ -44,6 +44,13 @@ Schnellstart-Parameter (Dev und Build):
   Cockpit-Varianten compact/standard/heavy, Energiemonitor, zweiter Reaktorkreis (KOLOSS),
   Startdauer je Klasse, Außenkamera, Walker-Wahl im Menü, Testmission „Paradeplatz".
 
+- **Phase A2a (Waffen und Schaden):** 10 Waffen mit Werks-Bewaffnung je Walker (geprüft beim
+  Start), Waffenmodelle an den Hardpoints, Geschosse, Strahl, Raketen, Streuung, Munition,
+  Nachladen, Energiepuffer aus dem Reaktor, Waffenhitze in der Reaktor-Wärmebilanz (Überhitzung
+  → Notabschaltung → Neustart). Schadenspipeline Seite → Schild → Panzerung → Struktur mit
+  5 Stufen und Folgen (Arm ab, Beine, Sensoren, Reaktorexplosion), Feuerketten, Zielaufschaltung,
+  Zielmonitor mit Drahtgitter, Effekte und Kampfsounds. Testmission „Schießstand“.
+
 Fahrplan für die nächsten Phasen inklusive Stützpunkt, Bergung, Funk, Radar und Missionen:
 `docs/ROADMAP.md`.
 
@@ -58,6 +65,36 @@ Fahrplan für die nächsten Phasen inklusive Stützpunkt, Bergung, Funk, Radar u
 - `Shift+S`: automatische Startprozedur (Schalter bewegen sich sichtbar)
 - `K`: Außenkamera an/aus (rechte Maustaste/`V` kreist dann um den Walker), `F7`: Debug-Freiflug
 - Walker im Menü wählen oder per URL `?walker=kestrel|marder|bastion|halberd|goliath|koloss`
+
+## Kampf
+
+| Taste | Wirkung |
+|---|---|
+| Linke Maustaste | aktive Feuerkette feuern (Maus muss gefangen sein, nicht im freien Blick) |
+| `1`–`4` | Waffengruppe feuern |
+| `R` | nächste Feuerkette (3 ab Werk, Anzeige auf dem Waffenmonitor) |
+| `G` | Notfallkette: alle Waffen |
+| `T` / `Shift+T` | Ziel unter dem Fadenkreuz aufschalten, sonst das nächste im Torso-Kegel / durchschalten |
+| `,` / `.` | Schildenergie Richtung Heck / Front verschieben (je ±2 Stufen) |
+| Gamepad | RT feuern, LT nächste Kette |
+
+Feuern geht nur mit WAFFEN SCHARF und laufendem Reaktor; sonst klickt es, VORSICHT blinkt und
+die Technik meldet sich. Waffen, Schaden, Hitze und Energie: `src/data/weapons.js`,
+`src/data/combat.js`, Werks-Bewaffnung und Ketten in `src/data/walkers.js`.
+
+**Testanleitung Schießstand** (`?mission=range&start=hot`, 6 stehende und 3 laufende Ziele):
+
+1. *Schild gegen Panzer:* Marder (190 m) aufschalten (`T`), 2–3 s Gruppe 1 (Laser) — die
+   Frontschilde brechen schnell zusammen, danach Panzerschaden. Den laufenden Marder (250 m)
+   mit Gruppe 2 (Autokanone, Schrot) beschießen — die Schilde halten deutlich länger.
+   Zielmonitor und `F3` zeigen Schilde und Komponenten.
+2. *Beine abschießen:* auf den KESTREL (110 m) zufahren und auf die Beine zielen. Bei „schwer“
+   wird er langsamer, bei „zerstört“ kniet er ab und raucht (Zielmonitor: BEWEGUNGSUNFÄHIG).
+3. *Arm abschießen:* einen Walker von der Seite auf den Arm beschießen. Der Arm fällt ab, die
+   Waffe bleibt mit blinkendem Marker liegen.
+4. *Überhitzen und neu starten:* `G` gedrückt halten. HITZE leuchtet, der Hitzebalken auf dem
+   Systemmonitor steigt, nach etwa 9 s (BASTION) folgt die Notabschaltung. Danach Neustart
+   laut Klemmbrett (`C`): Pumpen prüfen, VORH, Zündkappe zu/auf, ZÜND, Hauptbus REAKT, BETR.
 
 ## Startprozedur
 
@@ -96,6 +133,8 @@ eingebettet, damit der Offline-Build per `file://` funktioniert. Klang und Misch
 - `src/data/walkerModels.js` – Baupläne der Walker-Modelle (Profil, Beine, Arme, Aufbauten, Farben)
 - `src/data/cockpits.js` – Cockpit-Varianten standard/compact/heavy: Kanzel, Paneele, Sitz, Kabel, Licht
 - `src/data/panelLayouts.js` – Schalter, Lampen, Monitore und Hebel auf den Paneelen
+- `src/data/weapons.js` – die 10 Waffen (Schaden, Faktoren gegen Schild/Panzer, Feuerrate, Munition, Hitze)
+- `src/data/combat.js` – Schadensstufen, Schildverschiebung, Energiepuffer, Hitze, Folgen, Aufschaltkegel
 - `src/data/sounds.js` – Sound-Ereignisse, Loops, Mischpult, Bewegungs- und Systemsounds
 - `src/data/systems.js` – Startprozedur: Werte, Checklisten, Automatik-Skript, Funksprüche
 - `src/data/theaters.js` – Schauplätze: Geländeform, Farbpalette, Himmel, Nebel

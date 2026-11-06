@@ -31,7 +31,8 @@ export function updateLamps(sys) {
   set('lampHeat', f.heatWarning);
   set('lampReactor', (ignitionFail && blink) || f.scrammed || (sys.extraCircuit && f.reactorRunning && !f.reactor2Running && s.reactor2.mode === 'igniting' && blink));
   set('lampMasterWarning', (f.heatWarning || scramRecent || s.power.fault) && blink);
-  set('lampMasterCaution', ignitionFail || hydraulicsOnAux || legsWaiting);
+  const weaponsBlocked = t < (sys.cautionUntil ?? -Infinity);
+  set('lampMasterCaution', ignitionFail || hydraulicsOnAux || legsWaiting || (weaponsBlocked && blink));
   set('lampShield', c.value('shields') === 1 && !f.shieldsReady);
   set('lampMissile', false);
 

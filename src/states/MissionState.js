@@ -26,9 +26,9 @@ import { missionDebugLines } from './missionDebug.js';
 import { ChaseCamera } from '../render/ChaseCamera.js';
 import { WALKERS } from '../data/walkers.js';
 import { createCockpitData, updateCockpitData } from './cockpitData.js';
+import { MissionCombat } from './combat/MissionCombat.js';
 import { damp } from '../util/math.js';
 
-const AIM_DISTANCE = 800;
 const START_MODES = ['full', 'simple', 'auto'];
 
 /**
@@ -66,6 +66,7 @@ export class MissionState extends State {
       monitorIds: this.cockpit.monitors.map((m) => m.id),
       overrides: this.walker.systems,
       extraCircuit: !!this.walker.cockpit.extraCircuit,
+      heat: { capacity: this.walker.heatCapacity, dissipation: this.walker.heatDissipation },
     });
     const hot = params.get('start') === 'hot';
     if (hot) this.systems.forceHot();
@@ -92,6 +93,11 @@ export class MissionState extends State {
       mission: this.mission,
       player: { walker: this.walker, motion: this.motion },
     });
+    this.combat = new MissionCombat({
+      game, world: this.world, entities: this.entities, systems: this.systems, controls: this.controls,
+      radio: (msg) => this.radioMessage(msg),
+    });
+    this.link.extraFlicker = () => this.combat.readout().sensorsFlicker;
     this.viewMode = 'cockpit'; // 'cockpit' | 'external'
     this.chase = new ChaseCamera(game.renderer.camera, this.world.sampler);
 
@@ -152,6 +158,7 @@ export class MissionState extends State {
     game.audio.setPaused(false);
     this.cockpitAudio.dispose();
     this.systemsAudio.dispose();
+    this.combat.dispose();
     this.automation.stop();
     this.link.dispose();
     this.systems.dispose();
@@ -190,6 +197,7 @@ export class MissionState extends State {
       mission: this.mission,
       result,
       stats: {
+        kills: this.combat.units.kills,
         duration: this.stats.duration,
         distance: this.motion.distance,
         avgFps: this.stats.fpsFrames ? this.stats.fpsSum / this.stats.fpsFrames : 0,
@@ -258,6 +266,8 @@ export class MissionState extends State {
       this.motion.aim(look.x, look.y);
     }
 
+    this.combat.frame(input, { canAim: !this.freeCam && !(this.view.freeLook && !external) });
+
     // Stick deflection: turn input sideways, aim rate fore/aft and twist.
     const k = damp(10, dt);
     const aiming = !this.view.freeLook && !this.freeCam && dt > 0;
@@ -285,6 +295,7 @@ export class MissionState extends State {
     if (this.paused) return;
     const input = this.game.input;
     this.link.update();
+    this.combat.applyPlayerLimits();
     if (this.freeCam) {
       this.debugRig.update(dt, input);
       this.motion.update(dt, { throttleRate: 0, throttleAbs: null, turn: 0 });
@@ -298,6 +309,7 @@ export class MissionState extends State {
       this.world.update(this.motion.pose);
     }
     this.entities.update(dt);
+    this.combat.update(dt);
     this.systems.update(dt);
     this.checklist.update(this.systems.flags);
     this.automation.update(dt, this.systems.flags);
@@ -315,6 +327,7 @@ export class MissionState extends State {
     this.entities.render(a, fdt, this.freeCam || external);
 
     if (this.freeCam) {
+      this.combat.render(fdt, { eye: this.combat.eye, aimDir: this.combat.aimDir });
       this.debugRig.apply(a);
       this.world.beforeRender(renderer.camera);
       renderer.render(this.world.scene);
@@ -324,6 +337,9 @@ export class MissionState extends State {
 
     lerpPose(this.renderPose, this.motion.prevPose, this.motion.pose, a);
     this.view.apply(this.renderPose);
+    const p = this.renderPose;
+    this.combat.setViewportHeight(renderer.height);
+    this.combat.render(fdt, { eye: this.tmpVec.set(p.x, p.y, p.z), aimDir: this.view.aimDir });
     if (external) {
       this.chase.apply(this.renderPose, this.walker.cockpit.eyeHeight, this.view, fdt);
       this.link.frame();
@@ -334,12 +350,12 @@ export class MissionState extends State {
         this.systemsAudio.update();
       }
       this.radioLog.update(this.stats.duration);
-      this.hints.update({ reticle: null, tag: 'AUSSENKAMERA', locked: game.input.mouse.locked || this.paused });
+      this.hints.update({ reticle: renderer.project(this.combat.aimPoint, this.tmpProj), tag: 'AUSSENKAMERA', locked: game.input.mouse.locked || this.paused, target: this.targetBox() });
       return;
     }
     this.floodlight.update(this.renderPose, this.view.torsoQuat, this.view.aimDir);
     this.link.frame();
-    updateCockpitData(this.data, fdt, { motion: this.motion, controls: this.controls, systems: this.systems, stick: this.stickVisual });
+    updateCockpitData(this.data, fdt, { motion: this.motion, controls: this.controls, systems: this.systems, stick: this.stickVisual, combat: this.combat });
     this.cockpit.update(fdt, this.data, this.view.torsoQuat, this.checklist, renderer.cockpitCamera);
     this.world.beforeRender(renderer.camera);
     renderer.renderWithCockpit(this.world.scene, this.cockpit.scene);
@@ -350,18 +366,33 @@ export class MissionState extends State {
     }
     this.radioLog.update(this.stats.duration);
 
-    const p = this.renderPose;
-    this.tmpVec.set(p.x, p.y, p.z).addScaledVector(this.view.aimDir, AIM_DISTANCE);
-    const reticle = renderer.project(this.tmpVec, this.tmpProj);
+    const reticle = renderer.project(this.combat.aimPoint, this.tmpProj);
     this.hints.update({
       reticle,
       tag: this.view.freeLook ? 'FREIER BLICK · BEDIENEN' : null,
       locked: game.input.mouse.locked || this.paused,
+      target: this.targetBox(),
+      aimOnUnit: !!this.combat.aimUnit,
     });
   }
 
+  /** Screen box of the locked target for the HUD frame. */
+  targetBox() {
+    const t = this.combat.targeting.target;
+    if (!t) return null;
+    const r = this.game.renderer;
+    const c = t.volumes.componentCenter('torso', new THREE.Vector3());
+    const top = c.clone();
+    top.y += t.walker.cockpit.eyeHeight * 0.55;
+    const pc = r.project(c, new THREE.Vector3());
+    const pt = r.project(top, new THREE.Vector3());
+    if (!pc || !pt) return null;
+    const half = Math.max(14, Math.abs(pc.y - pt.y));
+    return { x: pc.x, y: pc.y - half * 0.2, half, label: `${t.walker.name}  ${Math.round(this.combat.targeting.distance ?? 0)} m`, wreck: !!t.wreck };
+  }
+
   debugInfo() {
-    return missionDebugLines(this);
+    return [...missionDebugLines(this), ...this.combat.debugLines()];
   }
 }
 

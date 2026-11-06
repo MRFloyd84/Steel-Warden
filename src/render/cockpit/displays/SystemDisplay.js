@@ -40,6 +40,7 @@ export const SystemDisplay = {
     const grade = Math.round(d.grade * 100);
     p.text(`STEIGUNG ${grade >= 0 ? '+' : ''}${grade} %`, w - 8, h - 30, { size: 10, align: 'right', alpha: Math.abs(grade) > 40 ? 1 : 0.7 });
     p.text(`ENERGIE ${d.energyPreset}  FUNK ${d.radioChannel}`, 8, h - 30, { size: 10, alpha: 0.7 });
+    if (d.sys) drawHeat(p, d.sys, w - 18, 54, h - 112);
     const nav = d.navPoints.find((n) => n.active);
     if (nav) {
       const km = (nav.dist / 1000).toFixed(2);
@@ -105,4 +106,20 @@ function drawTwist(p, d, cx, cy, r) {
   const deg = Math.round(Math.abs(d.twistDeg));
   const side = d.twistDeg > 0.5 ? 'L' : d.twistDeg < -0.5 ? 'R' : ' ';
   p.text(`TORSO ${side} ${deg}°`, cx, cy - r - 16, { size: 11, align: 'center' });
+}
+
+/** Vertical core heat bar with HITZE and NOTAUS marks (weapon heat lands here). */
+function drawHeat(p, s, x, y, bh) {
+  const min = 300;
+  const max = s.scramTemp + 40;
+  const f = (v) => Math.max(0, Math.min(1, (v - min) / (max - min)));
+  const alert = s.temp >= s.warnTemp;
+  p.text('HZ', x + 5, y - 9, { size: 9, align: 'center', alpha: 0.7 });
+  p.rect(x, y, 10, bh, 0.5);
+  const fh = bh * f(s.temp);
+  p.rect(x + 2, y + bh - fh, 6, fh, alert ? 1 : 0.8, true, alert ? '#ff6a3a' : null);
+  for (const v of [s.warnTemp, s.scramTemp]) {
+    const yy = y + bh - bh * f(v);
+    p.line(x - 4, yy, x + 14, yy, 1);
+  }
 }

@@ -11,6 +11,9 @@
  * build:           cost in scrap and build time in missions (workshop, campaign phase)
  * systems:         overrides for data/systems.js — light walkers start faster, heavy ones slower
  * cockpit.extraCircuit: second reactor circuit (assault class) — needs the 'assault' panel layout
+ * defaultLoadout:  hardpoint id → weapon id (data/weapons.js); checked by sim/loadout.js
+ * defaultGroups:   hardpoint id → weapon group 1–4 (keys 1–4)
+ * defaultChains:   three factory fire chains { name, weapons: [hardpoint ids], mode: 'salvo' | 'sequence' }
  */
 const ARM = { yaw: [-10, 10], pitch: [-15, 20] };
 const FIXED = { yaw: [0, 0], pitch: [0, 0] };
@@ -42,6 +45,9 @@ export const WALKERS = {
       { id: 'CT', location: 'torso', size: 'S', type: 'missile', mount: 'torsoC', arc: FIXED },
     ],
     maxLoadoutWeight: 6,
+    defaultLoadout: { LA: 'lux-12', RA: 'sk-6', CT: 'falke-4' },
+    defaultGroups: { LA: 1, RA: 2, CT: 3 },
+    defaultChains: [{ name: 'ARME', weapons: ['LA', 'RA'], mode: 'salvo' }, { name: 'RAKETEN', weapons: ['CT'], mode: 'salvo' }, { name: 'LASER', weapons: ['LA'], mode: 'salvo' }],
     jumpJets: { thrust: 14, fuel: 4 },
     cockpit: { variant: 'compact', eyeHeight: 6.2, canopyShape: 'bubble', panelLayout: 'compact', serial: 'LW2-25-1183' },
     sound: { stepPitch: 1.4, servoPitch: 1.3, reactorHum: 0.75 },
@@ -77,6 +83,9 @@ export const WALKERS = {
       { id: 'RT', location: 'torso', size: 'S', type: 'missile', mount: 'torsoR', arc: FIXED },
     ],
     maxLoadoutWeight: 10,
+    defaultLoadout: { LA: 'ak-20', RA: 'lux-40', LT: 'lux-12', RT: 'falke-4' },
+    defaultGroups: { LA: 2, RA: 1, LT: 1, RT: 3 },
+    defaultChains: [{ name: 'ARME', weapons: ['LA', 'RA'], mode: 'salvo' }, { name: 'ENERGIE', weapons: ['RA', 'LT'], mode: 'salvo' }, { name: 'RAKETEN', weapons: ['RT'], mode: 'salvo' }],
     jumpJets: null,
     cockpit: { variant: 'compact', eyeHeight: 6.9, canopyShape: 'wedge', panelLayout: 'compact', serial: 'LW4-35-0562' },
     sound: { stepPitch: 1.25, servoPitch: 1.2, reactorHum: 0.85 },
@@ -114,6 +123,9 @@ export const WALKERS = {
       { id: 'RS', location: 'torso', size: 'M', type: 'missile', mount: 'shoulderR', arc: FIXED },
     ],
     maxLoadoutWeight: 16,
+    defaultLoadout: { LA1: 'lux-40', LA2: 'lux-12', RA1: 'ak-20', RA2: 'sk-6', LS: 'habicht-8', RS: 'falke-4' },
+    defaultGroups: { LA1: 1, LA2: 1, RA1: 2, RA2: 2, LS: 3, RS: 3 },
+    defaultChains: [{ name: 'ARME', weapons: ['LA1', 'LA2', 'RA1', 'RA2'], mode: 'salvo' }, { name: 'RAKETEN', weapons: ['LS', 'RS'], mode: 'sequence' }, { name: 'DAUERFEUER', weapons: ['RA1', 'LA2'], mode: 'salvo' }],
     jumpJets: null,
     cockpit: { variant: 'standard', eyeHeight: 9.2, canopyShape: 'faceted', panelLayout: 'standard', serial: 'MW1-50-0417' },
     sound: { stepPitch: 1.0, servoPitch: 1.0, reactorHum: 1.0 },
@@ -149,6 +161,9 @@ export const WALKERS = {
       { id: 'RA', location: 'armR', size: 'M', type: 'energy', mount: 'armR.0', arc: ARM },
     ],
     maxLoadoutWeight: 20,
+    defaultLoadout: { LS: 'speer', RS: 'habicht-8', LA: 'imp-2', RA: 'lux-40' },
+    defaultGroups: { LS: 3, RS: 3, LA: 4, RA: 1 },
+    defaultChains: [{ name: 'RAKETEN', weapons: ['LS', 'RS'], mode: 'sequence' }, { name: 'LASER', weapons: ['RA'], mode: 'salvo' }, { name: 'EMP + LASER', weapons: ['LA', 'RA'], mode: 'sequence' }],
     jumpJets: null,
     cockpit: { variant: 'standard', eyeHeight: 9.8, canopyShape: 'faceted', panelLayout: 'standard', serial: 'MW3-60-0230' },
     sound: { stepPitch: 0.92, servoPitch: 0.85, reactorHum: 1.05 },
@@ -185,6 +200,9 @@ export const WALKERS = {
       { id: 'CT', location: 'torso', size: 'M', type: 'energy', mount: 'torsoC', arc: FIXED },
     ],
     maxLoadoutWeight: 28,
+    defaultLoadout: { LA: 'sr-3', RA: 'pz-9', LT: 'habicht-8', RT: 'ak-20', CT: 'lux-40' },
+    defaultGroups: { LA: 2, RA: 1, LT: 3, RT: 2, CT: 1 },
+    defaultChains: [{ name: 'SCHWER', weapons: ['LA', 'RA'], mode: 'salvo' }, { name: 'DAUERFEUER', weapons: ['RT', 'CT'], mode: 'salvo' }, { name: 'RAKETEN', weapons: ['LT'], mode: 'salvo' }],
     jumpJets: null,
     cockpit: { variant: 'heavy', eyeHeight: 11.2, canopyShape: 'slit', panelLayout: 'heavy', serial: 'HW2-80-0071' },
     sound: { stepPitch: 0.78, servoPitch: 0.75, reactorHum: 1.15 },
@@ -222,6 +240,9 @@ export const WALKERS = {
       { id: 'RT', location: 'torso', size: 'M', type: 'universal', mount: 'torsoR', arc: FIXED },
     ],
     maxLoadoutWeight: 38,
+    defaultLoadout: { LA: 'pz-9', RA: 'sr-3', LS: 'speer', RS: 'habicht-8', LT: 'ak-20', RT: 'lux-40' },
+    defaultGroups: { LA: 1, RA: 2, LS: 3, RS: 3, LT: 2, RT: 1 },
+    defaultChains: [{ name: 'SCHWER', weapons: ['LA', 'RA'], mode: 'sequence' }, { name: 'RAKETEN', weapons: ['LS', 'RS'], mode: 'sequence' }, { name: 'DAUERFEUER', weapons: ['LT', 'RT'], mode: 'salvo' }],
     jumpJets: null,
     cockpit: { variant: 'heavy', eyeHeight: 13.6, canopyShape: 'tower', panelLayout: 'assault', serial: 'AW1-100-0009', extraCircuit: true },
     sound: { stepPitch: 0.66, servoPitch: 0.65, reactorHum: 1.25 },

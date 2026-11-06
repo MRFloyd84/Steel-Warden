@@ -33,8 +33,8 @@ export const RadarDisplay = {
     p.line(cx - R, cy, cx + R, cy, 0.15);
     p.line(cx, cy - R, cx, cy + R, 0.15);
 
-    // Field of view wedge (about ±36° for the cockpit view)
-    const fov = 0.63;
+    // Lock cone of the torso (only targets inside can be locked)
+    const fov = ((d.coneDeg ?? 36) * Math.PI) / 180;
     p.line(cx, cy, cx - Math.sin(fov) * R, cy - Math.cos(fov) * R, 0.45);
     p.line(cx, cy, cx + Math.sin(fov) * R, cy - Math.cos(fov) * R, 0.45);
 
@@ -52,6 +52,19 @@ export const RadarDisplay = {
     const ly = Math.cos(t);
     p.line(cx, cy, cx + lx * R * 0.22, cy - ly * R * 0.22, 0.9);
     p.poly([[cx - 5, cy + 6], [cx + 5, cy + 6], [cx, cy - 6]], 1, true);
+
+    // Contacts: walkers in range (locked one boxed, wrecks as crosses)
+    if (d.sensorsReadyFor > 0.5) for (const c of d.contacts) {
+      if (c.dist > range) continue;
+      const [x, y] = toScreen(c.dx, c.dz);
+      if (c.wreck) {
+        p.line(x - 3, y - 3, x + 3, y + 3, 0.6);
+        p.line(x - 3, y + 3, x + 3, y - 3, 0.6);
+      } else {
+        p.rect(x - 2.5, y - 2.5, 5, 5, 1, true);
+      }
+      if (c.locked) p.rect(x - 6, y - 6, 12, 12, 1);
+    }
 
     // Nav points fade in during the first sweeps after the sensors came up
     const navAlpha = Math.min(1, d.sensorsReadyFor / 2.4);

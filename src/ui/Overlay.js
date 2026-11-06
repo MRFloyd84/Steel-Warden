@@ -38,7 +38,7 @@ export function keyLabel(code) {
   const special = {
     ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→',
     ShiftLeft: 'Shift', ShiftRight: 'Shift R', Space: 'Leertaste',
-    Escape: 'Esc', Enter: 'Enter', NumpadEnter: 'Num Enter',
+    Escape: 'Esc', Enter: 'Enter', NumpadEnter: 'Num Enter', Period: '.', Comma: ',',
   };
   if (special[code]) return special[code];
   if (code.startsWith('Key')) return code.slice(3);

@@ -7,6 +7,27 @@
  */
 export const MISSIONS = [
   {
+    id: 'range',
+    name: 'Schießstand Brenn-Süd',
+    theater: 'industrial',
+    timeOfDay: 'day',
+    seed: 90210,
+    briefing: 'Waffenerprobung: 6 stehende und 3 laufende Ziel-Walker in 100–800 m, keine Gegenwehr. T schaltet auf.',
+    playerStart: { x: 0, z: 0, heading: 0, walker: 'bastion' },
+    navPoints: [{ id: 'ALPHA', x: 0, z: -600 }],
+    spawns: [
+      { id: 's-kestrel', unit: 'kestrel', at: [-30, -110], heading: Math.PI, behavior: { type: 'idle' } },
+      { id: 's-marder', unit: 'marder', at: [45, -190], heading: Math.PI * 0.75, behavior: { type: 'idle' } },
+      { id: 's-bastion', unit: 'bastion', at: [-70, -280], heading: Math.PI / 2, behavior: { type: 'idle' } },
+      { id: 's-halberd', unit: 'halberd', at: [90, -400], heading: Math.PI, behavior: { type: 'idle' } },
+      { id: 's-goliath', unit: 'goliath', at: [-110, -560], heading: Math.PI * 1.2, behavior: { type: 'idle' } },
+      { id: 's-koloss', unit: 'koloss', at: [60, -780], heading: Math.PI, behavior: { type: 'idle' } },
+      { id: 'w-marder', unit: 'marder', at: [0, -250], heading: Math.PI / 2, behavior: { type: 'circle', radius: 40, throttle: 0.45 } },
+      { id: 'w-bastion', unit: 'bastion', at: [-160, -420], heading: -Math.PI / 2, behavior: { type: 'pace', distance: 120, throttle: 0.6 } },
+      { id: 'w-goliath', unit: 'goliath', at: [160, -620], heading: Math.PI / 2, behavior: { type: 'pace', distance: 90, throttle: 0.7 } },
+    ],
+  },
+  {
     id: 'test-parade',
     name: 'Paradeplatz Brenn-Süd',
     theater: 'industrial',

@@ -1,5 +1,6 @@
 import { SampleBank } from './SampleBank.js';
 import { renderClicks } from './ClickSynth.js';
+import { renderCombatSounds } from './CombatSynth.js';
 import { AUDIO_MIX, SOUND_EVENTS, SOUND_LOOPS } from '../data/sounds.js';
 
 /**
@@ -55,7 +56,7 @@ export class AudioEngine {
       g.connect(this.master);
       this.buses[name] = g;
     }
-    this.clicks = renderClicks(ctx);
+    this.clicks = { ...renderClicks(ctx), ...renderCombatSounds(ctx) };
     this.bank = new SampleBank(ctx);
     this.bank.loadAll().then(() => {
       this.ready = true;
@@ -146,7 +147,7 @@ class LoopVoice {
   start() {
     const e = this.engine;
     if (this.stopped || !e.ctx || !e.ready) return;
-    const buffer = e.bank.get(this.def.sample);
+    const buffer = this.def.synth ? e.clicks[this.def.synth] : e.bank.get(this.def.sample);
     if (!buffer) return;
     const ctx = e.ctx;
     this.gain = ctx.createGain();
@@ -155,7 +156,7 @@ class LoopVoice {
     const src = ctx.createBufferSource();
     src.buffer = buffer;
     src.loop = true;
-    const b = e.bank.bounds(this.def.sample);
+    const b = this.def.synth ? null : e.bank.bounds(this.def.sample);
     if (b) {
       src.loopStart = b.start;
       src.loopEnd = b.end;

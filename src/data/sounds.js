@@ -55,7 +55,33 @@ export const SOUND_EVENTS = {
   'sys.legsHiss': { samples: ['hiss_1', 'hiss_2'], gain: 0.6, rate: [0.95, 1.05], bus: 'cockpit' },
   'sys.legsBlocked': { samples: ['lock_clank'], gain: 0.4, rate: [0.7, 0.75], bus: 'cockpit' },
   'radio.squelch': { synth: 'squelch', gain: 0.35, rate: [0.97, 1.03], bus: 'ui' },
+
+  // Weapons (own weapons are panned by hardpoint, other walkers by distance/direction)
+  'weapon.laser': { synth: 'laser', gain: 0.35, rate: [0.95, 1.08], bus: 'world' },
+  'weapon.particle': { synth: 'particle', gain: 0.7, rate: [0.95, 1.02], bus: 'world' },
+  'weapon.autocannon': { samples: ['autocannon_shot'], gain: 0.45, rate: [0.94, 1.06], bus: 'world' },
+  'weapon.railgun': { samples: ['cannon_shot'], gain: 0.85, rate: [1.05, 1.12], bus: 'world' },
+  'weapon.railCharge': { synth: 'railCharge', gain: 0.35, rate: [1, 1], bus: 'world' },
+  'weapon.shotgun': { synth: 'shotgun', gain: 0.6, rate: [0.95, 1.05], bus: 'world' },
+  'weapon.rocket': { synth: 'rocket', gain: 0.35, rate: [0.9, 1.15], bus: 'world' },
+  'weapon.speer': { synth: 'rocket', gain: 0.75, rate: [0.55, 0.6], bus: 'world' },
+  'weapon.emp': { synth: 'emp', gain: 0.5, rate: [0.97, 1.03], bus: 'world' },
+  'weapon.dryFire': { synth: 'tap', gain: 0.4, rate: [0.8, 0.85], bus: 'cockpit', cooldown: 0.25 },
+  'weapon.chain': { synth: 'detent', gain: 0.45, rate: [1.1, 1.15], bus: 'cockpit' },
+  'weapon.lock': { synth: 'lockTone', gain: 0.25, rate: [1, 1], bus: 'cockpit' },
+  'weapon.shieldShift': { synth: 'buttonDown', gain: 0.35, rate: [1.2, 1.25], bus: 'cockpit' },
+
+  // Impacts
+  'impact.shield': { synth: 'shieldHit', gain: 0.45, rate: [0.9, 1.1], bus: 'world', cooldown: 0.03 },
+  'impact.armor': { synth: 'armorHit', gain: 0.5, rate: [0.85, 1.15], bus: 'world', cooldown: 0.03 },
+  'impact.ground': { synth: 'blast', gain: 0.35, rate: [1.3, 1.6], bus: 'world', cooldown: 0.03 },
+  'impact.blast': { synth: 'blast', gain: 0.7, rate: [0.9, 1.05], bus: 'world', cooldown: 0.05 },
+  'impact.explosion': { synth: 'explosion', gain: 1.0, rate: [0.95, 1.05], bus: 'world' },
+  'impact.partFall': { samples: ['creak_1', 'creak_3'], gain: 0.6, rate: [0.6, 0.7], bus: 'world' },
 };
+
+/** Distance attenuation for world sounds: gain = 1 / (1 + distance / ref). */
+export const WORLD_AUDIO = { ref: 60, minGain: 0.04 };
 
 /** systems:event type → one or more sound events. */
 export const SYSTEM_EVENT_SOUNDS = {
@@ -87,6 +113,7 @@ export const SOUND_LOOPS = {
   hydraulics: { sample: 'hydraulic_loop', gain: 0.3, bus: 'cockpit' },
   alarmHeat: { sample: 'alarm_warble', gain: 0.22, bus: 'cockpit' },
   alarmCritical: { sample: 'alarm_critical', gain: 0.25, bus: 'cockpit' },
+  beam: { synth: 'beamLoop', gain: 0.3, bus: 'world' },
 };
 
 /** How system values drive the machinery loops (rates are playback-rate ranges). */

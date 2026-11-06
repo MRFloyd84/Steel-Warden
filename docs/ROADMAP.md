@@ -1,6 +1,6 @@
 # STEEL WARDEN – Fahrplan
 
-Stand: nach Erweiterung Schritt 3 (Startprozedur). Dieses Dokument führt das Grundkonzept,
+Stand: nach Phase A2a (Waffen, Schaden, Schilde, Hitze). Dieses Dokument führt das Grundkonzept,
 die Cockpit-Erweiterung, das Missionsdokument und die Ergänzungen (Stützpunkt, Bergung,
 Funk, Radar, Kampf, Übung) zusammen.
 
@@ -17,21 +17,31 @@ Funk, Radar, Kampf, Übung) zusammen.
 ## Phasen
 
 ### A – Kampfgrundlage
-1. **Walker-Builder und 6 Walker** (Erweiterung Schritt 4): prozedurale Low-Poly-Modelle,
+1. ✅ **Walker-Builder und 6 Walker** (Erweiterung Schritt 4): prozedurale Low-Poly-Modelle,
    Laufanimation mit Fuß-IK, Cockpit-Varianten compact/standard/heavy, Außenkamera.
    Modellteile sind nach Schadenskomponenten markiert (Trefferzonen).
    Walker-Daten enthalten bereits Baukosten in Schrott und die Bauzeit in Missionen.
 2. **Waffen und Schaden** (Erweiterung Schritt 5, Grundkonzept Phase 4):
-   - 10 Waffen, Projektile/Strahlen, Hitze, Munition.
-   - Schaden je Typ: Energie stark gegen Schilde, ballistisch stark gegen Panzerung und schwach
-     gegen Schilde, Raketen schwach gegen geladene Schilde.
-   - Schilde pro Seite, Energie per Taste zwischen Front und Heck verschiebbar.
-   - Komponentenschaden in 5 Stufen (intakt/leicht/mittel/schwer/zerstört).
-   - Feuerketten wie oben.
-   - Raketen-Lenkarten: aktiv, halbaktiv (Aufschaltung halten), Anti-Radar, optisch mit
-     Raketenkamera auf einem Cockpitmonitor.
-   - Zielkapsel als Ausrüstung: Komponentenwahl am Ziel (Tab).
-   - Cockpit-Reaktionen auf Treffer, Neustart nach Überhitzung im Kampf.
+   - **A2a ✅** (erledigt):
+     - ✅ 10 Waffen, Werks-Bewaffnung je Walker mit Prüfung, Waffenmodelle an den Hardpoints,
+       Armwaffen schwenken im Rahmen von `arc`.
+     - ✅ Geschosse, Strahl (LUX-40), Streuung, Munition und Nachladen, Aufladen (SR-3, IMP-2),
+       Energiepuffer aus dem Reaktor, Hitze in der Wärmebilanz des Reaktors.
+     - ✅ Schaden je Typ: Energie stark gegen Schilde, ballistisch stark gegen Panzerung und
+       schwach gegen Schilde, Raketen schwach gegen geladene Schilde.
+     - ✅ Schilde pro Seite, Energie per Taste zwischen Front und Heck verschiebbar.
+     - ✅ Komponentenschaden in 5 Stufen mit Folgen: Arm ab, Beine schwer/zerstört, Sensoren,
+       Reaktorexplosion; Zerstörungsart `legs` / `weaponMount` / `reactor` festgehalten,
+       abgeschossene Waffen als Marker im Gelände.
+     - ✅ Feuerketten (3 ab Werk, Salve oder Folge), Gruppen 1–4, Notfallkette „alle Waffen“.
+     - ✅ Zielaufschaltung im Torso-Kegel, Zielmonitor mit Drahtgitter, Zielrahmen.
+     - ✅ Neustart nach Überhitzung im Kampf (Notabschaltung aus Schritt 3).
+     - ✅ Testmission „Schießstand“ (`?mission=range&start=hot`).
+   - **A2b** (offen):
+     - Raketen-Lenkarten: aktiv, halbaktiv (Aufschaltung halten), Anti-Radar, optisch mit
+       Raketenkamera auf einem Cockpitmonitor.
+     - Zielkapsel als Ausrüstung: Komponentenwahl am Ziel (Tab).
+     - Cockpit-Reaktionen auf Treffer.
 3. **Synthese-Gegner** (Grundkonzept Phase 5):
    - Trefferzonen Beine / Waffenträger / Torso (Reaktor).
    - Zerstörungsart: Beine → bewegungsunfähig, volles Material, Waffen bergbar. Waffenträger

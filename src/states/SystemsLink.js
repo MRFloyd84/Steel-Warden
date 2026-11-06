@@ -44,7 +44,7 @@ export class SystemsLink {
     const flicker = sys.flickering;
     if (flicker && Math.random() < 0.35) mode = Math.random() < 0.5 ? 'emergency' : 'off';
     if (mode !== cockpit.lightMode) cockpit.applyLightMode(mode);
-    cockpit.setMonitorFlicker(flicker);
+    cockpit.setMonitorFlicker(flicker || (this.extraFlicker?.() && Math.random() < 0.3));
     cockpit.clipboard?.setLightMode(mode);
 
     const flood = c.has('floodlight') && c.value('floodlight') === 1 && f.busPowered;
