@@ -5,6 +5,7 @@ export class Keyboard {
     this.isGameKey = isGameKey;
     this.down = new Set();
     this.pressed = new Set();
+    this.released = new Set();
 
     window.addEventListener('keydown', (e) => {
       if (this.isGameKey(e.code) && !isTypingTarget(e.target)) e.preventDefault();
@@ -13,10 +14,13 @@ export class Keyboard {
       this.pressed.add(e.code);
     });
     window.addEventListener('keyup', (e) => {
-      this.down.delete(e.code);
+      if (this.down.delete(e.code)) this.released.add(e.code);
     });
     // Losing focus would otherwise leave keys "stuck".
-    window.addEventListener('blur', () => this.down.clear());
+    window.addEventListener('blur', () => {
+      for (const code of this.down) this.released.add(code);
+      this.down.clear();
+    });
   }
 
   isDown(code) {
@@ -27,8 +31,13 @@ export class Keyboard {
     return this.pressed.has(code);
   }
 
+  wasReleased(code) {
+    return this.released.has(code);
+  }
+
   endFrame() {
     this.pressed.clear();
+    this.released.clear();
   }
 }
 

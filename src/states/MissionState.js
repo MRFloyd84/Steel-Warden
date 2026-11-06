@@ -9,12 +9,18 @@ import { getMission } from '../data/missions.js';
 import { getWalker } from '../data/walkers.js';
 import { MissionHints } from '../ui/MissionHints.js';
 import { PauseScreen } from '../ui/PauseScreen.js';
+import { CockpitCursor } from '../ui/CockpitCursor.js';
+import { CockpitInteraction } from '../ui/CockpitInteraction.js';
+import { CockpitControls } from '../sim/CockpitControls.js';
+import { CockpitAudio } from '../audio/CockpitAudio.js';
+import { Floodlight } from '../render/Floodlight.js';
+import { wireControlEffects } from './controlEffects.js';
 import { DEG, damp } from '../util/math.js';
 
 const compassDeg = (yaw) => ((((-yaw / DEG) % 360) + 360) % 360);
 const AIM_DISTANCE = 800;
 
-/** In-mission state: walker sim, pilot view, cockpit, pause handling, stats. */
+/** In-mission state: walker sim, pilot view, cockpit + controls, audio, pause, stats. */
 export class MissionState extends State {
   enter({ missionId }) {
     const game = this.game;
@@ -32,11 +38,25 @@ export class MissionState extends State {
     this.view = new PilotView(game.renderer.camera, game.renderer.cockpitCamera, cfg.view);
     this.cockpit = new Cockpit(this.walker, this.world.theater, cfg.cockpit);
     this.cockpit.setEnvironment(this.world.environment, this.world.lighting);
+    this.controls = new CockpitControls(this.cockpit.layout, game.bus);
+    this.cockpit.bindControls(this.controls, game.bus);
+    this.floodlight = new Floodlight(this.world.scene, cfg.floodlight);
+    this.unsubEffects = wireControlEffects(game.bus, this.controls, { cockpit: this.cockpit, floodlight: this.floodlight });
+    this.cockpitAudio = new CockpitAudio(game.audio, game.bus, this.cockpit, this.walker);
     this.debugRig = new TestRig(game.renderer.camera, this.world.sampler, cfg.testRig);
     this.freeCam = false;
 
     this.hints = new MissionHints(game.container, game.input.bindings);
     this.hints.show();
+    this.cursor = new CockpitCursor(game.container);
+    this.interaction = new CockpitInteraction({
+      cockpit: this.cockpit,
+      controls: this.controls,
+      camera: game.renderer.cockpitCamera,
+      renderer: game.renderer,
+      cursor: this.cursor,
+      throttle: this.motion.throttle,
+    });
     this.pauseScreen = new PauseScreen(game.container, {
       onResume: () => this.setPaused(false),
       onAbort: () => this.finish('aborted'),
@@ -70,7 +90,12 @@ export class MissionState extends State {
     game.renderer.canvas.removeEventListener('click', this.onCanvasClick);
     this.unsubLock();
     game.input.mouse.releaseLock();
+    game.audio.setPaused(false);
+    this.cockpitAudio.dispose();
+    this.unsubEffects();
+    this.floodlight.dispose();
     this.hints.destroy();
+    this.cursor.destroy();
     this.pauseScreen.destroy();
     this.cockpit.dispose();
     this.world.dispose();
@@ -79,7 +104,9 @@ export class MissionState extends State {
 
   setPaused(on) {
     this.paused = on;
+    this.game.audio.setPaused(on);
     if (on) {
+      this.interaction.endHold();
       this.game.input.mouse.releaseLock();
       this.pauseScreen.show();
     } else {
@@ -120,18 +147,33 @@ export class MissionState extends State {
       this.world.terrain.setWireframe(this.wireframe);
     }
     if (input.wasPressed('toggleHints')) this.hints.toggleBar();
-    if (input.wasPressed('cockpitLight')) this.cockpit.toggleNightLighting();
+    if (input.wasPressed('cockpitLight') && this.controls.has('cockpitLight')) {
+      // Shortcut for the INNENLICHT knob: toggles between NACHT and TAG.
+      this.controls.setValue('cockpitLight', this.controls.value('cockpitLight') === 2 ? 1 : 2);
+    }
     if (input.wasPressed('freeLookToggle')) this.view.toggleLatch();
     if (input.wasPressed('centerTorso')) this.motion.centerTorso();
     if (input.wasPressed('throttleStop')) this.motion.throttle.stop();
 
-    const look = input.lookDelta(dt);
-    this.view.setHold(input.isDown('freeLookHold'));
+    this.view.setHold(input.isDown('freeLookHold') && !this.freeCam);
+    if (this.view.freeLook) this.interaction.activate();
+    else this.interaction.deactivate();
+
+    let look = { x: 0, y: 0 };
     if (this.freeCam) {
+      look = input.lookDelta(dt);
       this.debugRig.look(look.x, look.y);
     } else if (this.view.freeLook) {
-      this.view.look(look.x, look.y);
+      // Mouse moves the cockpit cursor; pushing past the screen edge turns the head.
+      const m = input.mouse.consumeDelta();
+      const over = this.interaction.move(m.x, m.y);
+      const pad = input.gamepadLook(dt);
+      const sens = input.bindings.mouse.sensitivity;
+      this.view.look(over.x * sens + pad.x, over.y * sens + pad.y);
+      this.interaction.handleInput(input);
     } else {
+      input.mouse.consumeWheel();
+      look = input.lookDelta(dt);
       this.motion.aim(look.x, look.y);
     }
 
@@ -192,17 +234,20 @@ export class MissionState extends State {
 
     lerpPose(this.renderPose, this.motion.prevPose, this.motion.pose, a);
     this.view.apply(this.renderPose);
+    this.floodlight.update(this.renderPose, this.view.torsoQuat, this.view.aimDir);
     this.updateCockpitData(this.paused ? 0 : this.frameDt);
     this.cockpit.update(this.paused ? 0 : this.frameDt, this.data, this.view.torsoQuat);
     this.world.beforeRender(renderer.camera);
     renderer.renderWithCockpit(this.world.scene, this.cockpit.scene);
+    this.interaction.updateHover();
+    if (!this.paused) this.cockpitAudio.update(this.motion);
 
     const p = this.renderPose;
     this.tmpVec.set(p.x, p.y, p.z).addScaledVector(this.view.aimDir, AIM_DISTANCE);
     const reticle = renderer.project(this.tmpVec, this.tmpProj);
     this.hints.update({
       reticle,
-      tag: this.view.freeLook ? 'FREIER BLICK' : null,
+      tag: this.view.freeLook ? 'FREIER BLICK · BEDIENEN' : null,
       locked: game.input.mouse.locked || this.paused,
     });
   }
@@ -242,9 +287,11 @@ export class MissionState extends State {
     d.stickY = this.stickVisual.y;
     d.stickTwist = this.stickVisual.twist;
 
-    const range = this.cockpit.controls.get('radarRange');
-    d.radarRange = range ? Number(range.item.positions[range.value]) : 1000;
-    d.weaponsArmed = this.cockpit.controls.get('weaponsArm')?.value === 1;
+    const c = this.controls;
+    d.radarRange = c.has('radarRange') ? Number(c.positionLabel('radarRange')) : 1000;
+    d.weaponsArmed = c.has('weaponsArm') && c.value('weaponsArm') === 1;
+    d.energyPreset = c.has('energyPreset') ? c.positionLabel('energyPreset') : '';
+    d.radioChannel = c.has('radioChannel') ? c.positionLabel('radioChannel') : '';
     for (const nav of d.navPoints) {
       nav.dx = nav.x - m.x;
       nav.dz = nav.z - m.z;
@@ -264,6 +311,7 @@ export class MissionState extends State {
       `Throttle ${m.throttle.value.toFixed(2)}${m.throttle.detentHold ? ' (Raste)' : ''}  speed ${(m.speed * 3.6).toFixed(1)} km/h`,
       `Legs ${compassDeg(m.legYaw).toFixed(0)}°  twist ${(m.twist / DEG).toFixed(1)}°  pitch ${(m.pitch / DEG).toFixed(1)}°`,
       `Head ${(this.view.yaw / DEG).toFixed(0)}/${(this.view.pitch / DEG).toFixed(0)}°  freeLook ${this.view.freeLook ? 'on' : 'off'}  light ${this.cockpit.lightMode}`,
+      `Hover ${this.interaction.hover?.id ?? '-'}${this.interaction.hover?.part ? '/' + this.interaction.hover.part : ''}  held ${this.interaction.held?.id ?? '-'}  flood ${this.floodlight.on ? 'on' : 'off'}`,
       `Chunks ${t.chunks} (LOD ${t.perLod.join('/')})  queue ${t.queued}  cam ${this.freeCam ? 'free' : 'cockpit'}`,
       `Entities 1  Wireframe ${this.wireframe ? 'on' : 'off'} [F4]`,
     ];

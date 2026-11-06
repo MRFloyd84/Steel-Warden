@@ -26,6 +26,8 @@ export class WalkerMotion {
     this.accel = 0;
     this.twist = 0;
     this.twistTarget = 0;
+    this.twistRate = 0; // rad/s actually turned (for servo sound)
+    this.pitchRate = 0;
     this.pitch = 0;
     this.pitchTarget = 0;
     this.turnInput = 0;
@@ -111,9 +113,13 @@ export class WalkerMotion {
 
     // Torso twist and pitch move toward their targets at the walker's rates
     const twistStep = w.torsoTwistRate * DEG * dt;
-    this.twist += clamp(this.twistTarget - this.twist, -twistStep, twistStep);
+    const twistDelta = clamp(this.twistTarget - this.twist, -twistStep, twistStep);
+    this.twist += twistDelta;
+    this.twistRate = twistDelta / dt;
     const pitchStep = w.torsoPitchRate * DEG * dt;
-    this.pitch += clamp(this.pitchTarget - this.pitch, -pitchStep, pitchStep);
+    const pitchDelta = clamp(this.pitchTarget - this.pitch, -pitchStep, pitchStep);
+    this.pitch += pitchDelta;
+    this.pitchRate = pitchDelta / dt;
 
     this.updateGait(dt);
 
@@ -158,9 +164,13 @@ export class WalkerMotion {
     p.headZ = this.headZ.value;
   }
 
-  // ---- readouts for instruments ----
+  // ---- readouts for instruments and sound ----
   get torsoYaw() {
     return this.legYaw + this.twist;
+  }
+
+  get atTwistLimit() {
+    return Math.abs(this.twist) >= this.w.torsoTwistLimit * DEG - 1e-4;
   }
 }
 

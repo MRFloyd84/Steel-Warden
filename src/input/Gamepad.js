@@ -59,6 +59,10 @@ export class GamepadInput {
     return this.buttons[i] === true;
   }
 
+  wasReleased(i) {
+    return this.buttons[i] !== true && this.prevButtons[i] === true;
+  }
+
   wasPressed(i) {
     return this.buttons[i] === true && this.prevButtons[i] !== true;
   }

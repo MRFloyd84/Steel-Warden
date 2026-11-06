@@ -5,6 +5,7 @@ import { Time } from './Time.js';
 import { Renderer } from '../render/Renderer.js';
 import { InputManager } from '../input/InputManager.js';
 import { DebugOverlay } from '../ui/DebugOverlay.js';
+import { AudioEngine } from '../audio/AudioEngine.js';
 
 /** Owns the shared services and drives the main loop. */
 export class Game {
@@ -15,6 +16,7 @@ export class Game {
     this.time = new Time(CONFIG.sim.fixedStep, CONFIG.sim.maxStepsPerFrame);
     this.renderer = new Renderer(container, CONFIG.render);
     this.input = new InputManager(this.renderer.canvas, this.bus);
+    this.audio = new AudioEngine(this.bus);
     this.states = new StateMachine(this);
     this.debug = new DebugOverlay(container, () => this.collectDebugInfo());
     this.running = false;
@@ -58,6 +60,7 @@ export class Game {
       `Render ${this.renderer.width}x${this.renderer.height} (x${this.renderer.renderScale})`,
       `State ${this.states.currentName ?? '-'}  Dropped steps ${this.time.droppedSteps}`,
       `Pad ${this.input.gamepad.connected ? this.input.gamepad.id.slice(0, 28) : 'none'}`,
+      `Audio ${this.audio.state}  samples ${this.audio.bank?.loaded ?? 0}/${this.audio.bank?.total ?? 0}  voices ${this.audio.voices}`,
     ];
     const state = this.states.current;
     if (state) lines.push('', ...state.debugInfo());

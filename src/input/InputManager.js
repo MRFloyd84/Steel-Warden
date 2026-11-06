@@ -43,6 +43,15 @@ export class InputManager {
     return buttons?.some((b) => this.gamepad.wasPressed(b)) ?? false;
   }
 
+  wasReleased(action) {
+    const codes = this.bindings.keys[action];
+    if (codes?.some((c) => this.keyboard.wasReleased(c))) return true;
+    const mouseButtons = this.bindings.mouseButtons[action];
+    if (mouseButtons?.some((b) => this.mouse.wasReleased(b))) return true;
+    const buttons = this.bindings.gamepad.buttons[action];
+    return buttons?.some((b) => this.gamepad.wasReleased(b)) ?? false;
+  }
+
   /** Composite axis in [-1, 1] from keys plus any mapped gamepad axes. */
   axis(name) {
     let value = 0;
@@ -73,6 +82,13 @@ export class InputManager {
     if (!map || this.gamepad.axes.length <= map.axis) return null;
     const raw = this.gamepad.axis(map.axis);
     return map.invert ? -raw : raw;
+  }
+
+  /** Right-stick look in radians for this frame (without the mouse). */
+  gamepadLook(dt) {
+    const speed = this.bindings.gamepad.lookSpeed * dt;
+    const y = this.gamepadAxis('lookY') * speed;
+    return { x: this.gamepadAxis('lookX') * speed, y: this.bindings.mouse.invertY ? -y : y };
   }
 
   /** Look rotation for this frame in radians (mouse + right stick). */

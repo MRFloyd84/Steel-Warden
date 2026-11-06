@@ -62,6 +62,17 @@ export const CONFIG = {
     maxGrade: 1.1, // steeper than this blocks movement
   },
 
+  // Torso-mounted searchlight (SCHEINWERFER switch).
+  floodlight: {
+    color: '#fff2d8',
+    intensity: 60,
+    distance: 260,
+    angle: 22, // degrees, half cone
+    penumbra: 0.45,
+    decay: 1,
+    mountOffset: [0, -1.6, -1.2], // relative to the eye, torso frame
+  },
+
   // Debug free camera (F7).
   testRig: {
     eyeHeight: 9,

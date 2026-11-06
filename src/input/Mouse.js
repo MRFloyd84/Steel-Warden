@@ -1,13 +1,15 @@
-/** Pointer-lock mouse: accumulates movement deltas and button presses. */
+/** Pointer-lock mouse: accumulates movement and wheel deltas, button presses and releases. */
 export class Mouse {
   constructor(element, bus) {
     this.el = element;
     this.bus = bus;
     this.dx = 0;
     this.dy = 0;
+    this.wheel = 0;
     this.locked = false;
     this.down = new Set();
     this.pressed = new Set();
+    this.released = new Set();
 
     document.addEventListener('mousemove', (e) => {
       if (!this.locked) return;
@@ -18,7 +20,14 @@ export class Mouse {
       this.down.add(e.button);
       this.pressed.add(e.button);
     });
-    window.addEventListener('mouseup', (e) => this.down.delete(e.button));
+    window.addEventListener('mouseup', (e) => {
+      if (this.down.delete(e.button)) this.released.add(e.button);
+    });
+    element.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      // One notch = ±1 regardless of the device's delta units.
+      this.wheel += Math.sign(e.deltaY);
+    }, { passive: false });
     element.addEventListener('contextmenu', (e) => e.preventDefault());
 
     document.addEventListener('pointerlockchange', () => {
@@ -28,6 +37,10 @@ export class Mouse {
         this.dy = 0;
       }
       this.bus.emit('pointer:lock', { locked: this.locked });
+    });
+    window.addEventListener('blur', () => {
+      for (const b of this.down) this.released.add(b);
+      this.down.clear();
     });
   }
 
@@ -52,6 +65,13 @@ export class Mouse {
     return d;
   }
 
+  /** Wheel notches since the last call (positive = toward the user / down). */
+  consumeWheel() {
+    const w = this.wheel;
+    this.wheel = 0;
+    return w;
+  }
+
   isDown(button) {
     return this.down.has(button);
   }
@@ -60,7 +80,12 @@ export class Mouse {
     return this.pressed.has(button);
   }
 
+  wasReleased(button) {
+    return this.released.has(button);
+  }
+
   endFrame() {
     this.pressed.clear();
+    this.released.clear();
   }
 }

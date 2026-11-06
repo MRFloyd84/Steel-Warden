@@ -25,6 +25,7 @@ export class ControlFactory {
       metal: new THREE.MeshLambertMaterial({ color: '#b9bcb3', flatShading: true }),
       knob: new THREE.MeshLambertMaterial({ color: '#141512', flatShading: true }),
       pointer: new THREE.MeshBasicMaterial({ color: '#e9e4cf' }),
+      proxy: new THREE.MeshBasicMaterial(),
       guard: {
         red: new THREE.MeshLambertMaterial({ color: GUARD_COLORS.red, flatShading: true }),
         yellow: new THREE.MeshLambertMaterial({ color: GUARD_COLORS.yellow, flatShading: true }),
@@ -37,6 +38,8 @@ export class ControlFactory {
       skirt: new THREE.CylinderGeometry(0.019, 0.02, 0.004, 12).rotateX(Math.PI / 2).translate(0, 0, 0.002),
       knob: new THREE.CylinderGeometry(0.0125, 0.014, 0.017, 8).rotateX(Math.PI / 2).translate(0, 0, 0.0125),
       pointer: new THREE.BoxGeometry(0.0028, 0.011, 0.0015).translate(0, 0.006, 0.0215),
+      toggleProxy: new THREE.BoxGeometry(0.026, 0.046, 0.036).translate(0, 0, 0.018),
+      rotaryProxy: new THREE.BoxGeometry(0.042, 0.042, 0.024).translate(0, 0, 0.012),
     };
   }
 
@@ -55,13 +58,15 @@ export class ControlFactory {
     const nut = new THREE.Mesh(this.geo.nut, this.mat.metal);
     const pivot = new THREE.Group();
     pivot.add(new THREE.Mesh(this.geo.lever, this.mat.metal), new THREE.Mesh(this.geo.tip, this.mat.metal));
-    object.add(nut, pivot);
-    const pickables = [nut, ...pivot.children];
+    const proxy = this.proxy(this.geo.toggleProxy);
+    object.add(nut, pivot, proxy);
+    const pickables = [proxy, nut, ...pivot.children];
 
     let guardPivot = null;
     if (item.guard) {
       guardPivot = this.buildGuard(this.mat.guard[item.guard]);
       object.add(guardPivot);
+      for (const m of guardPivot.children) m.userData.part = 'guard';
       pickables.push(...guardPivot.children);
     }
 
@@ -75,6 +80,17 @@ export class ControlFactory {
       },
     };
     return { object, view, pickables };
+  }
+
+  /**
+   * Invisible, generous hit volume: a 3 mm lever is too fiddly to click.
+   * Raycasting ignores visibility, rendering skips it.
+   */
+  proxy(geometry) {
+    const mesh = new THREE.Mesh(geometry, this.mat.proxy);
+    mesh.visible = false;
+    mesh.userData.pickProxy = true;
+    return mesh;
   }
 
   /** Flip cover hinged at its lower edge: two side walls, a top and a front plate. */
@@ -100,14 +116,15 @@ export class ControlFactory {
     const skirt = new THREE.Mesh(this.geo.skirt, this.mat.housing);
     const dial = new THREE.Group();
     dial.add(new THREE.Mesh(this.geo.knob, this.mat.knob), new THREE.Mesh(this.geo.pointer, this.mat.pointer));
-    object.add(skirt, dial);
+    const proxy = this.proxy(this.geo.rotaryProxy);
+    object.add(skirt, dial, proxy);
     const n = item.positions.length;
     const view = {
       setValue(v) {
         dial.rotation.z = rotaryAngle(v, n);
       },
     };
-    return { object, view, pickables: [skirt, ...dial.children] };
+    return { object, view, pickables: [proxy, skirt, ...dial.children] };
   }
 
   button(item) {
@@ -167,7 +184,7 @@ function litMaterial(text, aspect, colorName) {
   const tex = labelFaceTexture(text ?? '', aspect);
   return new THREE.MeshLambertMaterial({
     map: tex,
-    color: lit.clone().multiplyScalar(0.13),
+    color: lit.clone().multiplyScalar(0.08),
     emissive: lit,
     emissiveMap: tex,
     emissiveIntensity: 0,

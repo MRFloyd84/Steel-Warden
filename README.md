@@ -26,6 +26,25 @@ Schnellstart-Parameter (Dev und Build):
   als eigener Render-Pass, freies Umsehen, Schubhebel und Seitenknüppel als bewegte 3D-Objekte,
   5 CRT-Monitore mit Nachleuchten, alle Schalter der Startprozedur als 3D-Modelle aus Daten,
   Schubhebel mit Nullraste, Beine/Torso getrennt, Schrittwippen, Bremsnicken.
+- **Erweiterung Schritt 2 (Interaktion + Audio):** Cockpit-Cursor im freien Blick (Rand dreht
+  den Kopf), alle Schalter, Kappen, Drehregler, Taster und Lampen bedienbar, Schubhebel ziehbar.
+  Schalterzustände als Simulationszustand (`sim/CockpitControls.js`). Hybride Audio-Engine:
+  eingebettete Samples plus prozedurale Klicks; Schritte, Servo, Reaktor, Lüftung, Knarzen.
+
+## Bedienung im Cockpit
+
+- Rechte Maustaste halten oder `V`: freier Blick mit Cockpit-Cursor; Maus über den Bildrand
+  hinaus dreht den Kopf
+- Linksklick (oder `F`, Pad A): Schalter umlegen, Schutzkappe öffnen, offene Kappe schließen
+- Drehregler: linke/rechte Hälfte anklicken oder Mausrad
+- Taster und Lampen: gedrückt halten (Lampentest); Schubhebel: anklicken und ziehen
+
+## Sounds
+
+Rohdateien in `assets/sounds-raw/`, Aufbereitung mit `python3 tools/prepare_sounds.py`
+(braucht numpy und ffmpeg) nach `src/audio/samples/`. Die Samples werden ins Bundle
+eingebettet, damit der Offline-Build per `file://` funktioniert. Klang und Mischung:
+`src/data/sounds.js`. Herkunft: `CREDITS.md`.
 
 ## Datenpflege
 
@@ -33,6 +52,7 @@ Schnellstart-Parameter (Dev und Build):
 - `src/data/walkers.js` – Walker-Werte (bisher BASTION MW-1)
 - `src/data/cockpits.js` – Cockpit-Varianten: Kanzel, Paneele, Sitz, Kabel, Innenlicht
 - `src/data/panelLayouts.js` – Schalter, Lampen, Monitore und Hebel auf den Paneelen
+- `src/data/sounds.js` – Sound-Ereignisse, Loops, Mischpult, Bewegungs-Sounds
 - `src/data/theaters.js` – Schauplätze: Geländeform, Farbpalette, Himmel, Nebel
 - `src/data/lighting.js` – Tageszeiten
 - `src/data/missions.js` – Einsätze

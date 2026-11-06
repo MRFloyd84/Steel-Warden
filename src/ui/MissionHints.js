@@ -14,7 +14,7 @@ export class MissionHints extends Overlay {
       `[${k('throttleStop')}] Stopp`,
       `[${k('turnLeft')}/${k('turnRight')}] Beine`,
       'Maus: Torso',
-      `[RMT/${k('freeLookToggle')}] Umsehen`,
+      `[RMT/${k('freeLookToggle')}] Umsehen + Bedienen (Klick, Mausrad)`,
       `[${k('centerTorso')}] Zentrieren`,
       `[${k('cockpitLight')}] Licht`,
       `[${k('debugFreeCam')}] Freiflug`,

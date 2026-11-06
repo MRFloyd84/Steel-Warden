@@ -92,6 +92,7 @@ export function buildShell(variant, theater) {
   const glassMesh = new THREE.Mesh(glass.finish({ withUv: true }), glassMaterial);
   glassMesh.name = 'canopyGlass';
   glassMesh.renderOrder = 10;
+  glassMesh.userData.noPick = true;
 
   const group = new THREE.Group();
   group.add(shell, glassMesh);

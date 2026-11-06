@@ -163,3 +163,25 @@ td:first-child { color: var(--green-dim); }
   border: 1px solid #234; pointer-events: none; z-index: 10;
 }
 .debug-overlay[hidden] { display: none; }
+
+/* ---- Cockpit cursor ---- */
+.cockpit-cursor-layer, .cockpit-cursor-layer > * { pointer-events: none; }
+.cockpit-cursor {
+  position: absolute; left: 0; top: 0; width: 14px; height: 14px; margin: -7px 0 0 -7px;
+  border: 1px solid rgba(255, 180, 58, 0.75); border-radius: 50%; will-change: transform;
+}
+.cockpit-cursor::after {
+  content: ''; position: absolute; left: 50%; top: 50%; width: 2px; height: 2px;
+  margin: -1px 0 0 -1px; background: var(--amber);
+}
+.cockpit-cursor.over { border-color: var(--green); width: 20px; height: 20px; margin: -10px 0 0 -10px; border-radius: 2px; }
+.cockpit-cursor.over::after { background: var(--green); }
+.cockpit-cursor.active { background: rgba(109, 255, 142, 0.18); }
+.cockpit-tip {
+  position: absolute; left: 0; top: 0; padding: 4px 8px; max-width: 260px;
+  font-size: 11px; color: var(--text); background: rgba(6, 8, 6, 0.82);
+  border: 1px solid var(--green-dim); white-space: nowrap; will-change: transform;
+}
+.cockpit-tip[hidden], .tip-hint[hidden] { display: none; }
+.tip-title { color: var(--green); letter-spacing: 0.06em; }
+.tip-hint { color: var(--green-dim); font-size: 10px; margin-top: 2px; }

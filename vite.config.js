@@ -23,7 +23,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     target: 'es2020',
-    chunkSizeWarningLimit: 1500,
+    chunkSizeWarningLimit: 3000,
     rollupOptions: {
       output: {
         format: 'iife',

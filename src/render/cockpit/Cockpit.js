@@ -10,15 +10,15 @@ import { CrtScreen } from './CrtScreen.js';
 import { buildNameplate } from './Nameplate.js';
 import { getDisplay } from './displays/index.js';
 
-const LIGHT_MODES = ['off', 'night', 'day'];
+export const LIGHT_MODES = ['off', 'night', 'day'];
 
 /**
  * The pilot's cockpit as its own scene in torso-local space (eye at the
  * origin). Rendered in a second pass over the world, so it needs no fog
  * and keeps a tiny near plane without hurting terrain depth precision.
  *
- * controls: Map id -> { item, view, value, pickables } — the interaction
- * step turns these into simulation state; here they show initial values.
+ * controls: Map id -> { item, view, object, pickables } — the visuals only.
+ * Positions live in sim/CockpitControls; bindControls() mirrors its events.
  */
 export class Cockpit {
   constructor(walker, theater, config) {
@@ -37,6 +37,7 @@ export class Cockpit {
 
     this.factory = new ControlFactory();
     this.controls = new Map();
+    this.extraParts = new Map(); // monitors, levers, nameplate
     this.monitors = [];
     this.pickables = [];
     this.mountItems(config);
@@ -46,7 +47,33 @@ export class Cockpit {
     this.worldSunColor = new THREE.Color(1, 1, 1);
     this.worldSunIntensity = 1;
     this.lightMode = 'day';
-    this.applyLightMode(LIGHT_MODES[this.controls.get('cockpitLight')?.value ?? 2]);
+    this.applyLightMode(LIGHT_MODES[this.layout.items.find((i) => i.id === 'cockpitLight')?.initial ?? 2]);
+  }
+
+  /** Mirrors control state from the simulation onto the 3D parts. */
+  bindControls(registry, bus) {
+    for (const [id, entry] of this.controls) {
+      if (!registry.has(id)) continue;
+      const s = registry.get(id);
+      entry.view.setValue?.(s.value);
+      entry.view.setGuardOpen?.(s.guardOpen);
+      entry.view.setLit?.(s.lit);
+    }
+    const view = (id) => this.controls.get(id)?.view;
+    const offs = [
+      bus.on('control:changed', ({ id, value }) => view(id)?.setValue?.(value)),
+      bus.on('control:guard', ({ id, open }) => view(id)?.setGuardOpen?.(open)),
+      bus.on('control:pressed', ({ id, pressed }) => view(id)?.setPressed?.(pressed)),
+      bus.on('control:lamp', ({ id, lit }) => view(id)?.setLit?.(lit)),
+    ];
+    this.unbind = () => offs.forEach((off) => off());
+  }
+
+  /** Cockpit-space position of a part (for stereo panning of its sounds). */
+  positionOf(id, out) {
+    const entry = this.controls.get(id) ?? this.extraParts.get(id);
+    if (!entry) return null;
+    return entry.object.getWorldPosition(out);
   }
 
   mountItems(config) {
@@ -90,16 +117,16 @@ export class Cockpit {
           const built = this.factory.create(item);
           object = built.object;
           pickables = built.pickables;
-          const value = item.initial ?? 0;
-          built.view.setValue?.(value);
+          built.view.setValue?.(item.initial ?? 0);
           built.view.setGuardOpen?.(false);
           built.view.setLit?.(false);
-          this.controls.set(item.id, { item, view: built.view, value, pickables });
+          this.controls.set(item.id, { item, view: built.view, object, pickables });
         }
       }
 
       object.position.set(x, y, object.position.z);
       object.name = item.id;
+      if (!this.controls.has(item.id)) this.extraParts.set(item.id, { item, object, pickables });
       for (const mesh of pickables) mesh.userData.controlId = item.id;
       this.pickables.push(...pickables);
       panel.frame.add(object);
@@ -123,17 +150,6 @@ export class Cockpit {
     this.worldSunColor.set(lighting.sunColor);
     this.worldSunIntensity = lighting.sunIntensity;
     this.shell.glassMaterial.color.setScalar(0.35 + 0.65 * lighting.skyBrightness);
-  }
-
-  /** Cycles INNENLICHT between night and day (keyboard shortcut). */
-  toggleNightLighting() {
-    const ctl = this.controls.get('cockpitLight');
-    const next = this.lightMode === 'day' ? 'night' : 'day';
-    if (ctl) {
-      ctl.value = LIGHT_MODES.indexOf(next);
-      ctl.view.setValue(ctl.value);
-    }
-    this.applyLightMode(next);
   }
 
   applyLightMode(mode) {
@@ -165,6 +181,7 @@ export class Cockpit {
 
   /** Frees all GPU resources; disposing shared resources twice is harmless. */
   dispose() {
+    this.unbind?.();
     this.scene.traverse((o) => {
       o.geometry?.dispose();
       const mats = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];

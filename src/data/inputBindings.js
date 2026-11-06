@@ -9,6 +9,9 @@
  *               HOTAS devices usually report other indices, hence remappable.
  *               Axis action "throttleAbs" maps an absolute throttle lever
  *               (-1 = full reverse, +1 = full ahead); "throttle" is a rate axis.
+ *
+ * In free look the mouse moves the cockpit cursor; "interact" (left mouse,
+ * F, pad A) operates the control under it, the wheel turns knobs.
  */
 export const DEFAULT_BINDINGS = {
   keys: {
@@ -19,6 +22,7 @@ export const DEFAULT_BINDINGS = {
     turnRight: ['KeyD', 'ArrowRight'],
     centerTorso: ['KeyE'],
     freeLookToggle: ['KeyV'],
+    interact: ['KeyF'],
     cockpitLight: ['KeyN'],
     moveUp: ['Space'],
     moveDown: ['KeyQ'],
@@ -32,6 +36,7 @@ export const DEFAULT_BINDINGS = {
   },
 
   mouseButtons: {
+    interact: [0],
     freeLookHold: [2],
   },
 
@@ -62,6 +67,7 @@ export const DEFAULT_BINDINGS = {
       throttleStop: [1],
       centerTorso: [2],
       freeLookHold: [11],
+      interact: [0],
       cockpitLight: [3],
       boost: [10],
       moveUp: [5],
@@ -82,6 +88,7 @@ export const ACTION_LABELS = {
   turnRight: 'Beine rechts drehen',
   centerTorso: 'Torso zentrieren',
   freeLookToggle: 'Freier Blick (umschalten)',
+  interact: 'Bedienen (im freien Blick)',
   cockpitLight: 'Innenlicht Tag/Nacht',
   toggleHints: 'Tastenhilfe',
   toggleDebug: 'Debug-Overlay',
