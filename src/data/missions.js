@@ -1,7 +1,7 @@
 /**
- * Mission definitions. Phase 1 only uses id/name/theater/timeOfDay/seed/
- * briefing/playerStart; navPoints, spawns, triggers, objectives etc. are
- * read by the mission system from phase 6 on.
+ * Mission definitions. Used so far: id/name/theater/timeOfDay/seed/briefing,
+ * playerStart { x, z, heading (rad), walker } and navPoints [{ id, x, z }].
+ * spawns, triggers, objectives etc. follow with the mission system.
  */
 export const MISSIONS = [
   {
@@ -11,7 +11,8 @@ export const MISSIONS = [
     timeOfDay: 'day',
     seed: 1337,
     briefing: 'Geländeerprobung in der Eiswüste. Keine Feindkontakte erwartet.',
-    playerStart: { x: 0, z: 0, heading: 0 },
+    playerStart: { x: 0, z: 0, heading: 0, walker: 'bastion' },
+    navPoints: [{ id: 'ALPHA', x: 600, z: -900 }, { id: 'BRAVO', x: -1400, z: -300 }],
   },
   {
     id: 'test-volcano',
@@ -20,7 +21,8 @@ export const MISSIONS = [
     timeOfDay: 'dusk',
     seed: 4242,
     briefing: 'Plateau-Terrassen und Lavasenken. Sichtweite eingeschränkt.',
-    playerStart: { x: 0, z: 0, heading: 1.2 },
+    playerStart: { x: 0, z: 0, heading: 1.2, walker: 'bastion' },
+    navPoints: [{ id: 'ALPHA', x: -900, z: -500 }, { id: 'BRAVO', x: 300, z: 1200 }],
   },
   {
     id: 'test-industrial',
@@ -29,7 +31,8 @@ export const MISSIONS = [
     timeOfDay: 'day',
     seed: 90210,
     briefing: 'Flaches Industriegelände. Bebauung folgt in einer späteren Ausbaustufe.',
-    playerStart: { x: 0, z: 0, heading: -0.6 },
+    playerStart: { x: 0, z: 0, heading: -0.6, walker: 'bastion' },
+    navPoints: [{ id: 'ALPHA', x: 500, z: -700 }, { id: 'BRAVO', x: 1500, z: 200 }],
   },
   {
     id: 'test-moon',
@@ -38,7 +41,8 @@ export const MISSIONS = [
     timeOfDay: 'day',
     seed: 777,
     briefing: 'Kraterfeld ohne Atmosphäre. Harte Schatten, schwarzer Himmel.',
-    playerStart: { x: 0, z: 0, heading: 2.4 },
+    playerStart: { x: 0, z: 0, heading: 2.4, walker: 'bastion' },
+    navPoints: [{ id: 'ALPHA', x: -700, z: 600 }, { id: 'BRAVO', x: 900, z: 900 }],
   },
   {
     id: 'test-ice-night',
@@ -47,7 +51,8 @@ export const MISSIONS = [
     timeOfDay: 'night',
     seed: 2024,
     briefing: 'Nachterprobung. Sternenhimmel, geringe Restlichtverstärkung.',
-    playerStart: { x: 0, z: 0, heading: 0.4 },
+    playerStart: { x: 0, z: 0, heading: 0.4, walker: 'bastion' },
+    navPoints: [{ id: 'ALPHA', x: -300, z: -1100 }],
   },
 ];
 

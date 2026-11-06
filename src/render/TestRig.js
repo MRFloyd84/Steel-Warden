@@ -2,10 +2,9 @@ import * as THREE from 'three';
 import { clamp, damp } from '../util/math.js';
 
 /**
- * Phase-1 test camera for inspecting terrain: ground mode follows the
- * surface at cockpit height, fly mode moves freely. Simulation runs at the
+ * Debug free camera (F7) for inspecting terrain and, later, walker models:
+ * ground mode follows the surface, fly mode moves freely. Runs at the
  * fixed step; the camera interpolates between the last two sim positions.
- * Phase 2 replaces this with the walker controller.
  */
 export class TestRig {
   constructor(camera, sampler, config) {
@@ -28,6 +27,16 @@ export class TestRig {
     this.vel.set(0, 0, 0);
     this.yaw = heading;
     this.pitch = 0;
+  }
+
+  /** Start free flight from an existing camera position and heading. */
+  placeAt(position, yaw, pitch) {
+    this.pos.copy(position);
+    this.prev.copy(position);
+    this.vel.set(0, 0, 0);
+    this.yaw = yaw;
+    this.pitch = pitch;
+    this.fly = true;
   }
 
   look(dx, dy) {

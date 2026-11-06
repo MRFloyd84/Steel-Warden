@@ -119,21 +119,31 @@ td:first-child { color: var(--green-dim); }
 .small-panel { width: min(420px, 92vw); padding: 20px 22px; }
 .report td:last-child { color: var(--amber); text-align: right; }
 
-/* ---- Phase-1 mission readout ---- */
+/* ---- Mission overlay ---- */
 .mission-hints { pointer-events: none; }
 .mission-hints > * { pointer-events: none; }
 .crosshair {
-  position: absolute; left: 50%; top: 50%; width: 22px; height: 22px;
-  margin: -11px 0 0 -11px; border: 1px solid var(--green); opacity: 0.8;
+  position: absolute; left: 0; top: 0; width: 22px; height: 22px;
+  margin: -11px 0 0 -11px; border: 1px solid var(--green); opacity: 0.85;
+  will-change: transform;
 }
+.crosshair[hidden] { display: none; }
 .crosshair::after {
   content: ''; position: absolute; left: 50%; top: 50%; width: 2px; height: 2px;
   margin: -1px 0 0 -1px; background: var(--green);
 }
-.hint-bar {
-  position: absolute; left: 0; right: 0; bottom: 0; padding: 6px 12px;
-  font-size: 12px; color: var(--green); background: rgba(0, 0, 0, 0.55); white-space: pre;
+.view-tag {
+  position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+  padding: 3px 10px; font-size: 11px; letter-spacing: 0.2em; color: var(--amber);
+  background: rgba(0, 0, 0, 0.55); border: 1px solid var(--amber-dim);
 }
+.view-tag[hidden] { display: none; }
+.hint-bar {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 5px 12px;
+  font-size: 11px; color: var(--green); background: rgba(0, 0, 0, 0.5); white-space: pre;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.hint-bar[hidden] { display: none; }
 .click-hint {
   position: absolute; left: 50%; top: 60%; transform: translateX(-50%);
   padding: 6px 12px; font-size: 12px; color: var(--amber); background: rgba(0, 0, 0, 0.6);

@@ -20,7 +20,8 @@ export class World {
     }];
     this.sampler = new TerrainSampler(this.theater.terrain, mission.seed, gridStep, flatZones);
 
-    this.environment = new Environment(this.scene, this.theater, { ...getLighting(mission.timeOfDay), ...this.theater.lightingOverride }, mission.seed);
+    this.lighting = { ...getLighting(mission.timeOfDay), ...this.theater.lightingOverride };
+    this.environment = new Environment(this.scene, this.theater, this.lighting, mission.seed);
     this.terrain = new TerrainManager(this.scene, this.sampler, this.theater, terrainConfig, mission.seed);
   }
 

@@ -1,4 +1,7 @@
-/** Global engine settings. Tune freely — nothing here is gameplay balance. */
+/**
+ * Global engine settings and motion feel. Tune freely — walker balance
+ * values live in walkers.js, this file only shapes how things feel.
+ */
 export const CONFIG = {
   sim: {
     fixedStep: 1 / 60,
@@ -8,7 +11,7 @@ export const CONFIG = {
   render: {
     // < 1 renders fewer pixels and upscales with hard edges (period look + speed).
     renderScale: 0.75,
-    fov: 68,
+    fov: 72,
     near: 0.5,
     far: 4000,
     antialias: false,
@@ -25,7 +28,41 @@ export const CONFIG = {
     skirtDepth: 14, // hides cracks between neighbouring LODs
   },
 
-  // Phase-1 test camera; replaced by the walker in phase 2.
+  cockpit: {
+    near: 0.02, // separate render pass, so the world keeps its depth precision
+    far: 30,
+    monitorHz: 15, // CRT redraw rate (staggered across monitors)
+    panelPixelsPerMetre: 1000,
+  },
+
+  view: {
+    neutralPitch: -7, // degrees; resting head angle shows more of the panel
+    freeLookYaw: 135,
+    freeLookPitchUp: 75,
+    freeLookPitchDown: 60,
+    recenterRate: 7,
+  },
+
+  feel: {
+    throttleRate: 0.55, // lever travel per second while a key is held
+    brakeFactor: 1.6, // deceleration relative to walker acceleration
+    turnAtSpeed: 0.7, // turn rate multiplier at full speed
+    strideBase: 3, // metres per step = strideBase + tonnage * stridePerTon
+    stridePerTon: 0.04,
+    bobBase: 0.04, // vertical bob amplitude in metres
+    bobPerTon: 0.0012,
+    swayPerTon: 0.012, // roll sway in degrees per tonne
+    footfallKick: 0.006, // head drop impulse per tonne (m/s)
+    brakePitch: 0.012, // torso pitch in radians per m/s² of acceleration
+    turnRoll: 0.06, // lean in radians at full turn rate and speed
+    pitchSpring: { stiffness: 22, damping: 3.2 }, // underdamped: settles with a wobble
+    headSpring: { stiffness: 160, damping: 13 },
+    uphillDrag: 1.6, // speed loss per unit of grade
+    downhillBoost: 0.4,
+    maxGrade: 1.1, // steeper than this blocks movement
+  },
+
+  // Debug free camera (F7).
   testRig: {
     eyeHeight: 9,
     groundSpeed: 14,

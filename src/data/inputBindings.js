@@ -1,31 +1,46 @@
 /**
  * Default input mapping. Users can override any section via localStorage key
- * "steelwarden:bindings" (a rebinding UI follows in phase 10).
+ * "steelwarden:bindings" (a rebinding UI follows in the polish phase).
  *
- * keys:      action -> list of KeyboardEvent.code values
- * keyAxes:   composite axis -> [positive action, negative action]
- * gamepad:   axis/button indices follow the "standard" Gamepad mapping;
- *            HOTAS devices usually report non-standard indices, hence remappable.
+ * keys:         action -> list of KeyboardEvent.code values
+ * mouseButtons: action -> list of MouseEvent.button values (0 left, 1 middle, 2 right)
+ * keyAxes:      composite axis -> [positive action, negative action]
+ * gamepad:      axis/button indices follow the "standard" Gamepad mapping;
+ *               HOTAS devices usually report other indices, hence remappable.
+ *               Axis action "throttleAbs" maps an absolute throttle lever
+ *               (-1 = full reverse, +1 = full ahead); "throttle" is a rate axis.
  */
 export const DEFAULT_BINDINGS = {
   keys: {
-    moveForward: ['KeyW', 'ArrowUp'],
-    moveBack: ['KeyS', 'ArrowDown'],
-    strafeLeft: ['KeyA', 'ArrowLeft'],
-    strafeRight: ['KeyD', 'ArrowRight'],
+    throttleUp: ['KeyW', 'ArrowUp'],
+    throttleDown: ['KeyS', 'ArrowDown'],
+    throttleStop: ['KeyX'],
+    turnLeft: ['KeyA', 'ArrowLeft'],
+    turnRight: ['KeyD', 'ArrowRight'],
+    centerTorso: ['KeyE'],
+    freeLookToggle: ['KeyV'],
+    cockpitLight: ['KeyN'],
     moveUp: ['Space'],
-    moveDown: ['KeyC'],
+    moveDown: ['KeyQ'],
     boost: ['ShiftLeft', 'ShiftRight'],
-    toggleFly: ['KeyF'],
+    toggleHints: ['F1'],
     toggleDebug: ['F3'],
     toggleWireframe: ['F4'],
+    debugFreeCam: ['F7'],
     pause: ['Escape', 'KeyP'],
     confirm: ['Enter', 'NumpadEnter'],
   },
 
+  mouseButtons: {
+    freeLookHold: [2],
+  },
+
   keyAxes: {
-    move: ['moveForward', 'moveBack'],
-    strafe: ['strafeRight', 'strafeLeft'],
+    throttle: ['throttleUp', 'throttleDown'],
+    turn: ['turnRight', 'turnLeft'],
+    // Debug free camera reuses the driving keys.
+    move: ['throttleUp', 'throttleDown'],
+    strafe: ['turnRight', 'turnLeft'],
     vertical: ['moveUp', 'moveDown'],
   },
 
@@ -38,16 +53,19 @@ export const DEFAULT_BINDINGS = {
     deadzone: 0.15,
     lookSpeed: 2.2, // radians per second at full deflection
     axes: [
-      { axis: 0, action: 'strafe', invert: false },
-      { axis: 1, action: 'move', invert: true },
+      { axis: 0, action: 'turn', invert: false },
+      { axis: 1, action: 'throttle', invert: true },
       { axis: 2, action: 'lookX', invert: false },
       { axis: 3, action: 'lookY', invert: false },
     ],
     buttons: {
+      throttleStop: [1],
+      centerTorso: [2],
+      freeLookHold: [11],
+      cockpitLight: [3],
       boost: [10],
       moveUp: [5],
       moveDown: [4],
-      toggleFly: [3],
       toggleDebug: [8],
       pause: [9],
       confirm: [0],
@@ -55,18 +73,20 @@ export const DEFAULT_BINDINGS = {
   },
 };
 
-/** German labels for the controls screen. */
+/** German labels for the controls screen (actions without a label are hidden). */
 export const ACTION_LABELS = {
-  moveForward: 'Vorwärts',
-  moveBack: 'Rückwärts',
-  strafeLeft: 'Seitwärts links',
-  strafeRight: 'Seitwärts rechts',
-  moveUp: 'Steigen (Flugmodus)',
-  moveDown: 'Sinken (Flugmodus)',
-  boost: 'Schnell',
-  toggleFly: 'Boden-/Flugmodus',
+  throttleUp: 'Schub erhöhen',
+  throttleDown: 'Schub verringern',
+  throttleStop: 'Schub auf Null',
+  turnLeft: 'Beine links drehen',
+  turnRight: 'Beine rechts drehen',
+  centerTorso: 'Torso zentrieren',
+  freeLookToggle: 'Freier Blick (umschalten)',
+  cockpitLight: 'Innenlicht Tag/Nacht',
+  toggleHints: 'Tastenhilfe',
   toggleDebug: 'Debug-Overlay',
   toggleWireframe: 'Drahtgitter',
+  debugFreeCam: 'Debug-Freiflug',
   pause: 'Pause',
   confirm: 'Bestätigen',
 };

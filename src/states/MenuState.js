@@ -27,8 +27,8 @@ export class MenuState extends State {
 
   frame() {
     const input = this.game.input;
-    if (input.wasPressed('moveBack')) this.screen.move(1);
-    if (input.wasPressed('moveForward')) this.screen.move(-1);
+    if (input.wasPressed('throttleDown')) this.screen.move(1);
+    if (input.wasPressed('throttleUp')) this.screen.move(-1);
     if (input.wasPressed('confirm')) this.screen.start();
   }
 

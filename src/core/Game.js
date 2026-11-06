@@ -32,6 +32,7 @@ export class Game {
     requestAnimationFrame(this.loop);
 
     const dt = this.time.beginFrame(now);
+    this.renderer.beginFrame();
     this.input.poll();
 
     if (this.states.applyPending()) this.time.resetAccumulator();

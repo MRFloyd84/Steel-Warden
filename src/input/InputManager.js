@@ -28,6 +28,8 @@ export class InputManager {
   isDown(action) {
     const codes = this.bindings.keys[action];
     if (codes?.some((c) => this.keyboard.isDown(c))) return true;
+    const mouseButtons = this.bindings.mouseButtons[action];
+    if (mouseButtons?.some((b) => this.mouse.isDown(b))) return true;
     const buttons = this.bindings.gamepad.buttons[action];
     return buttons?.some((b) => this.gamepad.isDown(b)) ?? false;
   }
@@ -35,6 +37,8 @@ export class InputManager {
   wasPressed(action) {
     const codes = this.bindings.keys[action];
     if (codes?.some((c) => this.keyboard.wasPressed(c))) return true;
+    const mouseButtons = this.bindings.mouseButtons[action];
+    if (mouseButtons?.some((b) => this.mouse.wasPressed(b))) return true;
     const buttons = this.bindings.gamepad.buttons[action];
     return buttons?.some((b) => this.gamepad.wasPressed(b)) ?? false;
   }
@@ -57,6 +61,18 @@ export class InputManager {
       value += map.invert ? -raw : raw;
     }
     return value;
+  }
+
+  /**
+   * Absolute axis value (e.g. a HOTAS throttle lever) or null when no
+   * connected device has that axis mapped.
+   */
+  absoluteAxis(name) {
+    if (!this.gamepad.connected) return null;
+    const map = this.bindings.gamepad.axes.find((m) => m.action === name);
+    if (!map || this.gamepad.axes.length <= map.axis) return null;
+    const raw = this.gamepad.axis(map.axis);
+    return map.invert ? -raw : raw;
   }
 
   /** Look rotation for this frame in radians (mouse + right stick). */
@@ -86,7 +102,7 @@ function applyDeadzone(v, dz) {
 function mergeBindings(defaults, overrides) {
   const merged = structuredClone(defaults);
   if (!overrides || typeof overrides !== 'object') return merged;
-  for (const section of ['keys', 'keyAxes', 'mouse']) {
+  for (const section of ['keys', 'mouseButtons', 'keyAxes', 'mouse']) {
     if (overrides[section]) Object.assign(merged[section], overrides[section]);
   }
   if (overrides.gamepad) {

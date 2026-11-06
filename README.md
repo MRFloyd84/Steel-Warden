@@ -17,15 +17,22 @@ Schnellstart-Parameter (Dev und Build):
 - `?mission=test-ice` – Menü überspringen (IDs siehe `src/data/missions.js`)
 - `?debug=1` – Debug-Overlay sofort anzeigen
 
-## Stand: Ausbaustufe 1 (Grundgerüst)
+## Stand
 
-Game-Loop mit festem Simulationstakt, Zustandsmaschine Menü → Einsatz → Nachbesprechung,
-gestreamtes Low-Poly-Terrain mit LOD, vier Schauplätze, Tageszeiten, Eingabeschicht
-(Tastatur, Maus mit Pointer-Lock, Gamepad), Debug-Overlay.
+- **Ausbaustufe 1 (Grundgerüst):** Game-Loop mit festem Simulationstakt, Zustandsmaschine
+  Menü → Einsatz → Nachbesprechung, gestreamtes Low-Poly-Terrain mit LOD, vier Schauplätze,
+  Tageszeiten, Eingabeschicht (Tastatur, Maus, Gamepad), Debug-Overlay.
+- **Erweiterung Schritt 1 (Cockpit-Grundmodell):** begehbares 3D-Cockpit (Variante `standard`)
+  als eigener Render-Pass, freies Umsehen, Schubhebel und Seitenknüppel als bewegte 3D-Objekte,
+  5 CRT-Monitore mit Nachleuchten, alle Schalter der Startprozedur als 3D-Modelle aus Daten,
+  Schubhebel mit Nullraste, Beine/Torso getrennt, Schrittwippen, Bremsnicken.
 
 ## Datenpflege
 
-- `src/data/config.js` – Engine-Einstellungen (Auflösung, Sichtweite, Terrain-LOD)
+- `src/data/config.js` – Engine-Einstellungen und Fahrgefühl (`feel`, `view`, `cockpit`)
+- `src/data/walkers.js` – Walker-Werte (bisher BASTION MW-1)
+- `src/data/cockpits.js` – Cockpit-Varianten: Kanzel, Paneele, Sitz, Kabel, Innenlicht
+- `src/data/panelLayouts.js` – Schalter, Lampen, Monitore und Hebel auf den Paneelen
 - `src/data/theaters.js` – Schauplätze: Geländeform, Farbpalette, Himmel, Nebel
 - `src/data/lighting.js` – Tageszeiten
 - `src/data/missions.js` – Einsätze

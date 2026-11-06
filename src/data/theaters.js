@@ -10,6 +10,7 @@
  *   craters          optional: { cell, chance, minRadius, maxRadius, depth, rim }
  *   startMinHeight   optional: player start pad is raised at least to this height
  * lightingOverride   optional: replaces fields of the mission's time-of-day preset
+ * canopyGrime       dirt on the cockpit glass { color, amount 0..1 }
  * palette:
  *   bands            colour by height (first band whose max >= height wins)
  *   rock / rockSlope faces steeper than rockSlope (normal.y) use the rock colour
@@ -35,6 +36,7 @@ export const THEATERS = {
     sky: { zenith: '#557aa0', horizon: '#b7c7d4', ground: '#6d7a85' },
     fog: { near: 140, far: 900 },
     ambientScale: 1.0,
+    canopyGrime: { color: '#eef4fa', amount: 0.55 },
   },
 
   volcano: {
@@ -58,6 +60,7 @@ export const THEATERS = {
     ambientScale: 1.7,
     // Volcanic haze scatters light: sun sits higher than a plain dusk preset.
     lightingOverride: { sunElevation: 22 },
+    canopyGrime: { color: '#2c2522', amount: 0.75 },
   },
 
   industrial: {
@@ -79,6 +82,7 @@ export const THEATERS = {
     sky: { zenith: '#6a7076', horizon: '#a9a99c', ground: '#4d4b45' },
     fog: { near: 100, far: 760 },
     ambientScale: 1.0,
+    canopyGrime: { color: '#5c5442', amount: 0.65 },
   },
 
   moon: {
@@ -104,6 +108,7 @@ export const THEATERS = {
     stars: true,
     // No atmosphere: low, hard, white sun for long crater shadows.
     lightingOverride: { sunElevation: 16, sunColor: '#ffffff', sunIntensity: 3.2 },
+    canopyGrime: { color: '#8a8a8a', amount: 0.45 },
   },
 };
 
