@@ -98,7 +98,7 @@ die Technik meldet sich. Waffen, Schaden, Hitze und Energie: `src/data/weapons.j
 
 ## Startprozedur
 
-Reihenfolge (Checkliste im Spiel): Batterie → Hilfsaggregat START halten → Kühlpumpen 1+2 →
+Reihenfolge (Checkliste im Spiel): Batterie → Hilfsaggregat START halten → KÜHLPUMPEN (ein Schalter, Pumpe 2 läuft automatisch nach) →
 BETRIEBSART VORH bis VORHEIZ OK → Zündkappe auf, ZÜND → Hauptbus REAKT → Hydraulik →
 Monitore TEST → Gyro ausrichten → Sensoren → Schilde → Waffen scharf → Beinsperre LÖSEN →
 BETRIEBSART BETR für volle Leistung.
@@ -112,10 +112,10 @@ BETRIEBSART BETR für volle Leistung.
 
 1. *Korrekter Start:* Checkliste (`C`) Punkt für Punkt abarbeiten. Am Ende sind alle
    Statuslampen links aus, Funkspruch „Bereit zum Ausrücken", der Walker fährt.
-2. *Zündung ohne Kühlung:* Batterie, Hilfsaggregat, VORH — Pumpen auslassen — zünden.
+2. *Zündung ohne Kühlung:* Batterie, Hilfsaggregat, VORH — KÜHLPUMPEN auslassen — zünden.
    Die Kerntemperatur steigt über 700 °C (HITZE, WARNUNG, Alarm), bei 900 °C Notabschaltung:
    BETRIEBSART springt auf AUS, Hauptbus auf HILFS, Hilfsaggregat startet von selbst.
-3. *Neustart:* nach der Notabschaltung Pumpen ein, abkühlen lassen, VORH bis VORHEIZ OK.
+3. *Neustart:* nach der Notabschaltung KÜHLPUMPEN ein, abkühlen lassen, VORH bis VORHEIZ OK.
    Zünden geht erst, nachdem die Zündkappe einmal geschlossen und wieder geöffnet wurde.
    Dann ZÜND, Hauptbus REAKT, BETR — das Klemmbrett zeigt solange die Neustart-Liste.
 

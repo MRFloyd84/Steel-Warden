@@ -63,7 +63,7 @@ export class WalkerSystems {
         // A trip by the system has its own event (busTrip).
         if (cause !== 'system') this.emit('busSwitch', { toReactor: value === 1 });
         break;
-      case 'coolantPump2':
+      case 'coolantPumps':
         if (value === 1 && this.randomEvents && !this.s.random.pump2Tried) {
           this.s.random.pump2Tried = true;
           this.s.coolant.pump2Failed = true;
@@ -174,7 +174,7 @@ export class WalkerSystems {
     if (c.has('reactor2Ignition')) c.setGuard('reactor2Ignition', true, 'system');
     const finalPositions = {
       reactor2Ignition: 1,
-      batteryMaster: 1, coolantPump1: 1, coolantPump2: 1, reactorMode: 2, reactorIgnition: 1,
+      batteryMaster: 1, coolantPumps: 1, reactorMode: 2, reactorIgnition: 1,
       mainBus: 1, hydraulics: 1, sensors: 1, shields: 1, weaponsArm: 1, legLock: 1,
     };
     for (const [id, v] of Object.entries(finalPositions)) if (c.has(id)) c.setValue(id, v, 'system');
@@ -234,7 +234,7 @@ function createState(cfg, monitorIds) {
     battery: { on: false, volts: 0 },
     apu: { rpm: 0, mode: 'off', stable: 0, transferT: 0, emergency: false },
     power: { aux: false, main: false, bus: false, batteryBus: false, fault: false, faultAt: -Infinity, source: 'none' },
-    coolant: { p1: 0, p2: 0, flow: 0, pump2Failed: false },
+    coolant: { p1: 0, p2: 0, flow: 0, onTime: 0, pump2Failed: false },
     reactor: {
       temp: cfg.reactor.ambient, power: 0, mode: 'cold', ignT: 0, heater: false, pendingHeat: 0, weaponHeatRate: 0,
       lockout: false, failUntil: -Infinity, flickerUntil: -Infinity, scramAt: -Infinity, restartNeeded: false,

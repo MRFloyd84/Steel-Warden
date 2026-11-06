@@ -21,8 +21,8 @@
 const OVERHEAD = [
   { id: 'batteryMaster', type: 'toggle', panel: 'overhead', at: [0.1, 0.42], label: 'BATTERIE', positions: ['AUS', 'EIN'], guard: 'yellow' },
   { id: 'apuStart', type: 'button', panel: 'overhead', at: [0.27, 0.42], label: 'HILFSAGG.', cap: 'START', lampColor: 'amber', momentary: true },
-  { id: 'coolantPump1', type: 'toggle', panel: 'overhead', at: [0.42, 0.42], label: 'PUMPE 1', positions: ['AUS', 'EIN'] },
-  { id: 'coolantPump2', type: 'toggle', panel: 'overhead', at: [0.55, 0.42], label: 'PUMPE 2', positions: ['AUS', 'EIN'] },
+  // One switch starts both coolant pumps; pump 2 follows automatically (systems.js: coolant.pump2Delay).
+  { id: 'coolantPumps', type: 'toggle', panel: 'overhead', at: [0.485, 0.42], label: 'KÜHLPUMPEN', positions: ['AUS', 'EIN'] },
   { id: 'reactorMode', type: 'rotary', panel: 'overhead', at: [0.74, 0.44], label: 'BETRIEBSART', positions: ['AUS', 'VORH', 'BETR'] },
   { id: 'reactorIgnition', type: 'toggle', panel: 'overhead', at: [0.9, 0.42], label: 'ZÜNDUNG', positions: ['AUS', 'ZÜND'], guard: 'red' },
   { id: 'mainBus', type: 'toggle', panel: 'overhead', at: [0.1, 0.8], label: 'HAUPTBUS', positions: ['HILFS', 'REAKT'] },

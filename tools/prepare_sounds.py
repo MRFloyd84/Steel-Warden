@@ -26,6 +26,7 @@ SR = 44100
 RECIPES = [
     # Movement
     ('mech_step', 'freesound_community-mech_step_001', 0.03, 1.45, dict(norm=('peak', -1), fade_out=0.15)),
+    ('motor_loop', 'Mechanical_machine_m_2', 0, None, dict(kind='loop', xfade=0.3, norm=('rms', -20))),
     ('servo_loop', 'Continuous_hydraulic_1', 0, None, dict(kind='loop', xfade=0.4, norm=('rms', -20))),
     ('servo_heavy_loop', 'Continuous_hydraulic_2', 0, None, dict(kind='loop', xfade=0.4, norm=('rms', -20))),
     ('creak_1', 'Old_rusty_heavy_stee_1', 0.05, None, dict(norm=('peak', -3), fade_out=0.1)),

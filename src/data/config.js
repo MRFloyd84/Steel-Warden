@@ -34,7 +34,7 @@ export const CONFIG = {
   // ?startmode=simple|auto|full overrides the mode.
   startup: {
     mode: 'full',
-    randomEvents: false, // pump 2 fails on the first try, gyro needs two runs
+    randomEvents: false, // pump 2 fails on the first try (switch KÜHLPUMPEN off and on), gyro needs two runs
   },
 
   cockpit: {

@@ -37,6 +37,7 @@ export const SYSTEMS = {
   },
 
   coolant: {
+    pump2Delay: 1.5, // s after the switch until pump 2 runs
     maxPressure: 6.0,
     okPressure: 4.5, // DRUCK 1/2 lamp threshold
     riseRate: 1.1,
@@ -146,7 +147,7 @@ export const CHECKLISTS = {
   full: [
     { text: 'BATTERIE — EIN', flag: 'batteryOn' },
     { text: 'HILFSAGG. START — HALTEN BIS BEREIT', flag: 'apuReady' },
-    { text: 'KÜHLPUMPE 1 + 2 — EIN, DRUCK PRÜFEN', flag: 'coolantOk' },
+    { text: 'KÜHLPUMPEN — EIN, DRUCK 1 + 2 PRÜFEN', flag: 'coolantOk' },
     { text: 'BETRIEBSART — VORH, VORHEIZ OK', flag: 'preheatOk' },
     { text: 'ZÜNDUNG — KAPPE AUF, ZÜNDEN', flag: 'reactorRunning' },
     { text: 'HAUPTBUS — REAKT', flag: 'onReactorBus' },
@@ -189,7 +190,7 @@ export const CHECKLISTS = {
 export const STARTUP_SCRIPT = [
   { id: 'battery', player: ['simple'], actions: [['guard', 'batteryMaster', true], ['set', 'batteryMaster', 1]], flag: 'batteryOn' },
   { id: 'apu', skipIf: ['onReactorBus', 'reactorRunning'], actions: [['press', 'apuStart']], flag: 'apuReady', after: [['release', 'apuStart']], timeout: 12, retry: [['release', 'apuStart'], ['wait', 1], ['press', 'apuStart']] },
-  { id: 'coolant', actions: [['set', 'coolantPump1', 1], ['set', 'coolantPump2', 1]], flag: 'coolantOk', timeout: 8, retry: [['set', 'coolantPump2', 0], ['set', 'coolantPump2', 1]] },
+  { id: 'coolant', actions: [['set', 'coolantPumps', 1]], flag: 'coolantOk', timeout: 9, retry: [['set', 'coolantPumps', 0], ['wait', 0.5], ['set', 'coolantPumps', 1]] },
   { id: 'preheat', skipIf: ['reactorRunning'], actions: [['set', 'reactorMode', 1]], flag: 'preheatOk', timeout: 20 },
   { id: 'ignition', player: ['simple'], actions: [['guard', 'reactorIgnition', true], ['set', 'reactorIgnition', 1]], flag: 'reactorRunning', timeout: 8, retry: [['set', 'reactorIgnition', 0], ['set', 'reactorIgnition', 1]] },
   { id: 'bus', actions: [['set', 'mainBus', 1]], flag: 'onReactorBus' },

@@ -12,3 +12,5 @@ erzeugt `tools/prepare_sounds.py` nach `src/audio/samples/`.
 
 Alle übrigen Klänge (Schalterklicks, Drehregler-Rasten, Taster) werden zur Laufzeit
 prozedural erzeugt (`src/audio/ClickSynth.js`).
+
+Ergänzt: `Mechanical_machine_m_2` (von Rene) als Antriebsmotor-Schleife `motor_loop`.

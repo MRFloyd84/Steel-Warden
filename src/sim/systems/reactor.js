@@ -11,8 +11,11 @@ import { emergencyApuStart } from './electrical.js';
 export function updateCoolant(sys, dt) {
   const { s, c, cfg } = sys;
   const k = cfg.coolant;
-  const run1 = c.value('coolantPump1') === 1 && s.power.bus;
-  const run2 = c.value('coolantPump2') === 1 && s.power.bus && !s.coolant.pump2Failed;
+  // One KÜHLPUMPEN switch: pump 1 starts at once, pump 2 a moment later.
+  const on = c.value('coolantPumps') === 1 && s.power.bus;
+  s.coolant.onTime = on ? s.coolant.onTime + dt : 0;
+  const run1 = on;
+  const run2 = on && s.coolant.onTime >= k.pump2Delay && !s.coolant.pump2Failed;
   s.coolant.p1 = approach(s.coolant.p1, run1 ? k.maxPressure : 0, (run1 ? k.riseRate : k.decayRate) * dt);
   s.coolant.p2 = approach(s.coolant.p2, run2 ? k.maxPressure : 0, (run2 ? k.riseRate : k.decayRate) * dt);
   s.coolant.flow = (s.coolant.p1 + s.coolant.p2) / (2 * k.maxPressure);

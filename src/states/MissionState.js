@@ -346,7 +346,7 @@ export class MissionState extends State {
       this.world.beforeRender(renderer.camera);
       renderer.render(this.world.scene);
       if (!this.paused) {
-        this.cockpitAudio.update(this.motion, this.systems.flags.busPowered);
+        this.cockpitAudio.update(this.motion, this.systems.flags.busPowered, this.systems.s.reactor.power);
         this.systemsAudio.update();
       }
       this.radioLog.update(this.stats.duration);
@@ -361,7 +361,7 @@ export class MissionState extends State {
     renderer.renderWithCockpit(this.world.scene, this.cockpit.scene);
     this.interaction.updateHover();
     if (!this.paused) {
-      this.cockpitAudio.update(this.motion, this.systems.flags.busPowered);
+      this.cockpitAudio.update(this.motion, this.systems.flags.busPowered, this.systems.s.reactor.power);
       this.systemsAudio.update();
     }
     this.radioLog.update(this.stats.duration);

@@ -49,10 +49,11 @@ export class CockpitAudio {
 
     this.airflow = audio.loop('airflow');
     this.servo = audio.loop('servo');
+    this.motor = audio.loop('motor');
   }
 
   /** Per-frame modulation from the walker's motion state; ventilation needs bus power. */
-  update(motion, busPowered = true) {
+  update(motion, busPowered = true, reactorPower = 1) {
     this.airflow.setGain(busPowered ? 1 : 0, 0.8);
     const m = MOTION_AUDIO;
     const w = this.walker;
@@ -63,6 +64,14 @@ export class CockpitAudio {
     const servo = Math.min(1, Math.max(twist, pitch * 0.7));
     this.servo.setGain(servo, 0.05);
     this.servo.setRate((m.servoRateMin + (m.servoRateMax - m.servoRateMin) * servo) * this.profile.servoPitch, 0.08);
+
+    // Drive motor: hums once the reactor runs, rises with speed and throttle.
+    const speedFrac = Math.min(1, Math.abs(motion.speed) / w.maxSpeed);
+    const load = Math.max(speedFrac, Math.abs(motion.throttle.value) * 0.6);
+    const running = reactorPower > 0.05 ? Math.min(1, reactorPower / 0.3) : 0;
+    this.motor.setGain(running * (m.motorIdle + (1 - m.motorIdle) * load), 0.25);
+    const motorPitch = Math.sqrt(this.profile.stepPitch);
+    this.motor.setRate((m.motorRate[0] + (m.motorRate[1] - m.motorRate[0]) * load) * motorPitch, 0.3);
 
     if (motion.accel < -m.creakBrake) this.audio.play('structure.creak');
 
@@ -84,6 +93,6 @@ export class CockpitAudio {
 
   dispose() {
     this.offs.forEach((off) => off());
-    for (const v of [this.airflow, this.servo]) v.stop(0.2);
+    for (const v of [this.airflow, this.servo, this.motor]) v.stop(0.2);
   }
 }

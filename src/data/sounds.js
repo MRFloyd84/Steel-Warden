@@ -106,6 +106,7 @@ export const SYSTEM_EVENT_SOUNDS = {
 export const SOUND_LOOPS = {
   airflow: { sample: 'airflow_loop', gain: 0.14, bus: 'cockpit' },
   servo: { sample: 'servo_loop', gain: 0.5, bus: 'cockpit' },
+  motor: { sample: 'motor_loop', gain: 0.4, bus: 'cockpit' },
   reactor: { sample: 'reactor_loop', gain: 0.22, bus: 'cockpit' },
   apu: { sample: 'apu_loop', gain: 0.22, bus: 'cockpit' },
   coolant1: { sample: 'coolant_loop', gain: 0.18, bus: 'cockpit' },
@@ -134,4 +135,6 @@ export const MOTION_AUDIO = {
   creakBrake: 3.2, // m/s² of deceleration that makes the frame groan
   settleSpeed: 4, // m/s: coming to a halt from above this plays the settle sound
   stepPanSpread: 0.18, // left/right foot stereo offset
+  motorIdle: 0.3, // drive motor level when standing with the reactor running
+  motorRate: [0.85, 1.25], // playback rate from standstill to full speed (× walker stepPitch^0.5)
 };
