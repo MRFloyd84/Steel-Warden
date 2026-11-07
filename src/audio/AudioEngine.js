@@ -105,6 +105,7 @@ export class AudioEngine {
     if (def.synth) buffers.push(this.clicks[def.synth]);
     if (def.samples) buffers.push(this.bank.get(def.samples[Math.floor(Math.random() * def.samples.length)]));
     let remaining = 0;
+    const sources = [];
     for (const buffer of buffers) {
       if (!buffer) continue;
       const src = this.ctx.createBufferSource();
@@ -119,8 +120,26 @@ export class AudioEngine {
         if (--remaining === 0) tail.disconnect();
       };
       src.start(now);
+      sources.push(src);
     }
-    if (remaining === 0) tail.disconnect();
+    if (remaining === 0) {
+      tail.disconnect();
+      return null;
+    }
+    // Handle to cut a long one-shot short (fade out)
+    const ctx = this.ctx;
+    return {
+      stop(fade = 0.2) {
+        out.gain.setTargetAtTime(0, ctx.currentTime, fade / 3);
+        for (const src of sources) {
+          try {
+            src.stop(ctx.currentTime + fade);
+          } catch {
+            // already ended
+          }
+        }
+      },
+    };
   }
 
   /** Continuous voice for a loop from SOUND_LOOPS; starts once samples are ready. */
@@ -156,7 +175,7 @@ class LoopVoice {
     const src = ctx.createBufferSource();
     src.buffer = buffer;
     src.loop = true;
-    const b = this.def.synth ? null : e.bank.bounds(this.def.sample);
+    const b = this.def.synth ? null : this.def.loopPoints ? { start: this.def.loopPoints[0], end: this.def.loopPoints[1] } : e.bank.bounds(this.def.sample);
     if (b) {
       src.loopStart = b.start;
       src.loopEnd = b.end;
@@ -164,7 +183,7 @@ class LoopVoice {
     src.playbackRate.value = this.rate;
     src.connect(this.gain);
     // Random start offset so several instances of one loop never phase.
-    src.start(ctx.currentTime, (b?.start ?? 0) + Math.random() * buffer.duration * 0.5);
+    src.start(ctx.currentTime, (b?.start ?? 0) + Math.random() * ((b ? b.end - b.start : buffer.duration) * 0.5));
     this.src = src;
     e.voices++;
   }

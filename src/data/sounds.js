@@ -10,7 +10,9 @@
  *   bus      'cockpit' (inside the cabin) | 'world' (outside) | 'ui'
  *   cooldown minimum seconds between two plays of this event
  *
- * Loop fields: sample, gain (base level; game code modulates on top), bus.
+ * Loop fields: sample, gain (base level; game code modulates on top), bus,
+ *   loopPoints [start, end] s — explicit loop range; the file carries 1 s of wrapped
+ *            audio at both ends, so a decoder offset can't break the seam.
  */
 export const AUDIO_MIX = {
   master: 0.8,
@@ -46,7 +48,8 @@ export const SOUND_EVENTS = {
   // Startup procedure (systems:event types → see SYSTEM_EVENT_SOUNDS)
   'sys.relayOn': { samples: ['relay_on'], gain: 0.55, rate: [0.97, 1.03], bus: 'cockpit' },
   'sys.relayOff': { samples: ['relay_off'], gain: 0.5, rate: [0.97, 1.03], bus: 'cockpit' },
-  'sys.apuSpool': { samples: ['apu_spool'], gain: 0.5, rate: [0.62, 0.66], bus: 'cockpit' },
+  // APU start (≈ 8.5 s: spool-up, then the running loop takes over — SystemsAudio)
+  'sys.apuStart': { samples: ['apu_start'], gain: 0.15, rate: [1, 1], bus: 'cockpit' },
   'sys.contactor': { samples: ['contactor_heavy'], gain: 0.6, rate: [0.95, 1.02], bus: 'cockpit' },
   'sys.ignition': { samples: ['contactor_heavy'], gain: 0.8, rate: [0.55, 0.6], bus: 'cockpit' },
   'sys.ignitionFail': { samples: ['relay_off'], gain: 0.5, rate: [0.7, 0.75], bus: 'cockpit' },
@@ -99,7 +102,7 @@ export const WORLD_AUDIO = { ref: 60, minGain: 0.04 };
 export const SYSTEM_EVENT_SOUNDS = {
   batteryOn: ['sys.relayOn'],
   batteryOff: ['sys.relayOff'],
-  apuCrank: ['sys.apuSpool'],
+  // apuCrank: played by SystemsAudio (the start sound has to stop if the APU spins down)
   busSwitch: ['sys.contactor'],
   busTrip: ['sys.contactor'],
   busFault: ['sys.contactor', 'sys.relayOff'],
@@ -120,7 +123,7 @@ export const SOUND_LOOPS = {
   servo: { sample: 'servo_loop', gain: 0.5, bus: 'cockpit' },
   motor: { sample: 'motor_loop', gain: 0.4, bus: 'cockpit' },
   reactor: { sample: 'reactor_loop', gain: 0.22, bus: 'cockpit' },
-  apu: { sample: 'apu_loop', gain: 0.22, bus: 'cockpit' },
+  apu: { sample: 'apu_run_loop', gain: 0.18, bus: 'cockpit', loopPoints: [1, 14.25] },
   coolant1: { sample: 'coolant_loop', gain: 0.18, bus: 'cockpit' },
   coolant2: { sample: 'coolant_loop', gain: 0.18, bus: 'cockpit' },
   hydraulics: { sample: 'hydraulic_loop', gain: 0.3, bus: 'cockpit' },
@@ -137,7 +140,8 @@ export const SOUND_LOOPS = {
 
 /** How system values drive the machinery loops (rates are playback-rate ranges). */
 export const SYSTEM_AUDIO = {
-  apuRate: [0.45, 1.0], // rpm 0 → 1
+  apuRate: [0.45, 1.0], // rpm 0 → 1 (running loop; spin-down drops the pitch)
+  apuStartBlend: [6.8, 8.3], // s after START: the running loop fades in, the start sound ends
   coolantRate: [0.8, 1.0],
   pump2Detune: 1.07,
   reactorRate: [0.5, 1.0], // ignition spool → idle, plus reactorRateLoad at full power

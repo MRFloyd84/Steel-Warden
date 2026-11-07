@@ -12,13 +12,22 @@ export class SystemsAudio {
     this.hum = walker.sound.reactorHum;
     this.offs = [
       bus.on('systems:event', ({ type }) => {
+        if (type === 'apuCrank') this.startApu();
         for (const name of SYSTEM_EVENT_SOUNDS[type] ?? []) audio.play(name);
       }),
     ];
+    this.apuStart = null; // start sound playing
+    this.apuStartAt = null; // systems time of START
     this.loops = {};
     for (const name of ['apu', 'coolant1', 'coolant2', 'reactor', 'hydraulics', 'alarmHeat', 'alarmCritical']) {
       this.loops[name] = audio.loop(name);
     }
+  }
+
+  startApu() {
+    this.apuStart?.stop(0.3);
+    this.apuStart = this.audio.play('sys.apuStart');
+    this.apuStartAt = this.systems.time;
   }
 
   update() {
@@ -27,8 +36,28 @@ export class SystemsAudio {
     const L = this.loops;
     const lerp = ([lo, hi], t) => lo + (hi - lo) * Math.max(0, Math.min(1, t));
 
+    // APU: the start sound carries the spool-up, the running loop fades in at its end.
+    // Spinning down (START released too early, battery off, transfer to main power):
+    // start sound cut, the loop follows rpm in level and pitch.
     const rpm = s.apu.rpm;
-    L.apu.setGain(rpm ** 1.5, 0.15);
+    let blend = 1;
+    if (this.apuStartAt !== null) {
+      const up = s.apu.mode === 'crank' || s.apu.mode === 'run';
+      const t = time - this.apuStartAt;
+      if (!up) {
+        this.apuStart?.stop(0.6);
+        this.apuStart = null;
+        this.apuStartAt = null;
+      } else {
+        const [b0, b1] = a.apuStartBlend;
+        blend = Math.max(0, Math.min(1, (t - b0) / (b1 - b0)));
+        if (t > b1 + 1) {
+          this.apuStart = null;
+          this.apuStartAt = null;
+        }
+      }
+    }
+    L.apu.setGain(rpm ** 1.5 * blend, 0.15);
     L.apu.setRate(lerp(a.apuRate, rpm), 0.15);
 
     const c1 = s.coolant.p1 / cfg.coolant.maxPressure;
@@ -60,6 +89,7 @@ export class SystemsAudio {
 
   dispose() {
     this.offs.forEach((off) => off());
+    this.apuStart?.stop(0.3);
     for (const v of Object.values(this.loops)) v.stop(0.3);
   }
 }

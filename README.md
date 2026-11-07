@@ -496,6 +496,12 @@ BETRIEBSART VORH bis VORHEIZ OK → Zündkappe auf, ZÜND → Hauptbus REAKT →
 Monitore TEST → Gyro ausrichten → Sensoren → Schilde → Waffen scharf → Beinsperre LÖSEN →
 BETRIEBSART BETR für volle Leistung.
 
+Hilfsaggregat-Klang: Beim START läuft das Anlaufgeräusch (`apu_start`, ≈ 8,5 s); gegen sein
+Ende blendet der Laufton (`apu_run_loop`) über. Fährt das Aggregat vorher wieder herunter
+(START zu früh losgelassen, Batterie aus), bricht der Anlaufklang ab und der Laufton sinkt mit
+der Drehzahl. Der Laufton trägt 1 s umgewickelten Ton an beiden Enden, die Schleife läuft über
+feste Schleifenpunkte (`loopPoints` in `src/data/sounds.js`) ohne Knacken.
+
 - Startmodus in `src/data/config.js` (`startup.mode`: `full`, `simple`, `auto`) oder per
   URL `?startmode=simple`; Zufallsereignisse mit `startup.randomEvents`
 - `?start=hot` überspringt den Start (alle Systeme bereit)
