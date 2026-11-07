@@ -1,6 +1,6 @@
 # STEEL WARDEN – Fahrplan
 
-Stand: nach Teil 2 (Karten-Erweiterung), davor A2b (Lenkraketen, Raketenkamera, Zielkapsel, Treffer im Cockpit). Dieses Dokument führt das Grundkonzept,
+Stand: nach Teil 2 (Menüsystem), davor Startphase-Fix, A3 (Synthese-Gegner und KI), Teil 2 (Karten-Erweiterung) und A2b. Dieses Dokument führt das Grundkonzept,
 die Cockpit-Erweiterung, das Missionsdokument und die Ergänzungen (Stützpunkt, Bergung,
 Funk, Radar, Kampf, Übung) zusammen.
 
@@ -91,6 +91,11 @@ Funk, Radar, Kampf, Übung) zusammen.
      Validierung und Patrouillen-Sperre im Navigationsraster, Signatur je Systemzustand
      (Grundlage für A4), Gruppen-Aktivierung über `onDeploy`/`immediate`/Trigger
      (Bereich, Zeit), Testmission „Alarmstart“.
+   - ✅ **Menüsystem (Teil 2):** Bildschirm-Stapel (`ui/menu/`), Titel über 3D-Szene,
+     Einsatzwahl mit Reitern und Übersichtskarte, Einsatzvorbereitung mit Walker-Vorschau und
+     Übungsoptionen, Ladebildschirm, Optionen mit sofortiger Wirkung, Pausenmenü,
+     Nachbesprechung (wird in Phase B ausgebaut). Offen: Kampagne (C), Hangar-Bewaffnung (C),
+     Musik (Regler vorhanden, noch keine Stücke).
 4. **Radar und Tarnung**:
    - Schalter aktiv/passiv im Cockpit.
    - Aktiv: große, einstellbare Reichweite, macht sichtbar.

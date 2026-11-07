@@ -5,14 +5,17 @@ const MAX_LINES = 3;
 
 /** Radio text log (top left of the view). The squelch sound is played by the caller. */
 export class RadioLog extends Overlay {
-  constructor(container) {
+  /** seconds: Optionen → Funktexte (0 = no text, the squelch still plays). */
+  constructor(container, seconds = SHOW_SECONDS) {
     super(container, 'radio-log');
     this.lines = [];
+    this.seconds = seconds;
     this.show();
   }
 
   push(from, text, now) {
-    this.lines.push({ from, text, until: now + SHOW_SECONDS });
+    if (!this.seconds) return;
+    this.lines.push({ from, text, until: now + this.seconds });
     if (this.lines.length > MAX_LINES) this.lines.shift();
     this.render();
   }

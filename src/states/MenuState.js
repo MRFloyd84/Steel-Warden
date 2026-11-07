@@ -1,74 +1,53 @@
 import { State } from '../core/State.js';
-import { World } from '../render/World.js';
-import { MenuScreen } from '../ui/MenuScreen.js';
-import { ControlsScreen } from '../ui/ControlsScreen.js';
-import { MISSIONS, getMission } from '../data/missions.js';
-import { missionError } from './missionStartup.js';
+import { MenuStack } from '../ui/menu/MenuStack.js';
+import { TitleScreen } from '../ui/menu/TitleScreen.js';
+import { MainMenu } from '../ui/menu/MainMenu.js';
+import { ConfirmDialog } from '../ui/menu/ConfirmDialog.js';
+import { MenuScene } from '../render/MenuScene.js';
 
-/** Main menu over a slow orbital flyover of the first test theater. */
+/**
+ * Title and menus over a 3D scene (render/MenuScene.js). Screens live on a
+ * MenuStack (ui/menu/). enter({ page: 'main' }) skips the title (back from a
+ * mission), enter({ error }) shows a message (invalid mission).
+ */
 export class MenuState extends State {
-  enter({ error = null } = {}) {
+  enter({ error = null, page = 'title' } = {}) {
     const game = this.game;
-    this.screen = new MenuScreen(game.container, game.input, {
-      onStart: (missionId, walkerId) => {
-        const err = missionError(getMission(missionId));
-        if (err) this.screen.showError(err);
-        else game.states.change('mission', { missionId, walkerId });
-      },
-      onControls: () => this.controls.open(),
-    });
-    this.screen.show();
-    if (error) this.screen.showError(error);
-    this.controls = new ControlsScreen(game.container, game.input, game.bus, { onClose: () => this.screen.renderControls() });
-    this.offLayout = game.bus.on('input:layout', () => this.screen.renderControls());
-
-    this.world = new World(MISSIONS[0], game.config.terrain, { light: true });
-    this.angle = 0.6;
-    this.orbitRadius = 260;
-    this.focus = { x: 0, z: 0 };
-    this.world.preload(0, 0);
+    game.loading.hide();
+    this.scene = new MenuScene(game);
+    this.fx = document.createElement('div');
+    this.fx.className = 'menu-fx';
+    game.container.appendChild(this.fx);
+    this.stack = new MenuStack({ game, container: game.container });
+    this.stack.scene = this.scene;
+    this.stack.push(new TitleScreen());
+    if (page === 'main' || error) this.stack.push(new MainMenu());
+    if (error) this.stack.push(new ConfirmDialog({ title: 'Einsatz ungültig', text: error, tone: 'error', buttons: [{ label: 'Zurück', cancel: true }] }));
   }
 
   exit() {
-    this.offLayout();
-    this.controls.close();
-    this.controls.destroy();
-    this.screen.destroy();
-    this.world.dispose();
-    this.world = null;
+    this.stack.destroy();
+    this.fx.remove();
+    this.scene.dispose();
+    this.scene = null;
   }
 
-  frame() {
-    const input = this.game.input;
-    input.setContext('menu');
-    if (this.controls.visible) {
-      if (input.pressed('menuBack')) this.controls.back();
-      return;
-    }
-    if (input.pressed('menuDown')) this.screen.move(1);
-    if (input.pressed('menuUp')) this.screen.move(-1);
-    if (input.pressed('menuConfirm')) this.screen.start();
+  frame(dt) {
+    this.game.input.setContext('menu');
+    this.stack.frame(dt);
+    this.dt = dt;
   }
 
   update(dt) {
-    this.angle += dt * 0.035;
+    this.scene?.update(dt);
   }
 
   render() {
-    const cam = this.game.renderer.camera;
-    const x = Math.cos(this.angle) * this.orbitRadius;
-    const z = Math.sin(this.angle) * this.orbitRadius;
-    const ground = this.world.sampler.heightAt(x, z);
-    cam.position.set(x, Math.max(ground, 0) + 70, z);
-    // Look tangentially along the orbit for a slow panning view.
-    cam.lookAt(x - Math.sin(this.angle) * 200, ground + 30, z + Math.cos(this.angle) * 200);
-    this.world.update(cam.position);
-    this.world.beforeRender(cam);
-    this.game.renderer.render(this.world.scene);
+    this.scene?.render();
   }
 
   debugInfo() {
-    const t = this.world.terrain.stats;
-    return [`Menu flyover  chunks ${t.chunks} (LOD ${t.perLod.join('/')})  queue ${t.queued}`];
+    const t = this.scene.world.terrain.stats;
+    return [`Menü: ${this.stack.pages.map((p) => p.key).join(' › ')}  Fokus ${this.stack.focused?.dataset.focus ?? '-'}  Szene ${this.scene.kind}/${this.scene.mission.theater}/${this.scene.mission.timeOfDay}  chunks ${t.chunks} queue ${t.queued}`];
   }
 }

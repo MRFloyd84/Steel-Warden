@@ -229,7 +229,7 @@ export class WeaponSystem {
   finishShot(s) {
     const d = s.def;
     s.cooldown = d.fireRate > 0 ? 1 / d.fireRate : 0;
-    if (s.magazine !== null) {
+    if (s.magazine !== null && !this.infiniteAmmo) {
       s.magazine -= d.kind === 'missile' ? d.burst : 1;
       if (s.magazine <= 0) {
         s.magazine = 0;

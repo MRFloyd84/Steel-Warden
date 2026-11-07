@@ -12,6 +12,22 @@ import { ScatterField } from '../world/ScatterField.js';
 import { ScatterRenderer, scatterHeights } from './world/ScatterRenderer.js';
 
 /** Scene for one mission: environment + streamed terrain built from mission data. */
+/** Height field of a mission (also used without a World: menu preview map). */
+export function createSampler(mission, terrainConfig, theater = withMissionOverrides(getTheater(mission.theater), mission)) {
+  const start = mission.playerStart;
+  const gridStep = terrainConfig.chunkSize / terrainConfig.lodSegments[0];
+  const flatZones = [{
+    x: start.x, z: start.z, radius: 60, falloff: 90,
+    minHeight: theater.terrain.startMinHeight,
+  }, ...siteFlatZones(mission)];
+  const sampler = new TerrainSampler(theater.terrain, mission.seed, gridStep, flatZones, mission.hills ?? [], {
+    features: [...(theater.features ?? []), ...(mission.features ?? [])],
+    surface: theater.surface,
+  });
+  sampler.gravity = theater.gravity ?? 1;
+  return sampler;
+}
+
 export class World {
   constructor(mission, terrainConfig, { bus = null, scatterConfig = {}, light = false, weather = null } = {}) {
     this.mission = mission;
@@ -19,16 +35,7 @@ export class World {
     this.scene = new THREE.Scene();
 
     const start = mission.playerStart;
-    const gridStep = terrainConfig.chunkSize / terrainConfig.lodSegments[0];
-    const flatZones = [{
-      x: start.x, z: start.z, radius: 60, falloff: 90,
-      minHeight: this.theater.terrain.startMinHeight,
-    }, ...siteFlatZones(mission)];
-    this.sampler = new TerrainSampler(this.theater.terrain, mission.seed, gridStep, flatZones, mission.hills ?? [], {
-      features: [...(this.theater.features ?? []), ...(mission.features ?? [])],
-      surface: this.theater.surface,
-    });
-    this.sampler.gravity = this.theater.gravity ?? 1;
+    this.sampler = createSampler(mission, terrainConfig, this.theater);
 
     this.lighting = { ...getLighting(mission.timeOfDay), ...this.theater.lightingOverride };
     this.weatherId = weather ?? mission.weather ?? this.theater.weather ?? 'clear';
@@ -43,7 +50,7 @@ export class World {
       ...(mission.spawns ?? []).map((sp) => ({ x: sp.at[0], z: sp.at[1], r: 18 })),
     ];
     this.scatter = new ScatterField({
-      sampler: this.sampler, rules: light ? [] : this.theater.scatter ?? [], seed: mission.seed, chunkSize, keepClear, heights: scatterHeights(),
+      sampler: this.sampler, rules: light ? [] : (this.theater.scatter ?? []).map((r) => ({ ...r, density: r.density * (scatterConfig.densityScale ?? 1) })), seed: mission.seed, chunkSize, keepClear, heights: scatterHeights(),
     });
     const models = [...new Set((this.theater.scatter ?? []).map((r) => r.model))].filter((m) => SCATTER_MODELS[m]);
     this.scatterView = light ? null : new ScatterRenderer(this.scene, this.scatter, models, scatterConfig);

@@ -15,6 +15,14 @@
  * marked on the nav display.
  */
 const DONE_DELAY = 4;
+
+export function stepText(s) {
+  if (s.text) return s.text;
+  if (s.type === 'nav') return `Navpunkt ${s.id} erreichen`;
+  if (s.type === 'extract') return `Extraktion ${s.id} erreichen`;
+  if (s.type === 'waves') return 'Alle Wellen abwehren';
+  return 'Gegner ausschalten';
+}
 const LOST_DELAY = 4;
 
 export class MissionScript {
@@ -48,12 +56,12 @@ export class MissionScript {
     if (this.finished === 'failed') return 'Walker verloren';
     const s = this.current;
     if (!s) return null;
-    const n = `${this.index + 1}/${this.steps.length}`;
-    if (s.text) return `${n}  ${s.text}`;
-    if (s.type === 'nav') return `${n}  Navpunkt ${s.id} erreichen`;
-    if (s.type === 'extract') return `${n}  Extraktion ${s.id} erreichen`;
-    if (s.type === 'waves') return `${n}  Alle Wellen abwehren`;
-    return `${n}  Gegner ausschalten`;
+    return `${this.index + 1}/${this.steps.length}  ${stepText(s)}`;
+  }
+
+  /** All objectives with their state (pause menu). */
+  list() {
+    return this.steps.map((s, i) => ({ text: stepText(s), state: i < this.index ? 'done' : i === this.index && !this.finished ? 'active' : this.finished === 'completed' ? 'done' : 'open' }));
   }
 
   markNav() {

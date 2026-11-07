@@ -11,12 +11,14 @@ const INTRO_TIME = 14; // seconds the first-mission key card stays
  * On the first mission a short card with the eight most important keys.
  */
 export class HelpPanel extends Overlay {
-  constructor(container, input, bus) {
+  /** intro: Optionen → Tastenhilfe zu Beginn ('once' | 'always' | 'never'). */
+  constructor(container, input, bus, intro = 'once') {
     super(container, 'help-panel');
     this.input = input;
     this.on = false;
     this.shownContext = null;
-    this.introLeft = Storage.load('introSeen', false) ? 0 : INTRO_TIME;
+    const show = intro === 'always' || (intro === 'once' && !Storage.load('introSeen', false));
+    this.introLeft = show ? INTRO_TIME : 0;
     if (this.introLeft) Storage.save('introSeen', true);
     this.off = bus.on('input:layout', () => (this.shownContext = null));
     this.offBind = bus.on('input:bindings', () => (this.shownContext = null));

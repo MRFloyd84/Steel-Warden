@@ -16,7 +16,7 @@
  */
 export const AUDIO_MIX = {
   master: 0.8,
-  buses: { cockpit: 1.0, world: 0.9, ui: 0.7 },
+  buses: { cockpit: 1.0, world: 0.9, ui: 0.7, radio: 0.8, music: 0.6, menu: 0.5 },
 };
 
 export const SOUND_EVENTS = {
@@ -67,7 +67,13 @@ export const SOUND_EVENTS = {
   'sys.legsRelease': { samples: ['lock_clank'], gain: 0.7, rate: [0.9, 0.95], bus: 'cockpit' },
   'sys.legsHiss': { samples: ['hiss_1', 'hiss_2'], gain: 0.6, rate: [0.95, 1.05], bus: 'cockpit' },
   'sys.legsBlocked': { samples: ['lock_clank'], gain: 0.4, rate: [0.7, 0.75], bus: 'cockpit' },
-  'radio.squelch': { synth: 'squelch', gain: 0.35, rate: [0.97, 1.03], bus: 'ui' },
+  'radio.squelch': { synth: 'squelch', gain: 0.35, rate: [0.97, 1.03], bus: 'radio' },
+  // Menu (procedural, quiet)
+  'menu.move': { synth: 'uiMove', gain: 0.35, rate: [0.98, 1.02], bus: 'menu' },
+  'menu.confirm': { synth: 'uiConfirm', gain: 0.45, rate: [1, 1], bus: 'menu' },
+  'menu.back': { synth: 'uiBack', gain: 0.4, rate: [1, 1], bus: 'menu' },
+  'menu.error': { synth: 'uiError', gain: 0.45, rate: [1, 1], bus: 'menu' },
+  'menu.adjust': { synth: 'uiMove', gain: 0.3, rate: [1.3, 1.35], bus: 'menu' },
 
   // Weapons (own weapons are panned by hardpoint, other walkers by distance/direction)
   'weapon.laser': { synth: 'laser', gain: 0.35, rate: [0.95, 1.08], bus: 'world' },

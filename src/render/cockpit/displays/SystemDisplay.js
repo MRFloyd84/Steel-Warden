@@ -23,13 +23,14 @@ export const SystemDisplay = {
     drawThrottle(p, d, 18, 58, 34, h - 92);
     drawTwist(p, d, w * 0.67, h * 0.52, 54);
 
-    const kmh = Math.round(Math.abs(d.speed) * 3.6);
+    const ms = d.units === 'ms';
+    const kmh = Math.round(Math.abs(d.speed) * (ms ? 1 : 3.6));
     const pct = Math.round(d.throttle * 100);
     p.text('SCHUB', 64, 64, { size: 10, alpha: 0.7 });
     p.text(`${pct > 0 ? '+' : ''}${pct} %`, 64, 80, { size: 16 });
     p.text('GESCHW', 64, 104, { size: 10, alpha: 0.7 });
     p.text(`${d.speed < -0.1 ? '-' : ''}${kmh}`, 64, 120, { size: 16 });
-    p.text('km/h', 64, 136, { size: 10, alpha: 0.7 });
+    p.text(ms ? 'm/s' : 'km/h', 64, 136, { size: 10, alpha: 0.7 });
     p.text('NEIG', 64, 160, { size: 10, alpha: 0.7 });
     const pitch = Math.round(d.pitchDeg);
     p.text(d.gyroAligned ? `${pitch >= 0 ? '+' : ''}${pitch}°` : '--', 64, 176, { size: 14 });

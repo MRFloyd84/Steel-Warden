@@ -99,7 +99,11 @@ export const ACTIONS = [
   // ---- menus (radio menu, pause, main menu) ----
   { id: 'menuUp', label: 'Menü: hoch', category: 'menu', contexts: ['menu'], type: 'press', keys: ['ArrowUp', 'KeyW'], pad: [12] },
   { id: 'menuDown', label: 'Menü: runter', category: 'menu', contexts: ['menu'], type: 'press', keys: ['ArrowDown', 'KeyS'], pad: [13] },
-  { id: 'menuConfirm', label: 'Menü: bestätigen', category: 'menu', contexts: ['menu'], type: 'press', keys: ['Enter', 'NumpadEnter'], pad: [0] },
+  { id: 'menuLeft', label: 'Menü: links / Wert kleiner', category: 'menu', contexts: ['menu'], type: 'press', keys: ['ArrowLeft', 'KeyA'], pad: [14] },
+  { id: 'menuRight', label: 'Menü: rechts / Wert größer', category: 'menu', contexts: ['menu'], type: 'press', keys: ['ArrowRight', 'KeyD'], pad: [15] },
+  { id: 'menuTabPrev', label: 'Menü: Reiter zurück', category: 'menu', contexts: ['menu'], type: 'press', keys: ['KeyQ', 'PageUp'], pad: [4] },
+  { id: 'menuTabNext', label: 'Menü: Reiter vor', category: 'menu', contexts: ['menu'], type: 'press', keys: ['KeyE', 'PageDown'], pad: [5] },
+  { id: 'menuConfirm', label: 'Menü: bestätigen', category: 'menu', contexts: ['menu'], type: 'press', keys: ['Enter', 'NumpadEnter', 'Space'], pad: [0] },
   { id: 'menuBack', label: 'Menü: zurück / schließen', category: 'menu', contexts: ['menu'], type: 'press', keys: ['Escape'], pad: [1] },
   ...[1, 2, 3, 4, 5, 6, 7].map((n) => ({
     id: `menuChoice${n}`, label: `Menü: Eintrag ${n}`, category: 'menu', contexts: ['menu'], type: 'press', keys: [`Digit${n}`, `Numpad${n}`],

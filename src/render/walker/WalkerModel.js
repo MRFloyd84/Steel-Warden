@@ -2,6 +2,24 @@ import * as THREE from 'three';
 import { getWalkerModel } from '../../data/walkerModels.js';
 import { buildWalkerParts } from './WalkerBuilder.js';
 import { solveTwoBone, orientSegment } from '../../util/ik.js';
+import { CONFIG } from '../../data/config.js';
+
+let shadowMaterial = null;
+/** Soft round contact shadow (Optionen → Grafik → Schatten). */
+function contactShadowMaterial() {
+  if (shadowMaterial) return shadowMaterial;
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d');
+  const grad = g.createRadialGradient(32, 32, 4, 32, 32, 32);
+  grad.addColorStop(0, 'rgba(0,0,0,0.55)');
+  grad.addColorStop(0.6, 'rgba(0,0,0,0.3)');
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 64, 64);
+  shadowMaterial = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+  return shadowMaterial;
+}
 
 const material = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
 
@@ -82,6 +100,14 @@ export class WalkerModel {
 
   addTo(scene) {
     scene.add(this.root, this.legGroup);
+    if (!this.shadow) {
+      const r = 3 + this.walker.tonnage * 0.07;
+      this.shadow = new THREE.Mesh(new THREE.PlaneGeometry(r * 2, r * 2).rotateX(-Math.PI / 2), contactShadowMaterial());
+      this.shadow.renderOrder = -1;
+      this.shadow.userData.noPick = true;
+      this.shadow.userData.fx = true;
+      this.legGroup.add(this.shadow);
+    }
   }
 
   setVisible(on) {
@@ -106,6 +132,10 @@ export class WalkerModel {
     const hipY = torsoY - (plan.torso.pivot - plan.legs.hipHeight);
 
     this.root.position.set(pose.x, hipY, pose.z);
+    if (this.shadow) {
+      this.shadow.visible = CONFIG.render.contactShadows;
+      if (this.shadow.visible) this.shadow.position.set(pose.x, this.sampler.heightAt(pose.x, pose.z) + 0.2, pose.z);
+    }
     this.root.rotation.set(0, pose.legYaw, 0);
     this.torso.rotation.set(pose.pitch, pose.yaw - pose.legYaw, pose.roll, 'YXZ');
     this.root.updateMatrixWorld(true);

@@ -1,4 +1,7 @@
 import { defineConfig } from 'vite';
+import { readFileSync } from 'node:fs';
+
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
 
 // Browsers block ES-module scripts on file:// URLs. For the offline build we
 // bundle everything into one classic (IIFE) script so dist/index.html can be
@@ -19,6 +22,11 @@ function classicScriptForFileProtocol() {
 
 export default defineConfig({
   base: './',
+  // Title screen: version and build date
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+    __BUILD_DATE__: JSON.stringify(new Date().toISOString().slice(0, 10)),
+  },
   plugins: [classicScriptForFileProtocol()],
   build: {
     outDir: 'dist',

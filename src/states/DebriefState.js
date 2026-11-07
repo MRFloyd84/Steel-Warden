@@ -1,26 +1,32 @@
 import { State } from '../core/State.js';
-import { DebriefScreen } from '../ui/DebriefScreen.js';
+import { MenuStack } from '../ui/menu/MenuStack.js';
+import { DebriefPage } from '../ui/menu/DebriefPage.js';
 import { getTheater } from '../data/theaters.js';
 
-/** Shows mission results; the 3D scene is not rendered here. */
+/** Mission results (ui/menu/DebriefPage.js); Erneut starts the same mission with the same settings. */
 export class DebriefState extends State {
-  enter({ mission, result, stats }) {
-    this.screen = new DebriefScreen(this.game.container, {
-      onContinue: () => this.game.states.change('menu'),
-    });
-    this.screen.showReport({ mission, theaterName: getTheater(mission.theater).name, result, stats });
-    // Clear the last mission frame to black behind the dialog.
-    this.game.renderer.renderer.setClearColor(0x000000, 1);
-    this.game.renderer.renderer.clear();
+  enter({ mission, result, stats, params = null }) {
+    const game = this.game;
+    this.stack = new MenuStack({ game, container: game.container, className: 'debrief-layer' });
+    this.stack.push(new DebriefPage({
+      mission, result, stats, theaterName: getTheater(mission.theater).name,
+      onRetry: () => {
+        game.loading.show({ name: mission.name, place: getTheater(mission.theater).name });
+        game.states.change('mission', params ?? { missionId: mission.id });
+      },
+      onMenu: () => game.states.change('menu', { page: 'main' }),
+    }));
+    // Black behind the panel
+    game.renderer.renderer.setClearColor(0x000000, 1);
+    game.renderer.renderer.clear();
   }
 
   exit() {
-    this.screen.destroy();
+    this.stack.destroy();
   }
 
-  frame() {
-    const input = this.game.input;
-    input.setContext('menu');
-    if (input.pressed('menuConfirm')) this.game.states.change('menu');
+  frame(dt) {
+    this.game.input.setContext('menu');
+    this.stack.frame(dt);
   }
 }

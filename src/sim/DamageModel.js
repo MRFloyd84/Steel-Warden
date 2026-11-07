@@ -92,6 +92,11 @@ export class DamageModel {
     const result = { shieldHit: false, armorHit: false, shieldDamage: 0, armorDamage: 0, changes: [] };
     this.lastHit = this.time;
     this.stats.hits++;
+    // Practice option "Verwundbar: nein": hits flash on the shield, nothing is lost
+    if (this.invulnerable) {
+      result.shieldHit = true;
+      return result;
+    }
 
     if (hit.effect?.kind === 'emp') {
       for (const s of SIDES) this.shields.value[s] = 0;
@@ -131,6 +136,7 @@ export class DamageModel {
   /** Direct damage to a component bypassing shields (blasts, explosions). */
   applyRaw(component, damage) {
     const changes = [];
+    if (this.invulnerable) return changes;
     const part = this.parts[component];
     const fromArmor = Math.min(part.armor, damage);
     part.armor -= fromArmor;

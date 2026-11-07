@@ -15,6 +15,9 @@
  *   terrainFeatures: false, surface, scatter: false, autoStructures: false, surfaceColors, surfaceTints
  *                  overrides for test fields
  *
+ * Menu: category 'theater' (Schauplätze) | 'combat' (Gefechte) | 'system' (Systemtests) |
+ *   'debug' (only under Erprobung), description: one or two sentences for the mission list.
+ *
  * Enemies and objectives (A3):
  *   forces         groups, guns, reinforcements, waves — see ai/AIDirector.js
  *   script         objectives (nav, destroy, waves, extract) — see states/MissionScript.js
@@ -23,6 +26,8 @@ export const MISSIONS = [
   {
     id: 'range',
     name: 'Schießstand Brenn-Süd',
+    category: 'system',
+    description: 'Waffenerprobung ohne Gegenwehr: stehende und laufende Ziel-Walker in 100–800 m.',
     theater: 'industrial',
     timeOfDay: 'day',
     seed: 90210,
@@ -49,6 +54,8 @@ export const MISSIONS = [
   {
     id: 'test-parade',
     name: 'Paradeplatz Brenn-Süd',
+    category: 'system',
+    description: 'Alle sechs Walker-Typen laufen im Kreis — Modelle, Gangarten und Außenkamera prüfen.',
     theater: 'industrial',
     timeOfDay: 'day',
     seed: 90210,
@@ -69,6 +76,8 @@ export const MISSIONS = [
   {
     id: 'test-ice',
     name: 'Testgelände Kalvik',
+    category: 'theater',
+    description: 'Eiswüste Kalvik: dünnes Eis über einem See, eine Gletscherspalte, Schneesturm.',
     theater: 'ice',
     timeOfDay: 'day',
     seed: 1337,
@@ -86,6 +95,8 @@ export const MISSIONS = [
   {
     id: 'test-volcano',
     name: 'Testgelände Ashmar',
+    category: 'theater',
+    description: 'Vulkanplateau Ashmar: Lavafluss, heißer Boden, Ascheregen und eine Raffinerie.',
     theater: 'volcano',
     timeOfDay: 'dusk',
     seed: 4242,
@@ -102,6 +113,8 @@ export const MISSIONS = [
   {
     id: 'test-industrial',
     name: 'Testgelände Brenn-Süd',
+    category: 'theater',
+    description: 'Industriezone Brenn-Süd: Straßenraster, Hallen, ein Stützpunkt — Start im Hangar.',
     theater: 'industrial',
     timeOfDay: 'day',
     seed: 90210,
@@ -115,6 +128,8 @@ export const MISSIONS = [
   {
     id: 'test-moon',
     name: 'Testgelände Selene-7',
+    category: 'theater',
+    description: 'Mondbasis Selene-7: geringe Schwerkraft, Krater, Landeplatz.',
     theater: 'moon',
     timeOfDay: 'day',
     seed: 777,
@@ -127,6 +142,8 @@ export const MISSIONS = [
   {
     id: 'test-delta',
     name: 'Testgelände Flussdelta Morrow',
+    category: 'theater',
+    description: 'Flussdelta Morrow: breiter Fluss mit Deichen, weicher Boden, Stützpunkt am anderen Ufer.',
     theater: 'delta',
     timeOfDay: 'day',
     seed: 5150,
@@ -143,6 +160,8 @@ export const MISSIONS = [
   {
     id: 'test-canyon',
     name: 'Testgelände Canyonwüste Tessar',
+    category: 'theater',
+    description: 'Canyonwüste Tessar: Felsbogen, ein versteckter MARDER, Sandsturm — Lenkrakete optisch um den Bogen.',
     theater: 'canyon',
     timeOfDay: 'day',
     seed: 6060,
@@ -159,6 +178,8 @@ export const MISSIONS = [
   {
     id: 'test-synth',
     name: 'Testgelände Synthese-Kernwelt',
+    category: 'theater',
+    description: 'Synthese-Kernwelt: kristalline Landschaft und ein Synthese-Nest mit Abwehrstacheln.',
     theater: 'synth',
     timeOfDay: 'day',
     seed: 1999,
@@ -171,6 +192,8 @@ export const MISSIONS = [
   {
     id: 'test-ground',
     name: 'Bodenproben',
+    category: 'system',
+    description: 'Sechs Bodenstreifen nebeneinander: hart, weich, Wasser, Lava, dünnes Eis, heiß.',
     theater: 'delta',
     timeOfDay: 'day',
     seed: 4711,
@@ -197,6 +220,8 @@ export const MISSIONS = [
   {
     id: 'test-ice-night',
     name: 'Nachtlauf Kalvik',
+    category: 'system',
+    description: 'Nacht in der Eiswüste: Suchscheinwerfer, Sicht und Cockpitlicht prüfen.',
     theater: 'ice',
     timeOfDay: 'night',
     seed: 2024,
@@ -209,6 +234,8 @@ export const MISSIONS = [
   {
     id: 'test-duel',
     name: 'Duell',
+    category: 'combat',
+    description: 'Ein Synthese-Jäger gegen dich auf offenem Feld — gut zum Vergleich der Schwierigkeitsgrade.',
     theater: 'industrial',
     timeOfDay: 'day',
     seed: 31337,
@@ -225,6 +252,8 @@ export const MISSIONS = [
   {
     id: 'test-ambush',
     name: 'Hinterhalt',
+    category: 'combat',
+    description: 'Eine Patrouille zieht durch einen Canyon. Am Knick ungesehen warten, Sensoren aus.',
     theater: 'canyon',
     timeOfDay: 'day',
     seed: 7070,
@@ -252,6 +281,8 @@ export const MISSIONS = [
   {
     id: 'test-stellung',
     name: 'Stellung',
+    category: 'combat',
+    description: 'Eine Raffinerie in Synthese-Hand: Abwehrstachel, Geschütztürme und ein Brecher mit Lenkraketen.',
     theater: 'industrial',
     timeOfDay: 'day',
     seed: 4455,
@@ -271,6 +302,8 @@ export const MISSIONS = [
   {
     id: 'test-waves',
     name: 'Welle',
+    category: 'combat',
+    description: 'Drei Wellen landen per Fähre, die letzte mit einem Belagerer und Mörserfeuer.',
     theater: 'industrial',
     timeOfDay: 'dusk',
     seed: 8080,
@@ -291,6 +324,8 @@ export const MISSIONS = [
   {
     id: 'first-sortie',
     name: 'Erster Einsatz',
+    category: 'combat',
+    description: 'Meilenstein: Kaltstart im Hangar, Navpunkte, eine Patrouille stellen, Extraktion.',
     theater: 'industrial',
     timeOfDay: 'day',
     seed: 2601,
@@ -320,6 +355,8 @@ export const MISSIONS = [
   {
     id: 'test-scramble',
     name: 'Alarmstart',
+    category: 'combat',
+    description: 'Alarmstart im Hangar: Späher halten nach 45 s auf den Stützpunkt zu. Früh oder spät zünden?',
     theater: 'industrial',
     timeOfDay: 'dusk',
     seed: 5150,
@@ -339,6 +376,8 @@ export const MISSIONS = [
   {
     id: 'test-invalid',
     name: 'Validierungsprobe (absichtlich fehlerhaft)',
+    category: 'debug',
+    description: 'Absichtlich fehlerhaft: prüft die Validierung der Schutzzone.',
     theater: 'industrial',
     timeOfDay: 'day',
     seed: 1,

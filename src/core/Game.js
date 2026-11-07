@@ -6,6 +6,31 @@ import { Renderer } from '../render/Renderer.js';
 import { InputManager } from '../input/InputManager.js';
 import { DebugOverlay } from '../ui/DebugOverlay.js';
 import { AudioEngine } from '../audio/AudioEngine.js';
+import { Settings } from './Settings.js';
+import { LoadingScreen } from '../ui/menu/LoadingScreen.js';
+
+/** Small FPS readout (Optionen → Grafik → FPS-Anzeige). */
+class FpsCounter {
+  constructor(container) {
+    this.el = document.createElement('div');
+    this.el.className = 'fps-counter';
+    this.el.hidden = true;
+    container.appendChild(this.el);
+    this.t = 0;
+  }
+
+  setVisible(on) {
+    this.el.hidden = !on;
+  }
+
+  update(dt, fps) {
+    if (this.el.hidden) return;
+    this.t += dt;
+    if (this.t < 0.25) return;
+    this.t = 0;
+    this.el.textContent = `${Math.round(fps)} FPS`;
+  }
+}
 
 /** Owns the shared services and drives the main loop. */
 export class Game {
@@ -18,6 +43,10 @@ export class Game {
     this.input = new InputManager(this.renderer.canvas, this.bus);
     this.audio = new AudioEngine(this.bus);
     this.states = new StateMachine(this);
+    this.fpsCounter = new FpsCounter(container);
+    this.loading = new LoadingScreen(container); // survives the menu → mission switch
+    this.settings = new Settings(this);
+    this.settings.applyAll();
     this.debug = new DebugOverlay(container, () => this.collectDebugInfo());
     this.running = false;
     this.loop = this.loop.bind(this);
@@ -52,6 +81,7 @@ export class Game {
 
     this.input.endFrame();
     this.debug.update(dt);
+    this.fpsCounter.update(dt, this.time.fps);
   }
 
   setDebugMode(on) {

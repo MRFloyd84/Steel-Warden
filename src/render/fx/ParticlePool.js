@@ -1,3 +1,4 @@
+import { CONFIG } from '../../data/config.js';
 import * as THREE from 'three';
 
 const VERT = `
@@ -78,6 +79,8 @@ export class ParticlePool {
   }
 
   spawn({ pos, vel = null, color, size = 1, grow = 0, life = 0.5, gravity = 0, drag = 0, alpha = 1 }) {
+    // Optionen → Grafik → Effekte: sparse drops a share of the particles
+    if (CONFIG.render.effects < 1 && Math.random() > CONFIG.render.effects) return;
     const i = this.next;
     this.next = (this.next + 1) % this.count;
     const i3 = i * 3;

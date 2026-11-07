@@ -312,6 +312,19 @@ export class InputManager {
     this.mouse.consumeWheel();
   }
 
+  /** Any key, mouse button or gamepad button pressed this frame ("Taste drücken"). */
+  anyPressed() {
+    const kb = this.keyboard;
+    for (const code of kb.pressed) if (!/^(Shift|Control|Alt|Meta)/.test(code) && code !== 'Backquote') return true;
+    if ([0, 1, 2].some((b) => this.mouse.wasPressed(b))) return true;
+    return this.gamepad.connected && this.gamepad.buttons.some((_, i) => this.gamepad.wasPressed(i));
+  }
+
+  /** A rebinding capture is running (menus leave the keys alone). */
+  get capturing() {
+    return !!this.capture;
+  }
+
   /** Wheel notches since the last call. */
   wheel() {
     return this.mouse.consumeWheel();

@@ -40,6 +40,29 @@ const RECIPES = {
     noise: { amp: 0.9, decay: 0.12, highpass: 0.2 },
     partials: [[1800, 0.08, 0.05]],
   },
+  // Menu sounds: short, soft, a little electronic (CRT terminal)
+  uiMove: {
+    length: 0.05,
+    noise: { amp: 0.05, decay: 0.003, highpass: 0.6 },
+    partials: [[1320, 0.22, 0.012], [2640, 0.06, 0.006]],
+  },
+  uiConfirm: {
+    length: 0.16,
+    noise: { amp: 0.08, decay: 0.004, highpass: 0.5 },
+    partials: [[880, 0.25, 0.05], [1320, 0.2, 0.06]],
+    second: { at: 0.06, amp: 0.8 },
+  },
+  uiBack: {
+    length: 0.14,
+    noise: { amp: 0.06, decay: 0.004, highpass: 0.5 },
+    partials: [[660, 0.25, 0.04], [440, 0.18, 0.05]],
+  },
+  uiError: {
+    length: 0.24,
+    noise: { amp: 0.04, decay: 0.01, highpass: 0.3 },
+    partials: [[180, 0.35, 0.12], [190, 0.3, 0.12]],
+    second: { at: 0.11, amp: 0.9 },
+  },
   guard: {
     length: 0.12,
     noise: { amp: 0.6, decay: 0.004, highpass: 0.5 },

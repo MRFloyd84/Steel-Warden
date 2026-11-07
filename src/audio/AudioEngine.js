@@ -19,6 +19,8 @@ export class AudioEngine {
     this.voices = 0;
     this.lastPlayed = new Map();
     this.pendingLoops = new Set();
+    this.volumes = {};
+    this.duck = 1;
     const unlock = () => {
       this.unlock();
       if (this.ctx?.state === 'suspended' && !this.paused) this.ctx.resume();
@@ -47,12 +49,12 @@ export class AudioEngine {
     this.limiter.threshold.value = -6;
     this.limiter.ratio.value = 8;
     this.master = ctx.createGain();
-    this.master.gain.value = AUDIO_MIX.master;
+    this.master.gain.value = AUDIO_MIX.master * (this.volumes.master ?? 1);
     this.master.connect(this.limiter).connect(ctx.destination);
     this.buses = {};
     for (const [name, level] of Object.entries(AUDIO_MIX.buses)) {
       const g = ctx.createGain();
-      g.gain.value = level;
+      g.gain.value = this.busLevel(name);
       g.connect(this.master);
       this.buses[name] = g;
     }
@@ -64,6 +66,25 @@ export class AudioEngine {
       this.pendingLoops.clear();
       this.bus.emit('audio:ready', { loaded: this.bank.loaded, failed: this.bank.failed });
     });
+  }
+
+  /** Player volume 0..1 for 'master' or a bus (Optionen → Audio); kept until the context exists. */
+  setVolume(name, v) {
+    this.volumes[name] = v;
+    if (!this.ctx) return;
+    if (name === 'master') this.master.gain.setTargetAtTime(AUDIO_MIX.master * v, this.ctx.currentTime, 0.03);
+    else if (this.buses[name]) this.buses[name].gain.setTargetAtTime(this.busLevel(name), this.ctx.currentTime, 0.03);
+  }
+
+  /** Dampens the game sound (pause menu), menu sounds stay: 1 = normal. */
+  setDuck(k) {
+    this.duck = k;
+    if (!this.ctx) return;
+    for (const name of Object.keys(this.buses)) this.buses[name].gain.setTargetAtTime(this.busLevel(name), this.ctx.currentTime, 0.08);
+  }
+
+  busLevel(name) {
+    return (AUDIO_MIX.buses[name] ?? 1) * (this.volumes[name] ?? 1) * (name === 'menu' ? 1 : this.duck);
   }
 
   setPaused(on) {

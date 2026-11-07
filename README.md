@@ -98,6 +98,13 @@ Schnellstart-Parameter (Dev und Build):
   Reaktorstrom); Alarmstart als bewusste Ausnahme, Startort Hangar (Tor öffnet beim
   Ausrücken) oder Absetzpunkt, Schutzzone mit Validierung, Signatur je Systemzustand.
 
+- **Startphase-Fix:** sicherer Start (Gegner ruhen bis zum Ausrücken), Alarmstart, Hangar
+  mit Tor oder Absetzpunkt, Schutzzone mit Validierung, Signatur je Systemzustand.
+- **Teil 2 (Menüsystem):** Titel über 3D-Szene, Hauptmenü, Einsatzwahl mit Reitern und
+  Übersichtskarte, Einsatzvorbereitung mit Walker-Vorschau und Übungsoptionen, Ladebildschirm,
+  Optionen (Spiel, Grafik, Audio, Steuerung), Pausenmenü, Nachbesprechung; vollständig mit
+  Tastatur, Maus und Gamepad bedienbar.
+
 Fahrplan für die nächsten Phasen inklusive Stützpunkt, Bergung, Funk, Radar und Missionen:
 `docs/ROADMAP.md`.
 
@@ -228,7 +235,11 @@ _Erzeugt aus `src/input/actions.js` mit `node tools/gen-controls.mjs` — nicht 
 |---|---|---|---|
 | Menü: hoch | `↑` / `W` | Kreuz ↑ | Menü |
 | Menü: runter | `↓` / `S` | Kreuz ↓ | Menü |
-| Menü: bestätigen | `Enter` / `Num Enter` | A | Menü |
+| Menü: links / Wert kleiner | `←` / `A` | Kreuz ← | Menü |
+| Menü: rechts / Wert größer | `→` / `D` | Kreuz → | Menü |
+| Menü: Reiter zurück | `Q` / `Bild ↑` | LB | Menü |
+| Menü: Reiter vor | `E` / `Bild ↓` | RB | Menü |
+| Menü: bestätigen | `Enter` / `Num Enter` / `Leertaste` | A | Menü |
 | Menü: zurück / schließen | `Esc` | B | Menü |
 | Menü: Eintrag 1–7 | `1`–`7` | – | Menü |
 
@@ -443,6 +454,59 @@ Jede Mission hat eine Startphase (`startup` in `src/data/missions.js`, Details i
    welche Einheit und welche Patrouillenpunkte wie weit innerhalb der Schutzzone liegen.
    Eigene Probe: in einer Mission eine Einheit mit `at` nah an den Start setzen.
 
+## Menüs (Teil 2)
+
+Aufbau (Skizze und Module in `docs/MENU-PLAN.md`):
+
+```
+Titelbildschirm (3D-Szene, „Taste drücken“, Version und Build-Datum unten rechts)
+└─ Hauptmenü: Kampagne (in Vorbereitung) · Übungseinsatz · Optionen · Erprobung (nur Debug) · Mitwirkende
+   └─ Übungseinsatz → Einsatzwahl → Einsatzvorbereitung → Laden → Einsatz
+Im Einsatz: Pausenmenü · Nachbesprechung
+```
+
+- **Titel und Hauptmenü** liegen über einer echten 3D-Szene (`src/render/MenuScene.js`):
+  ein Walker auf dem Landeplatz eines zufälligen Schauplatzes zu zufälliger Tageszeit,
+  langsame Kamerafahrt, Scanlines und Vignette (Stärke unter Optionen → Grafik), CRT-Einschalten.
+- **Einsatzwahl:** Reiter Schauplätze · Gefechte · Systemtests (`category` und `description`
+  je Mission); rechts Beschreibung, Schauplatz, Tageszeit, Wetter, Gegner, Startmodus und
+  eine Übersichtskarte aus dem Höhenfeld (Start, Navpunkte, Gegner, Gebiet, Schutzzone).
+- **Einsatzvorbereitung:** Walker wählen (◀ ▶) mit 3D-Vorschau auf der Drehplattform und
+  Kennwerten als Balken, Werks-Bewaffnung, Übungsoptionen (verwundbar, Munition,
+  Schwierigkeit, Tageszeit, Wetter, Startprozedur voll/einfach/auto/heiß). Die Auswahl bleibt
+  gespeichert.
+- **Laden:** Missionsname, Schauplatz, Balken für Gelände, Modelle und Audio, wechselnde Hinweise.
+- **Optionen:** Spiel (Startprozedur, Zufallsereignisse, Tastenhilfe, Funktexte, Einheiten),
+  Grafik (Sichtweite, Objektdichte, Schatten, Effekte, Scanlines, Auflösungsskala, FPS),
+  Audio (Gesamt, Effekte, Cockpit/Maschine, Funk, Musik), Steuerung (Belegungsbildschirm).
+  Wirkt sofort, gespeichert in `localStorage`, „Standard wiederherstellen“ je Seite.
+  Sichtweite und Objektdichte gelten ab dem nächsten Einsatz.
+- **Pause:** Fortsetzen · Einsatzziele · Steuerung (nur Ansicht) · Optionen · Einsatz neu
+  starten · Einsatz abbrechen (mit Bestätigung). Simulation steht, Ton gedämpft, Szene dunkel.
+- **Nachbesprechung:** Ergebnis, Einsatzzeit ab dem Ausrücken, Strecke, Abschüsse mit
+  Zerstörungsart und Schrottwert, eigener Schaden je Komponente, Treffergenauigkeit;
+  „Erneut“ startet denselben Einsatz mit denselben Einstellungen.
+
+**Bedienung:** Pfeile oder WASD bzw. Steuerkreuz und linker Stick bewegen den Fokus (gelber
+Rahmen), links/rechts ändert Werte, `Q`/`E` bzw. LB/RB wechseln Reiter, `Enter`/Leertaste bzw. A
+bestätigt, `Esc` bzw. B geht zurück. Maus: Fokus beim Überfahren, Klick bestätigt, Klick auf
+◀ ▶ ändert. Jeder Bildschirm merkt sich den letzten Fokus. Lange Listen scrollen in ihrem
+Bereich mit ausgeblendetem Rand als Hinweis. Alles skaliert über eine Einheit von 1280×720
+bis 2560×1440.
+
+**Testanleitung Menüs:**
+1. Nur Tastatur, 1280×720: Titel → Taste → Übungseinsatz → Reiter mit `Q`/`E` durchblättern
+   (Karte und Angaben wechseln) → Duell → Einsatzvorbereitung: Walker mit ←/→ wechseln (die
+   Vorschau dreht sich auf der Plattform), Schwierigkeit ändern → „Einsatz beginnen“ →
+   Ladebildschirm → im Einsatz `Esc` → Einsatzziele, Steuerung, Optionen ansehen → „Einsatz
+   abbrechen“ → bestätigen → Nachbesprechung → „Zum Hauptmenü“.
+2. Dasselbe nur mit Gamepad (Steuerkreuz/Stick, A, B, LB/RB, im Einsatz Start für die Pause).
+3. Dasselbe in 2560×1440 (Browserfenster oder Zoom): nichts überlappt, nichts wird
+   abgeschnitten, Schrift wächst mit.
+4. Optionen → Grafik → Scanlines/CRT ändern: wirkt sofort; Seite neu laden: Wert bleibt;
+   „Standard wiederherstellen“ (zweimal bestätigen) setzt die Seite zurück.
+5. Debug-Modus (`^`) im Hauptmenü: der Eintrag „Erprobung“ erscheint mit allen Testmissionen.
+
 ## Gegner und KI (A3)
 
 **Synthese-Einheiten** (`src/data/enemies.js`, Modelle in `src/data/enemyModels.js`). Gleiche
@@ -507,7 +571,7 @@ zeigt je Einheit Zustand, Ziel, Entfernung und Torso, dazu KI-Takt, Pfade, Verst
 **Testanleitung A3** (Missionen im Menü unten; `?mission=…` springt direkt hinein):
 
 1. *Duell* (`test-duel`): ein Jäger 800 m voraus kennt deine Position, sobald du ausrückst. Je Schwierigkeitsgrad
-   einmal spielen (Menü → Schwierigkeit oder `&difficulty=…`): Anfänger schießt spät und weit
+   einmal spielen (Einsatzvorbereitung → Schwierigkeit oder `&difficulty=…`): Anfänger schießt spät und weit
    daneben und kommt frontal, Normal flankiert manchmal und trifft gut, Elite hält kaum still
    und trifft fast jede Salve. Im Debug-Modus sieht man Kegel, Zustand und Pfad.
 2. *Hinterhalt* (`test-ambush`): SENSOREN aus (Schalter), die Schlucht bis zum Knick (KNICK)

@@ -15,6 +15,8 @@ export const CONFIG = {
     near: 0.5,
     far: 4000,
     antialias: false,
+    contactShadows: true, // dark blob under walkers (Optionen → Grafik)
+    effects: 1, // particle share (Optionen → Grafik)
   },
 
   terrain: {
@@ -37,6 +39,7 @@ export const CONFIG = {
     viewDistance: 560,
     capacity: 2500, // instances per model and detail level
     structureDistance: 1100,
+    densityScale: 1, // Optionen → Grafik → Objektdichte
   },
 
   // Startup procedure. mode: 'full' (every switch yourself), 'simple'

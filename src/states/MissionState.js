@@ -8,7 +8,9 @@ import { WalkerMotion, lerpPose } from '../sim/WalkerMotion.js';
 import { getMission } from '../data/missions.js';
 import { getWalker } from '../data/walkers.js';
 import { MissionHints } from '../ui/MissionHints.js';
-import { PauseScreen } from '../ui/PauseScreen.js';
+import { MenuStack } from '../ui/menu/MenuStack.js';
+import { PauseMenu } from '../ui/menu/PauseMenu.js';
+import { MIN_SHOW } from '../ui/menu/LoadingScreen.js';
 import { CockpitCursor } from '../ui/CockpitCursor.js';
 import { CockpitInteraction } from '../ui/CockpitInteraction.js';
 import { CockpitControls } from '../sim/CockpitControls.js';
@@ -33,7 +35,6 @@ import { WEATHER } from '../data/weather.js';
 import { WorldLink } from './WorldLink.js';
 import { HelpPanel } from '../ui/HelpPanel.js';
 import { RadioMenu } from '../ui/RadioMenu.js';
-import { ControlsScreen } from '../ui/ControlsScreen.js';
 import { damp } from '../util/math.js';
 import { AIDirector } from '../ai/AIDirector.js';
 import { AIDebugView } from '../render/AIDebugView.js';
@@ -51,14 +52,18 @@ const COMPONENT_LABELS = { torso: 'TORSO', armL: 'ARM L', armR: 'ARM R', legs: '
  * startup procedure, audio, pause, stats.
  */
 export class MissionState extends State {
-  enter({ missionId, walkerId }) {
+  enter({ missionId, walkerId, practice = null }) {
     const game = this.game;
     const cfg = game.config;
     const params = new URLSearchParams(window.location.search);
+    // Practice options from the mission preparation (menu); URL parameters stay for tests
+    this.missionParams = { missionId, walkerId, practice };
+    const pr = practice ?? {};
     // Start site (hangar base or drop zone) is added to the mission; validation ran before (missionStartup.js)
-    this.mission = withStartSite(getMission(missionId));
-    this.startup = startupOf(this.mission, { hot: params.get('start') === 'hot' });
-    const weather = params.get('weather');
+    const base = getMission(missionId);
+    this.mission = withStartSite(pr.timeOfDay && pr.timeOfDay !== 'mission' ? { ...base, timeOfDay: pr.timeOfDay } : base);
+    this.startup = startupOf(this.mission, { hot: params.get('start') === 'hot' || pr.startMode === 'hot' });
+    const weather = pr.weather && pr.weather !== 'mission' ? pr.weather : params.get('weather');
     this.world = new World(this.mission, cfg.terrain, { bus: game.bus, scatterConfig: cfg.scatter, weather: WEATHER[weather] ? weather : null });
     const chosen = walkerId ?? params.get('walker');
     this.walker = getWalker(WALKERS[chosen] ? chosen : this.mission.playerStart.walker ?? 'bastion');
@@ -66,7 +71,10 @@ export class MissionState extends State {
     const start = this.mission.playerStart;
     this.motion = new WalkerMotion(this.walker, this.world.sampler, cfg.feel, game.bus);
     this.motion.place(start.x, start.z, start.heading);
-    this.world.preload(start.x, start.z);
+    // Terrain meshes stream in during the loading phase (warm-up), heights are there already
+    this.world.terrain.update(start.x, start.z);
+    this.world.objects.ensureAround(start.x, start.z);
+    this.world.scatterView?.update(start.x, start.z);
     this.renderPose = { ...this.motion.pose };
 
     this.view = new PilotView(game.renderer.camera, game.renderer.cockpitCamera, cfg.view);
@@ -77,7 +85,7 @@ export class MissionState extends State {
     this.floodlight = new Floodlight(this.world.scene, cfg.floodlight);
 
     // Startup procedure
-    const urlMode = params.get('startmode');
+    const urlMode = START_MODES.includes(pr.startMode) ? pr.startMode : params.get('startmode');
     // Scramble: simple procedure unless the URL (later the options) says otherwise
     this.startMode = START_MODES.includes(urlMode) ? urlMode : this.startup.mode === 'scramble' ? 'simple' : cfg.startup.mode;
     this.systems = new WalkerSystems(this.controls, game.bus, {
@@ -94,7 +102,7 @@ export class MissionState extends State {
     this.checklist.update(this.systems.flags);
     this.automation = new StartupAutomation(this.controls, this.startMode);
     if (this.startMode === 'simple' && !hot) this.automation.start('simple');
-    this.radioLog = new RadioLog(game.container);
+    this.radioLog = new RadioLog(game.container, game.settings.get('radioText'));
     this.link = new SystemsLink({
       systems: this.systems,
       controls: this.controls,
@@ -117,6 +125,8 @@ export class MissionState extends State {
       radio: (msg) => this.radioMessage(msg),
     });
     this.link.extraFlicker = () => this.combat.readout().sensorsFlicker;
+    if (pr.invulnerable) this.combat.player.damage.invulnerable = true;
+    if (pr.infiniteAmmo) this.combat.player.weapons.infiniteAmmo = true;
     this.viewMode = 'cockpit'; // 'cockpit' | 'external'
     this.chase = new ChaseCamera(game.renderer.camera, this.world.sampler);
 
@@ -127,7 +137,7 @@ export class MissionState extends State {
 
     this.hints = new MissionHints(game.container);
     this.hints.show();
-    this.help = new HelpPanel(game.container, game.input, game.bus);
+    this.help = new HelpPanel(game.container, game.input, game.bus, game.settings.get('helpIntro'));
     this.radioMenu = new RadioMenu(game.container, { onCommand: (cmd) => this.radioCommand(cmd) });
     this.cursor = new CockpitCursor(game.container);
     this.interaction = new CockpitInteraction({
@@ -139,12 +149,9 @@ export class MissionState extends State {
       throttle: this.motion.throttle,
       onClipboard: () => this.cockpit.clipboard?.toggle(),
     });
-    this.pauseScreen = new PauseScreen(game.container, {
-      onResume: () => this.setPaused(false),
-      onAbort: () => this.finish('aborted'),
-      onControls: () => this.controlsScreen.open(),
-    });
-    this.controlsScreen = new ControlsScreen(game.container, game.input, game.bus, { onClose: () => {} });
+    // Pause menu (ui/menu): scene dimmed, sound ducked, the simulation stands still
+    this.pauseStack = new MenuStack({ game, container: game.container, className: 'pause-layer' });
+    this.pauseStack.setVisible(false);
 
     this.paused = false;
     this.wireframe = false;
@@ -169,7 +176,7 @@ export class MissionState extends State {
     this.data.worldLink = this.worldLink;
 
     // AI (A3): difficulty from the menu (URL ?difficulty= for tests)
-    const diffId = params.get('difficulty');
+    const diffId = pr.difficulty ?? params.get('difficulty');
     this.difficultyId = DIFFICULTY[diffId] ? diffId : Storage.load('difficulty', 'normal');
     this.ai = new AIDirector({
       mission: this.mission, world: this.world, entities: this.entities, combat: this.combat,
@@ -197,6 +204,9 @@ export class MissionState extends State {
       mission: this.mission, director: this.ai, combat: this.combat, data: this.data,
       radio: (msg) => this.radioMessage(msg), onFinish: (result) => this.finish(result),
     });
+    // Loading phase: terrain meshes, shader compile, audio samples (ui/menu/LoadingScreen.js)
+    this.warmup = { t: 0, phase: 'terrain', total: Math.max(1, this.world.terrain.queue.length) };
+    if (!game.loading.visible) game.loading.show({ name: this.mission.name, place: `${this.world.theater.name} · ${this.walker.name}` });
     this.objectiveEl = document.createElement('div');
     this.objectiveEl.className = 'objective';
     this.objectiveEl.hidden = true;
@@ -228,7 +238,7 @@ export class MissionState extends State {
     game.renderer.canvas.removeEventListener('click', this.onCanvasClick);
     this.unsubLock();
     game.input.releasePointerLock();
-    game.audio.setPaused(false);
+    game.audio.setDuck(1);
     this.cockpitAudio.dispose();
     this.systemsAudio.dispose();
     this.camView.dispose();
@@ -248,24 +258,33 @@ export class MissionState extends State {
     this.help.destroy();
     this.radioMenu.destroy();
     this.cursor.destroy();
-    this.pauseScreen.destroy();
-    this.controlsScreen.close();
-    this.controlsScreen.destroy();
+    this.pauseStack.destroy();
+    game.loading.hide();
     this.cockpit.dispose();
     this.world.dispose();
     this.world = null;
   }
 
   setPaused(on) {
+    if (on === this.paused) return;
     this.paused = on;
-    this.game.audio.setPaused(on);
+    this.game.audio.setDuck(on ? 0.2 : 1);
     if (on) {
       this.interaction.endHold();
       this.game.input.releasePointerLock();
       this.radioMenu.hide();
-      this.pauseScreen.show();
+      this.pauseStack.setVisible(true);
+      this.pauseStack.push(new PauseMenu({
+        name: this.mission.name,
+        briefing: this.mission.briefing,
+        objectives: () => this.script.list(),
+        resume: () => this.setPaused(false),
+        restart: () => this.restart(),
+        abort: () => this.finish('aborted'),
+      }));
     } else {
-      this.pauseScreen.hide();
+      this.pauseStack.clear();
+      this.pauseStack.setVisible(false);
       this.game.input.requestPointerLock();
       this.game.time.resetAccumulator();
     }
@@ -305,17 +324,34 @@ export class MissionState extends State {
   }
 
   finish(result) {
+    const units = this.combat.units;
+    const player = this.combat.player;
+    const damage = {};
+    for (const [c, p] of Object.entries(player.damage.parts)) {
+      damage[c] = { left: player.damage.fraction(c), lost: c.startsWith('arm') ? units.player.lostArms.has(c) : p.internal <= 0 };
+    }
     this.game.states.change('debrief', {
-      mission: this.mission,
+      mission: getMission(this.missionParams.missionId),
       result,
+      params: this.missionParams,
       stats: {
-        kills: this.combat.units.kills,
+        kills: units.kills,
+        killList: units.units.filter((u) => u.wreck && !u.isPlayer).map((u) => ({ name: `${u.walker.name} (${u.id})`, kind: u.wreck.kind, scrap: u.wreck.scrap })),
         duration: this.missionTime, // from deploy
+        deployed: this.deployed,
         totalTime: this.stats.duration,
         distance: this.motion.distance,
+        shots: this.combat.stats.shots,
+        hits: this.combat.stats.hits,
+        damage,
         avgFps: this.stats.fpsFrames ? this.stats.fpsSum / this.stats.fpsFrames : 0,
       },
     });
+  }
+
+  restart() {
+    this.game.loading.show({ name: this.mission.name, place: this.world.theater.name });
+    this.game.states.change('mission', this.missionParams);
   }
 
   /** Input context from what the player is doing (input/actions.js → CONTEXTS). */
@@ -328,18 +364,53 @@ export class MissionState extends State {
     return 'combat';
   }
 
+  /** One frame of the loading phase; the simulation waits until it is done. */
+  warmStep(dt) {
+    const w = this.warmup;
+    const game = this.game;
+    const L = game.loading;
+    L.update(dt);
+    w.t += dt;
+    const terrain = this.world.terrain;
+    if (w.phase === 'terrain') {
+      const t0 = performance.now();
+      while (terrain.queue.length && performance.now() - t0 < 35) terrain.processQueue(2);
+      L.set('terrain', 1 - terrain.queue.length / w.total);
+      if (!terrain.queue.length) w.phase = 'models';
+    } else if (w.phase === 'models') {
+      const r = game.renderer.renderer;
+      r.compile(this.world.scene, game.renderer.camera);
+      r.compile(this.cockpit.scene, game.renderer.cockpitCamera);
+      L.set('models', 1);
+      w.phase = 'audio';
+    } else {
+      const a = game.audio;
+      const frac = a.ready || !a.ctx || !a.bank ? 1 : a.bank.loaded / Math.max(1, a.bank.total);
+      L.set('audio', frac);
+      if ((frac >= 1 && L.age >= MIN_SHOW) || w.t > 8) {
+        this.warmup = null;
+        L.hide();
+        game.time.resetAccumulator();
+      }
+    }
+  }
+
   frame(dt) {
     const input = this.game.input;
     this.frameDt = dt;
+    if (this.warmup) {
+      input.setContext('menu');
+      this.warmStep(dt);
+      return;
+    }
     input.setContext(this.currentContext());
     this.help.update(input, dt);
 
     // Menus: radio menu or pause (Esc closes; the key right after a pointer-lock
     // loss is ignored because that same Esc already opened the pause)
     if (this.paused) {
-      if (this.controlsScreen.visible) {
-        if (input.pressed('menuBack')) this.controlsScreen.back();
-      } else if (input.pressed('menuBack') && performance.now() - this.lockLostAt > 300) this.setPaused(false);
+      // The Esc that released the pointer lock (and opened the pause) must not close it again
+      if (!(input.pressed('menuBack') && performance.now() - this.lockLostAt < 300)) this.pauseStack.frame(dt);
       input.discardMotion();
       return;
     }
@@ -445,7 +516,7 @@ export class MissionState extends State {
   }
 
   update(dt) {
-    if (this.paused) return;
+    if (this.paused || this.warmup) return;
     const input = this.game.input;
     this.link.update();
     this.combat.applyPlayerLimits();
@@ -478,6 +549,7 @@ export class MissionState extends State {
   }
 
   render(alpha) {
+    if (this.warmup) return;
     const game = this.game;
     const renderer = game.renderer;
     const a = this.paused ? 1 : alpha;
@@ -531,6 +603,8 @@ export class MissionState extends State {
     this.floodlight.update(this.renderPose, this.view.torsoQuat, this.view.aimDir);
     this.link.frame();
     updateCockpitData(this.data, fdt, { motion: this.motion, controls: this.controls, systems: this.systems, stick: this.stickVisual, combat: this.combat });
+    this.data.units = game.settings.get('units');
+    this.radioLog.seconds = game.settings.get('radioText');
     this.cockpit.update(fdt, this.data, this.view.torsoQuat, this.checklist, renderer.cockpitCamera);
     this.worldLink.frame(fdt, renderer.camera, this.renderPose, true);
     this.camView.render(fdt);
