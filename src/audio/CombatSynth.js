@@ -132,6 +132,23 @@ export function renderCombatSounds(ctx) {
     return thump + rattle + ring;
   }, 0.9);
 
+  // Footsteps by ground: splash, mud squelch, lava sizzle, ice crunch, ice breaking
+  sounds.splash = make(0.6, (t, i, n, lp, lp2) => (lp(n(i), 0.3) - lp2(n(i), 0.03)) * 2.2 * Math.min(1, t * 60) * Math.exp(-t * 7));
+  sounds.squelch = make(0.35, (t, i, n, lp) => (lp(n(i), 0.05) * 3 + Math.sin(2 * Math.PI * (90 + 60 * Math.sin(t * 30)) * t) * 0.4) * Math.exp(-t * 10));
+  sounds.sizzle = make(0.9, (t, i, n, lp) => (n(i) - lp(n(i), 0.2)) * 0.9 * Math.min(1, t * 30) * Math.exp(-t * 3.5));
+  sounds.crunch = make(0.3, (t, i, n) => (n(i) > 0.7 || n(i) < -0.7 ? n(i) : n(i) * 0.2) * Math.exp(-t * 14));
+  phase.p = 0;
+  sounds.iceBreak = make(1.4, (t, i, n, lp) => {
+    const crack = (n(i) > 0.9 ? 1 : 0) * Math.exp(-t * 3) * 0.9;
+    const groan = osc(160 - t * 60, dt) * 0.4 * Math.exp(-t * 2);
+    return crack + groan + lp(n(i), 0.05) * 2 * Math.exp(-t * 2.5);
+  });
+  // Wind: slowly breathing band noise (loop)
+  sounds.windLoop = make(4, (t, i, n, lp, lp2) => {
+    const swell = 0.6 + 0.4 * Math.sin((2 * Math.PI * t) / 4);
+    return (lp(n(i), 0.08) - lp2(n(i), 0.01)) * 3 * swell;
+  }, 0.6, true);
+
   // Sparks from a panel: crackle
   sounds.sparks = make(0.5, (t, i, n) => (n(i) > 0.92 || n(i) < -0.96 ? n(i) : n(i) * 0.08) * Math.exp(-t * 6));
   return sounds;

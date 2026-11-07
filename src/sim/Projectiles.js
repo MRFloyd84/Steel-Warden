@@ -14,15 +14,17 @@ const segEnd = new THREE.Vector3();
  * ctx gives guidance access to the units and to the player's lock
  * (semi-active illumination).
  *
- * Hits are reported through onHit({ proj, unit|null, hit|null, point, ground }).
+ * Hits are reported through onHit({ proj, unit|null, hit|null, point, ground, obstacle? }).
  */
 export class Projectiles {
-  constructor({ sampler, units, onHit, onEnd = null, illuminated = () => false }) {
+  constructor({ sampler, units, onHit, onEnd = null, illuminated = () => false, obstacles = null, emitters = null, gravity = 1 }) {
     this.sampler = sampler;
+    this.obstacles = obstacles; // WorldObjects: buildings and big scatter
+    this.gravity = gravity;
     this.units = units; // () => array of combat units { id, volumes, wreck }
     this.onHit = onHit;
     this.onEnd = onEnd; // (proj, reason: 'hit' | 'ground' | 'expired') — e.g. missile camera
-    this.guideCtx = { units, illuminated, dt: 0 };
+    this.guideCtx = { units, emitters: emitters ?? units, illuminated, dt: 0, gravity };
     this.serial = 0;
     this.pool = Array.from({ length: POOL }, () => ({
       active: false,
@@ -117,6 +119,13 @@ export class Projectiles {
       if (u === p.owner) continue;
       const hit = u.volumes.intersectSegment(p.prev, p.pos);
       if (hit && (!best || hit.t < best.hit.t)) best = { unit: u, hit };
+    }
+    // Buildings and rocks
+    const obs = this.obstacles?.segment(p.prev, p.pos);
+    if (obs && (!best || obs.t < best.hit.t) && (tGround === null || obs.t <= tGround)) {
+      this.onHit({ proj: p, unit: null, hit: null, point: obs.point, ground: false, obstacle: obs });
+      this.kill(p, 'hit');
+      return;
     }
     if (best && (tGround === null || best.hit.t <= tGround)) {
       this.onHit({ proj: p, unit: best.unit, hit: best.hit, point: best.hit.point, ground: false });

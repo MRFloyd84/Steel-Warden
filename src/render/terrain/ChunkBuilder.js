@@ -17,6 +17,11 @@ export class ChunkBuilder {
     this.rockSlope = pal.rockSlope;
     this.variation = pal.variation;
     this.tmp = new THREE.Color();
+    // Ground types and feature tints (soft ground, ice, hot ground, river beds, roads, veins)
+    const col = (obj) => Object.fromEntries(Object.entries(obj ?? {}).map(([k, v]) => [k, new THREE.Color(v)]));
+    this.surfaceColors = col(pal.surfaces);
+    this.tints = col(pal.tints);
+    this.useFeatures = !sampler.features.empty || !!theater.surface?.soft || !!theater.surface?.hot;
   }
 
   build(cx, cz, segments) {
@@ -83,6 +88,16 @@ export class ChunkBuilder {
         if (height <= b.max) { band = b; break; }
       }
       c.copy(band.color);
+      if (this.useFeatures) {
+        const info = this.sampler.infoAt(wx, wz);
+        const tint = info.tint && this.tints[info.tint];
+        if (tint) c.copy(tint);
+        else {
+          const surf = this.sampler.classify(info, wx, wz, height);
+          const sc = this.surfaceColors[surf === 'water' || surf === 'lava' ? `${surf}Bed` : surf];
+          if (sc) c.lerp(sc, 0.85);
+        }
+      }
     }
     const jitter = (hash2(Math.floor(wx * 0.5), Math.floor(wz * 0.5), this.seed + 55) - 0.5) * 2;
     return c.multiplyScalar(1 + jitter * this.variation);

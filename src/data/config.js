@@ -28,6 +28,17 @@ export const CONFIG = {
     skirtDepth: 14, // hides cracks between neighbouring LODs
   },
 
+  // Mission area fence (holographic band at the border)
+  area: { height: 22, step: 12, color: '#5fe0c8', showDist: 200 },
+
+  // Scatter objects and buildings
+  scatter: {
+    nearDistance: 200, // full models up to here, simple stand-ins beyond
+    viewDistance: 560,
+    capacity: 2500, // instances per model and detail level
+    structureDistance: 1100,
+  },
+
   // Startup procedure. mode: 'full' (every switch yourself), 'simple'
   // (battery → reactor → systems → weapons → legs, the rest runs by itself)
   // or 'auto' (Shift+S runs the whole procedure). URL: ?start=hot skips it,

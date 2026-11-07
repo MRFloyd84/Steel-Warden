@@ -97,6 +97,10 @@ export class MissileCamView {
     if (missile) {
       d.ground = missile.pos.y - this.world.sampler.heightAt(missile.pos.x, missile.pos.z);
       d.weapon = missile.def.short;
+      // Weather: the picture snows up with distance (snow, sand, ash in the air)
+      const range = this.world.weatherDef.camRange ?? 0;
+      const dist = missile.pos.distanceTo(c.eye);
+      d.weatherNoise = range * Math.min(1, Math.max(0, (dist - 120) / 500));
     }
     const on = this.active;
     if (this.monitor) this.monitor.override = on ? MissileCamDisplay : null;

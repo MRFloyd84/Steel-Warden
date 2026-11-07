@@ -144,6 +144,11 @@ export class WalkerSystems {
     if (units > 0) this.s.reactor.pendingHeat += units * this.degPerHeatUnit;
   }
 
+  /** Heat from the ground in °C/s (negative: cooling by water). */
+  setExternalHeat(rate) {
+    this.s.reactor.externalRate = rate;
+  }
+
   /** Weapons may fire: armed and a reactor that carries the load. */
   get canFire() {
     return this.flags.weaponsReady && this.flags.reactorRunning;

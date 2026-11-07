@@ -1,3 +1,4 @@
+import { SURFACES } from '../data/surfaces.js';
 import { Throttle } from './Throttle.js';
 import { Spring } from '../util/Spring.js';
 import { clamp, damp, DEG } from '../util/math.js';
@@ -44,6 +45,16 @@ export class WalkerMotion {
     this.rollSpring = new Spring(feel.pitchSpring);
     this.headY = new Spring(feel.headSpring);
     this.headZ = new Spring(feel.headSpring);
+
+    // Ground: type under the feet (data/surfaces.js), thin ice breaking, collisions
+    this.obstacles = null; // WorldObjects (buildings, big scatter)
+    this.surface = 'hard';
+    this.sink = 0; // current sink depth (broken ice)
+    this.sinkTarget = 0;
+    this.stuck = 0; // seconds left unable to move
+    this.iceBroken = false;
+    this.radius = 2.5 + walker.tonnage * 0.04;
+    this.collided = false;
 
     // Set by WalkerSystems every step: what the machinery currently allows.
     this.limits = { throttleLocked: false, canMove: true, canTwist: true, speedFactor: 1, stance: 1 };
@@ -111,8 +122,8 @@ export class WalkerMotion {
     const t = this.throttle.value;
     let target = t >= 0 ? t * w.maxSpeed : t * w.maxReverseSpeed;
     const slope = clamp(1 - Math.max(0, this.grade) * f.uphillDrag + Math.max(0, -this.grade) * f.downhillBoost, 0.2, 1.2);
-    target *= slope * lim.speedFactor;
-    if (this.grade > f.maxGrade || !lim.canMove) target = 0;
+    target *= slope * lim.speedFactor * this.updateGround(dt);
+    if (this.grade > f.maxGrade || !lim.canMove || this.stuck > 0) target = 0;
 
     const prevSpeed = this.speed;
     const speedingUp = Math.abs(target) > Math.abs(this.speed) && Math.sign(target) !== -Math.sign(this.speed);
@@ -121,8 +132,22 @@ export class WalkerMotion {
     this.speed += clamp(diff, -rate * dt, rate * dt);
     this.accel = (this.speed - prevSpeed) / dt;
 
+    const px = this.x;
+    const pz = this.z;
     this.x += fx * this.speed * dt;
     this.z += fz * this.speed * dt;
+    // Buildings and big rocks push the walker back and eat its speed
+    this.collided = false;
+    if (this.obstacles) {
+      const pos = { x: this.x, z: this.z };
+      if (this.obstacles.resolveWalker(pos, this.radius)) {
+        this.x = pos.x;
+        this.z = pos.z;
+        const moved = Math.hypot(this.x - px, this.z - pz) / Math.max(1e-4, Math.abs(this.speed) * dt);
+        this.speed *= Math.min(1, moved);
+        this.collided = true;
+      }
+    }
     this.distance += Math.abs(this.speed) * dt;
 
     // Torso twist and pitch move toward their targets at the walker's rates
@@ -151,6 +176,31 @@ export class WalkerMotion {
     this.writePose(this.pose);
   }
 
+  /** Ground type under the walker; returns its speed factor. Thin ice breaks under heavy walkers. */
+  updateGround(dt) {
+    const surf = this.sampler.surfaceAt ? this.sampler.surfaceAt(this.x, this.z) : 'hard';
+    const def = SURFACES[surf] ?? SURFACES.hard;
+    const tons = this.w.tonnage;
+    if (surf === 'thinIce') {
+      if (!this.iceBroken && tons >= def.breakTonnage) {
+        this.iceBroken = true;
+        this.sinkTarget = def.sink;
+        this.stuck = def.stuck;
+        this.bus.emit('walker:iceBreak', { tonnage: tons });
+      }
+    } else if (this.iceBroken) {
+      this.iceBroken = false;
+      this.sinkTarget = 0;
+    }
+    this.stuck = Math.max(0, this.stuck - dt);
+    this.sink += clamp(this.sinkTarget - this.sink, -dt * 1.5, dt * 3);
+    this.surface = surf;
+    let k = def.speed ?? 1;
+    if (def.perTon) k -= def.perTon * tons;
+    if (this.iceBroken) k = Math.min(k, 0.55);
+    return Math.max(def.minSpeed ?? 0.3, k);
+  }
+
   updateGait(dt) {
     // Turning on the spot also makes the legs step.
     const yawSpeed = Math.abs(this.turnInput) * this.w.turnRate * DEG * this.feel.turnStepRadius;
@@ -166,6 +216,7 @@ export class WalkerMotion {
         foot: steps % 2 === 0 ? 'left' : 'right',
         tonnage: this.w.tonnage,
         strength,
+        surface: this.iceBroken ? 'water' : this.surface,
       });
     }
   }
@@ -176,12 +227,13 @@ export class WalkerMotion {
     p.x = this.x;
     p.z = this.z;
     const sag = 1 - this.limits.stance;
-    p.y = ground + this.w.cockpit.eyeHeight - sag * this.standUpHeight + this.bobAmp * Math.abs(s) * this.motionAmount;
+    p.y = ground + this.w.cockpit.eyeHeight - sag * this.standUpHeight + this.bobAmp * Math.abs(s) * this.motionAmount - this.sink;
     p.yaw = this.legYaw + this.twist;
     p.pitch = this.pitch + this.pitchSpring.value - sag * this.slumpPitch;
     p.roll = this.swayAmp * s * this.motionAmount + this.rollSpring.value;
     p.aimPitch = this.pitch;
     p.legYaw = this.legYaw;
+    p.sink = this.sink;
     p.stepPhase = this.stepPhase;
     p.motionAmount = this.motionAmount;
     p.speed = this.speed;
@@ -202,7 +254,7 @@ export class WalkerMotion {
 function makePose() {
   return {
     x: 0, y: 0, z: 0, yaw: 0, pitch: 0, roll: 0, aimPitch: 0, headY: 0, headZ: 0,
-    legYaw: 0, stepPhase: 0, motionAmount: 0, speed: 0,
+    legYaw: 0, stepPhase: 0, motionAmount: 0, speed: 0, sink: 0,
   };
 }
 

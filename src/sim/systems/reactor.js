@@ -72,8 +72,9 @@ export function updateReactor(sys, dt) {
     + k.passiveCooling * (r.temp - k.ambient);
   // Weapon heat (°C collected since the last step), smoothed rate for the displays
   r.weaponHeatRate += (r.pendingHeat / dt - r.weaponHeatRate) * Math.min(1, dt * 1.5);
-  r.temp += (heatIn - cooling) * dt + r.pendingHeat;
+  r.temp += (heatIn - cooling) * dt + r.pendingHeat + (r.externalRate ?? 0) * dt; // ground: water cools, lava heats
   r.pendingHeat = 0;
+  if (r.temp < k.ambient) r.temp = k.ambient;
 
   if (r.mode !== 'scram' && r.temp >= k.scramTemp) scram(sys);
 

@@ -33,6 +33,12 @@ export const SOUND_EVENTS = {
 
   // Walker movement
   footstep: { samples: ['mech_step'], gain: 0.5, rate: [0.95, 1.04], bus: 'world' },
+  // Ground layers on top of the footstep (data/surfaces.js → step)
+  'footstep.soft': { synth: 'squelch', gain: 0.45, rate: [0.8, 1.0], bus: 'world' },
+  'footstep.water': { synth: 'splash', gain: 0.6, rate: [0.8, 1.05], bus: 'world' },
+  'footstep.lava': { synth: 'sizzle', samples: ['hiss_1', 'hiss_2', 'hiss_3'], gain: 0.45, rate: [0.9, 1.1], bus: 'world' },
+  'footstep.ice': { synth: 'crunch', gain: 0.5, rate: [0.9, 1.15], bus: 'world' },
+  'ground.iceBreak': { synth: 'iceBreak', samples: ['creak_2', 'creak_4'], gain: 1, rate: [0.8, 0.9], bus: 'world' },
   'structure.creak': { samples: ['creak_1', 'creak_2', 'creak_3', 'creak_4'], gain: 0.4, rate: [0.85, 1.1], bus: 'cockpit', cooldown: 1.8 },
   'torso.limit': { samples: ['piston_end'], gain: 0.35, rate: [0.9, 1.0], bus: 'cockpit', cooldown: 0.6 },
   'walker.settle': { samples: ['piston_rattle', 'piston_short'], gain: 0.3, rate: [0.85, 0.95], bus: 'cockpit', cooldown: 1.5 },
@@ -126,6 +132,7 @@ export const SOUND_LOOPS = {
   incoming: { synth: 'incoming', gain: 0.2, bus: 'cockpit' },
   missileFlight: { synth: 'missileFlight', gain: 0.5, bus: 'world' },
   camStatic: { synth: 'camStatic', gain: 0.12, bus: 'cockpit' },
+  wind: { synth: 'windLoop', gain: 0.35, bus: 'world' },
 };
 
 /** How system values drive the machinery loops (rates are playback-rate ranges). */

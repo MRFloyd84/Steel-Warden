@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { ChunkBuilder } from './ChunkBuilder.js';
+import { FluidBuilder } from './FluidBuilder.js';
 
 /**
  * Streams terrain chunks around a focus point. Chunks get a LOD by ring
@@ -14,6 +15,9 @@ export class TerrainManager {
     this.group = new THREE.Group();
     this.group.name = 'terrain';
     scene.add(this.group);
+    this.fluids = new FluidBuilder(sampler, config.chunkSize);
+    this.hasFluids = !sampler.features.empty;
+    this.onChunk = null; // (cx, cz, lod) after a chunk was (re)built
 
     this.chunks = new Map(); // key -> { mesh, lod }
     this.desired = new Map(); // key -> { cx, cz, lod, dist }
@@ -58,6 +62,7 @@ export class TerrainManager {
       if (!this.desired.has(key)) {
         this.group.remove(chunk.mesh);
         chunk.mesh.geometry.dispose();
+        this.removeFluids(chunk);
         this.chunks.delete(key);
       }
     }
@@ -90,18 +95,49 @@ export class TerrainManager {
     const segments = this.config.lodSegments[want.lod];
     const geometry = this.builder.build(want.cx, want.cz, segments);
     const existing = this.chunks.get(key);
+    let chunk = existing;
     if (existing) {
       existing.mesh.geometry.dispose();
       existing.mesh.geometry = geometry;
       existing.lod = want.lod;
-      return;
+    } else {
+      const mesh = new THREE.Mesh(geometry, this.material);
+      mesh.position.set(want.cx * this.config.chunkSize, 0, want.cz * this.config.chunkSize);
+      mesh.matrixAutoUpdate = false;
+      mesh.updateMatrix();
+      this.group.add(mesh);
+      chunk = { mesh, lod: want.lod, fluids: [] };
+      this.chunks.set(key, chunk);
     }
-    const mesh = new THREE.Mesh(geometry, this.material);
-    mesh.position.set(want.cx * this.config.chunkSize, 0, want.cz * this.config.chunkSize);
-    mesh.matrixAutoUpdate = false;
-    mesh.updateMatrix();
-    this.group.add(mesh);
-    this.chunks.set(key, { mesh, lod: want.lod });
+    if (this.hasFluids) this.buildFluids(chunk, want);
+    this.onChunk?.(want.cx, want.cz, want.lod);
+  }
+
+  buildFluids(chunk, want) {
+    this.removeFluids(chunk);
+    const step = 8 * 2 ** want.lod;
+    for (const { kind, geometry } of this.fluids.build(want.cx, want.cz, step)) {
+      const mesh = new THREE.Mesh(geometry, this.fluids.materials[kind]);
+      mesh.position.copy(chunk.mesh.position);
+      mesh.matrixAutoUpdate = false;
+      mesh.updateMatrix();
+      mesh.renderOrder = kind === 'water' ? 2 : 1;
+      this.group.add(mesh);
+      chunk.fluids.push(mesh);
+    }
+  }
+
+  removeFluids(chunk) {
+    for (const m of chunk.fluids ?? []) {
+      this.group.remove(m);
+      m.geometry.dispose();
+    }
+    if (chunk.fluids) chunk.fluids.length = 0;
+  }
+
+  /** Animates water and lava. */
+  tick(dt) {
+    this.fluids.time.value += dt;
   }
 
   setWireframe(on) {
@@ -115,8 +151,12 @@ export class TerrainManager {
   }
 
   dispose() {
-    for (const chunk of this.chunks.values()) chunk.mesh.geometry.dispose();
+    for (const chunk of this.chunks.values()) {
+      chunk.mesh.geometry.dispose();
+      this.removeFluids(chunk);
+    }
     this.chunks.clear();
+    this.fluids.dispose();
     this.scene.remove(this.group);
     this.material.dispose();
   }

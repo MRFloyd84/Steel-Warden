@@ -163,11 +163,11 @@ export class WalkerGait {
         const e = cycle * cycle * (3 - 2 * cycle);
         const reach = this.stride * 0.5 * dir * Math.min(1, motion * 1.2);
         f.pos.copy(f.start).lerp(this.rest.addScaledVector(fwd, reach), e);
-        f.pos.y = this.sampler.heightAt(f.pos.x, f.pos.z) + Math.sin(Math.PI * cycle) * L.lift * motion;
+        f.pos.y = this.sampler.heightAt(f.pos.x, f.pos.z) - (pose.sink ?? 0) + Math.sin(Math.PI * cycle) * L.lift * motion;
       } else {
         f.swinging = false;
         if (motion <= 0.03) f.pos.lerp(this.rest, 1 - Math.exp(-3 * dt));
-        f.pos.y = this.sampler.heightAt(f.pos.x, f.pos.z);
+        f.pos.y = this.sampler.heightAt(f.pos.x, f.pos.z) - (pose.sink ?? 0);
       }
     }
   }

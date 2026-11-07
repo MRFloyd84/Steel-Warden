@@ -1,5 +1,6 @@
 import { fbm, ridged, hash2 } from '../../util/noise.js';
 import { smoothstep, lerp } from '../../util/math.js';
+import { FeatureField } from '../../world/FeatureField.js';
 
 /**
  * Pure height function for a theater. Both the chunk meshes and the
@@ -13,21 +14,36 @@ export class TerrainSampler {
    * @param gridStep   LOD0 vertex spacing — heightAt() matches that mesh exactly
    * @param flatZones  [{x, z, radius, falloff, minHeight?}] areas levelled for bases/starts
    * @param hills      [{x, z, radius, height}] extra mounds from the mission (cover)
+   * @param extra      { features: [...] (theater + mission), surface: theater ground mask }
    */
-  constructor(terrain, seed, gridStep, flatZones = [], hills = []) {
+  constructor(terrain, seed, gridStep, flatZones = [], hills = [], extra = {}) {
     this.p = terrain;
     this.hills = hills;
+    this.surfaceMask = extra.surface ?? { base: 'hard' };
+    this.fluidOut = { kind: null, level: 0 };
     this.seed = seed | 0;
     this.gridStep = gridStep;
     this.invScale = 1 / terrain.scale;
+    this.flatZones = [];
+    this.features = new FeatureField(extra.features ?? [], seed | 0, (x, z) => this.baseShape(x, z));
     this.flatZones = flatZones.map((z) => ({
       ...z,
       height: Math.max(this.shapeHeight(z.x, z.z), z.minHeight ?? -Infinity),
     }));
   }
 
-  /** Unflattened procedural shape. */
+  /** Unflattened shape including features and mission hills. */
   shapeHeight(x, z) {
+    let h = this.features.height(x, z, this.baseShape(x, z));
+    for (const hill of this.hills) {
+      const d = Math.hypot(x - hill.x, z - hill.z) / hill.radius;
+      if (d < 1) h += hill.height * (0.5 + 0.5 * Math.cos(Math.PI * d));
+    }
+    return h;
+  }
+
+  /** Procedural noise shape before features. */
+  baseShape(x, z) {
     const p = this.p;
     const s = this.invScale;
     const seed = this.seed;
@@ -46,11 +62,6 @@ export class TerrainSampler {
     }
 
     if (p.craters) h += this.craterOffset(x, z, p.craters);
-    for (const hill of this.hills) {
-      const d = Math.hypot(x - hill.x, z - hill.z) / hill.radius;
-      if (d < 1) h += hill.height * (0.5 + 0.5 * Math.cos(Math.PI * d));
-    }
-
     return h + (p.baseHeight ?? 0);
   }
 
@@ -114,6 +125,62 @@ export class TerrainSampler {
     }
     const h01 = this.rawHeight(x0, z0 + s);
     return h00 + (h11 - h01) * fx + (h01 - h00) * fz;
+  }
+
+  /** How much the flat zones (start pad, sites) dominate here, 0..1. */
+  flatWeight(x, z) {
+    let w = 0;
+    for (const zone of this.flatZones) {
+      const d = Math.hypot(x - zone.x, z - zone.z);
+      w = Math.max(w, 1 - smoothstep(zone.radius, zone.radius + zone.falloff, d));
+    }
+    return w;
+  }
+
+  /** Feature info at a point (surface override, fluid, tint); fluids vanish on levelled zones. */
+  infoAt(x, z) {
+    const info = this.features.info(x, z);
+    if ((info.fluid || info.surface) && this.flatZones.length && this.flatWeight(x, z) > 0.5) {
+      info.fluid = null;
+      info.surface = null;
+    }
+    return info;
+  }
+
+  /**
+   * Ground type: 'hard' | 'soft' | 'water' | 'lava' | 'thinIce' | 'hot'
+   * (data/surfaces.js). Fluids first, then feature masks, then the theater mask.
+   */
+  surfaceAt(x, z) {
+    return this.classify(this.infoAt(x, z), x, z);
+  }
+
+  /** Ground type from feature info (h: known ground height, saves a lookup). */
+  classify(info, x, z, h = null) {
+    if (info.fluid && (info.fluid.kind === 'water' || info.fluid.kind === 'lava')) {
+      // Only where the fluid actually covers the ground
+      if ((h ?? this.heightAt(x, z)) < info.fluid.level - 0.15) return info.fluid.kind;
+    }
+    if (info.surface) return info.surface;
+    const m = this.surfaceMask;
+    if (m.soft) {
+      const n = fbm(x / m.soft.scale, z / m.soft.scale, this.seed + 404, 3);
+      if (n > m.soft.threshold) return 'soft';
+    }
+    if (m.hot) {
+      const n = fbm(x / m.hot.scale, z / m.hot.scale, this.seed + 505, 3);
+      if (n > m.hot.threshold) return 'hot';
+    }
+    return m.base ?? 'hard';
+  }
+
+  /** Water/lava level (or glow veins) at a point, or null. Returned object is reused. */
+  fluidAt(x, z) {
+    const f = this.infoAt(x, z).fluid;
+    if (!f) return null;
+    this.fluidOut.kind = f.kind;
+    this.fluidOut.level = f.level;
+    return this.fluidOut;
   }
 
   /** Approximate surface normal y-component (1 = flat, 0 = vertical). */

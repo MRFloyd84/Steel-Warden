@@ -16,6 +16,7 @@ Schnellstart-Parameter (Dev und Build):
 
 - `?mission=test-ice` – Menü überspringen (IDs siehe `src/data/missions.js`)
 - `?debug=1` – Debug-Overlay sofort anzeigen
+- `?weather=sandstorm` – Wetter erzwingen (`clear`, `snowstorm`, `sandstorm`, `ashfall`, `groundFog`, `rain`)
 
 ## Stand
 
@@ -60,6 +61,17 @@ Schnellstart-Parameter (Dev und Build):
   Treffer im Cockpit: Schildleuchten von der Trefferseite, Kamerastoß, Funken, Monitorflackern,
   Risse in der Scheibe, Rauch, Monitorausfall mit Selbsttest-Meldung, kritischer Schaden mit
   Notlicht und Hupe. Warnung bei feindlicher Aufschaltung und anfliegender Rakete.
+
+- **Teil 2 (Karten-Erweiterung):** Gelände-Features je Schauplatz (Kämme, Senken, Schluchten,
+  Gletscherspalten, Plateaus mit Aufgang, Tafelberge, Krater, Flüsse/Kanäle mit Deichen,
+  Lavaflüsse, Eisseen, Straßenraster, leuchtende Adern), Bodenarten hart / weich / Wasser /
+  Lava / dünnes Eis / heiß mit Wirkung auf Tempo, Reaktor, Beine und Schrittklang, Wasser- und
+  Lavaflächen. 19 Bauwerke und 5 Sites (Stützpunkt, Raffinerie, Synthese-Nest, Landeplatz,
+  Felsbogen) mit Kollision, Trefferzonen, Zerstörung (intakt → beschädigt → Trümmer) und
+  Sichtlinien-Blockade; Streuobjekte per Instancing. Drei neue Schauplätze (Flussdelta Morrow,
+  Canyonwüste Tessar, Synthese-Kernwelt), Wetter (klar, Schneesturm, Sandsturm, Ascheregen,
+  Bodennebel, Regen) mit Partikeln und Belag auf der Scheibe, Einsatzgebiet mit Zaun und
+  Radarlinie. Acht Testmissionen.
 
 Fahrplan für die nächsten Phasen inklusive Stützpunkt, Bergung, Funk, Radar und Missionen:
 `docs/ROADMAP.md`.
@@ -185,6 +197,58 @@ dahinter steht verdeckt ein MARDER; GOLIATH (560 m, stehend) und der laufende BA
    gegensteuern — kurz Vorrang, dann zieht die Nachführung zurück. Mit den Beinen wegdrehen,
    bis das Ziel hinter dem Schwenkbereich liegt: Schalter fällt auf AUS, Lampe aus, Funkspruch.
 
+## Welt (Teil 2)
+
+**Bodenarten** (Werte in `src/data/surfaces.js`, `F3` zeigt die Bodenart unter dem Walker):
+
+| Boden | Wirkung |
+|---|---|
+| hart | – |
+| weich (Schnee, Schlamm, Sand) | bremst, je schwerer desto mehr (KESTREL kaum, KOLOSS auf gut die Hälfte) |
+| Wasser | bremst leicht, kühlt den Reaktor (−9 °C/s) |
+| Lava | bremst, heizt den Reaktor (+22 °C/s), frisst die Beine (≈ 7 Punkte/s) |
+| dünnes Eis | trägt leichte Walker; ab 50 t bricht es: Walker sinkt 2,2 m ein, 4 s fest, danach Waten |
+| heiß | heizt den Reaktor leicht (+4 °C/s) |
+
+**Bauwerke** stehen in Sites (Missionen) oder werden je Schauplatz automatisch gesetzt (Hallen,
+Kühltürme und Kräne in Brenn-Süd, Funkrelais im Delta, Pylone und Stachel in der Kernwelt). Sie
+halten Walker auf, fangen Geschosse ab, verdecken die Sicht (keine Aufschaltung, aufgeschaltete
+Ziele gehen nach 1,5 s verloren) und lassen sich zerstören: erst beschädigt (dunkler, schief,
+Rauch), dann Trümmer mit Feuer oder Explosion. Radarturm, Funkrelais, Kristall-Pylon und Sensorknoten strahlen
+(Anti-Radar-Ziel). Felsen, Basaltsäulen, Eisblöcke und Tafelfelsen kollidieren ebenfalls.
+
+**Wetter** dünnt die Sicht aus (Nebel), legt Schnee, Sand, Asche oder Tropfen auf die
+Kanzelscheibe, rauscht im Wind; im Sandsturm baut sich die Aufschaltung langsamer auf und reißt
+gelegentlich ab, die Raketenkamera verschneit mit der Entfernung.
+
+**Einsatzgebiet:** gestrichelte Linie auf dem Radar, ab 200 m vor der Grenze ein grüner
+holografischer Zaun. Funkwarnung bei Annäherung und beim Verlassen, sonst noch keine Folgen.
+
+**Testanleitung Teil 2:**
+
+1. *Bodenproben* (Menü „Bodenproben“, sechs Streifen von links: hart, weich, Wasser, Lava,
+   dünnes Eis, heiß). Mit KESTREL (`?walker=kestrel`) und KOLOSS (`?walker=koloss`) je einen
+   Streifen entlanglaufen und Tempo (Schubanzeige/`F3`) und Kerntemperatur (Systemmonitor)
+   vergleichen. Im Wasser fällt die Temperatur, in Lava steigt sie, und der Schadensmonitor
+   zeigt die Beine sinken. Auf dem Eis-Streifen (Navpunkt EIS) läuft der KESTREL drüber, der
+   KOLOSS bricht mit Krachen ein, steckt 4 s fest und watet dann weiter.
+2. *Bauwerk zerstören:* „Testgelände Brenn-Süd“, auf den Stützpunkt 400 m voraus zugehen, `G`
+   auf ein Gebäude halten. Erst Rauch und dunklere, verbogene Teile, dann Trümmer mit Feuer
+   bzw. Explosion (Generator). Danach kann man über die Trümmer laufen; vorher hält das Gebäude
+   den Walker auf. `F3` zählt Bauwerke und Trümmer.
+3. *Optische Rakete um den Felsbogen:* „Testgelände Canyonwüste Tessar“ (HALBERD), für klare
+   Sicht `?mission=test-canyon&weather=clear`. Der MARDER hinter dem rechten Pfeiler lässt sich
+   nicht aufschalten. `B` auf OPT, leicht links vom rechten Pfeiler durch den Bogen zielen, `3`
+   halten und die SPEER nach dem Bogen nach rechts auf den MARDER lenken.
+4. *Sandstorm-Sicht:* dieselbe Mission ohne `weather`-Parameter: Sicht unter 300 m, Sand auf
+   der Scheibe, Wind. Einen Walker aufschalten — die Aufschaltung dauert länger (Faktor 0,6),
+   die Raketenkamera verschneit mit der Entfernung.
+5. *Schauplätze:* je eine Testmission für Kalvik (Schneesturm, Eissee mit dünnem Eis, Spalte),
+   Ashmar (Ascheregen, Lavafluss, heiße Zone, Raffinerie), Brenn-Süd (Regen, Straßenraster,
+   Stützpunkt), Selene-7 (Krater, Landeplatz, niedrige Schwerkraft), Morrow (Bodennebel, Kanal
+   mit Deichen, Schilf), Tessar (Sandsturm, Schluchten, Felsbogen) und die Kernwelt (Adern,
+   Synthese-Nest). Einsatzgebiet mit Zaun in Kalvik, Brenn-Süd und Morrow.
+
 ## Startprozedur
 
 Reihenfolge (Checkliste im Spiel): Batterie → Hilfsaggregat START halten → KÜHLPUMPEN (ein Schalter, Pumpe 2 läuft automatisch nach) →
@@ -230,7 +294,12 @@ eingebettet, damit der Offline-Build per `file://` funktioniert. Klang und Misch
 - `src/data/missions.js` – Missionen; `hills` legt zusätzliche Hügel an, `emitting` lässt eine Einheit strahlen
 - `src/data/sounds.js` – Sound-Ereignisse, Loops, Mischpult, Bewegungs- und Systemsounds
 - `src/data/systems.js` – Startprozedur: Werte, Checklisten, Automatik-Skript, Funksprüche
-- `src/data/theaters.js` – Schauplätze: Geländeform, Farbpalette, Himmel, Nebel
+- `src/data/theaters.js` – Schauplätze: Geländeform, Farbpalette, Himmel, Nebel, Features, Bodenmaske,
+  Streuobjekte, automatische Bauwerke, typisches Wetter, Schwerkraft
+- `src/data/surfaces.js` – Bodenarten und ihre Wirkung, Flüssigkeitsflächen
+- `src/data/structures.js` – Bauwerke (Teile, Panzerung, Kollision, Zerstörung), Streuobjekt-Modelle, Sites
+- `src/data/weather.js` – Wetter: Nebel, Partikel, Scheibe, Wind, Wirkung auf Kamera und Aufschaltung
+- `config.js` → `scatter` (Sichtweiten, Instanzen), `area` (Zaun)
 - `src/data/lighting.js` – Tageszeiten
 - `src/data/missions.js` – Einsätze
 - `src/data/inputBindings.js` – Tastenbelegung; Overrides per localStorage-Key `steelwarden:bindings`

@@ -145,6 +145,7 @@ function updateCombatData(d, m, combat) {
   d.tracking = r.tracking;
   d.loadoutWeight = r.weapons.slots.reduce((sum, sl) => sum + combat.weapons.byId[sl.id].def.weight, 0);
 
+  d.area = d.worldLink?.areaRelative(m.x, m.z) ?? null;
   // Radar contacts (all other walkers; data link and passive radar come with A4)
   d.contacts.length = 0;
   for (const u of combat.units.enemies) {

@@ -12,7 +12,7 @@ export class MenuState extends State {
     });
     this.screen.show();
 
-    this.world = new World(MISSIONS[0], game.config.terrain);
+    this.world = new World(MISSIONS[0], game.config.terrain, { light: true });
     this.angle = 0.6;
     this.orbitRadius = 260;
     this.focus = { x: 0, z: 0 };

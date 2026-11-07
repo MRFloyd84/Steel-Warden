@@ -51,6 +51,7 @@ export const COMBAT = {
     podConvergeDeg: 8, // target pod: projectile weapons converge on the component when the crosshair is this close
     trackingManualPause: 0.6, // ZIELNACHF. pauses this long after manual aiming
     podRadioCooldown: 8,
+    hiddenGrace: 1.5, // a locked target out of sight is dropped after this many seconds
   },
 
   explosion: { radius: 16, damage: 60 }, // reactor explosion, damages nearby walkers

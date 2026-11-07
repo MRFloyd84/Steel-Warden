@@ -7,17 +7,25 @@ import { hash2 } from '../util/noise.js';
  * The dome and starfield follow the camera so they never get closer.
  */
 export class Environment {
-  constructor(scene, theater, lighting, seed) {
+  constructor(scene, theater, lighting, seed, weather = null) {
     this.scene = scene;
     this.objects = [];
 
     const tint = new THREE.Color(lighting.tint);
     const zenith = new THREE.Color(theater.sky.zenith).multiply(tint).multiplyScalar(lighting.skyBrightness);
     const horizon = new THREE.Color(theater.sky.horizon).multiply(tint).multiplyScalar(lighting.skyBrightness);
+    // Weather: thicker fog, sky washed toward the weather colour
+    const wf = weather?.fog;
+    if (wf?.color) {
+      const wc = new THREE.Color(wf.color).multiply(tint).multiplyScalar(lighting.skyBrightness);
+      horizon.lerp(wc, wf.amount ?? 0.5);
+      zenith.lerp(wc, (wf.amount ?? 0.5) * 0.7);
+    }
     this.fogColor = horizon.clone();
 
     scene.background = horizon.clone();
-    scene.fog = new THREE.Fog(horizon, theater.fog.near, theater.fog.far);
+    scene.fog = new THREE.Fog(horizon, theater.fog.near * (wf?.near ?? 1), theater.fog.far * (wf?.far ?? 1));
+    this.baseFar = scene.fog.far;
 
     const ambient = lighting.ambient * (theater.ambientScale ?? 1);
     const hemi = new THREE.HemisphereLight(zenith.clone().lerp(horizon, 0.5), new THREE.Color(theater.sky.ground), ambient);

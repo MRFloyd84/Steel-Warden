@@ -18,6 +18,9 @@ export class Targeting {
     this.lockTime = 0;
     this.inCone = false; // inside the lock cone right now (semi-active guidance)
     this.component = 'torso'; // aim/homing component chosen with the target pod
+    this.los = null; // (eye, point) → true if the sight line is free (terrain, buildings)
+    this.hiddenFor = 0;
+    this.rate = 1; // weather: lock builds up slower
   }
 
   /** Units that may be locked, with their angle off the torso axis. */
@@ -30,7 +33,7 @@ export class Targeting {
       const dist = to.length();
       if (dist > maxRange) continue;
       const angle = Math.acos(Math.min(1, to.dot(aimDir) / dist)) / DEG;
-      if (angle <= COMBAT.targeting.coneDeg) out.push({ unit: u, dist, angle });
+      if (angle <= COMBAT.targeting.coneDeg && (!this.los || this.los(eye, u.volumes.componentCenter('torso', end)))) out.push({ unit: u, dist, angle });
     }
     return out;
   }
@@ -60,6 +63,7 @@ export class Targeting {
   setTarget(unit) {
     if (unit !== this.target) {
       this.lockTime = 0;
+      this.hiddenFor = 0;
       this.inCone = false;
       this.component = 'torso';
     }
@@ -91,8 +95,15 @@ export class Targeting {
       return;
     }
     this.distance = dist;
-    this.inCone = angle <= COMBAT.targeting.coneDeg;
-    if (this.inCone) this.lockTime += dt;
+    // Out of sight (behind a hill or building): no lock progress, lost after a while
+    const visible = !this.los || this.los(eye, t.volumes.componentCenter('torso', end));
+    this.hiddenFor = visible ? 0 : this.hiddenFor + dt;
+    if (this.hiddenFor > COMBAT.targeting.hiddenGrace) {
+      this.setTarget(null);
+      return;
+    }
+    this.inCone = angle <= COMBAT.targeting.coneDeg && visible;
+    if (this.inCone) this.lockTime += dt * this.rate;
     if (!t.volumes.hasComponent(this.component)) this.component = 'torso';
   }
 }

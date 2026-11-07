@@ -38,6 +38,29 @@ export const RadarDisplay = {
     p.line(cx, cy, cx - Math.sin(fov) * R, cy - Math.cos(fov) * R, 0.45);
     p.line(cx, cy, cx + Math.sin(fov) * R, cy - Math.cos(fov) * R, 0.45);
 
+    // Mission area border: dashed line, clipped to the scope
+    if (d.area) {
+      const step = range / 24;
+      for (let i = 0; i < d.area.length; i++) {
+        const [ax, az] = d.area[i];
+        const [bx, bz] = d.area[(i + 1) % d.area.length];
+        const len = Math.hypot(bx - ax, bz - az);
+        const n = Math.max(1, Math.ceil(len / step));
+        for (let k = 0; k < n; k += 2) {
+          const f0 = k / n;
+          const f1 = Math.min(1, (k + 1) / n);
+          const x0 = ax + (bx - ax) * f0;
+          const z0 = az + (bz - az) * f0;
+          const x1 = ax + (bx - ax) * f1;
+          const z1 = az + (bz - az) * f1;
+          if (Math.hypot(x0, z0) > range || Math.hypot(x1, z1) > range) continue;
+          const [sx0, sy0] = toScreen(x0, z0);
+          const [sx1, sy1] = toScreen(x1, z1);
+          p.line(sx0, sy0, sx1, sy1, 0.8, '#5fe0c8');
+        }
+      }
+    }
+
     // Sweep — one turn every 2.4 s
     const a = (d.time / 2.4) * Math.PI * 2;
     p.line(cx, cy, cx + Math.sin(a) * R, cy - Math.cos(a) * R, 1);

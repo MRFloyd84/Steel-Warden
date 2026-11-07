@@ -50,7 +50,7 @@ export function stepMissile(p, dt, ctx) {
   }
 
   p.vel.copy(dir).multiplyScalar(p.speed);
-  if (!burning) p.vel.y -= GRAVITY * dt * 3; // falls once the motor is out
+  if (!burning) p.vel.y -= GRAVITY * (ctx.gravity ?? 1) * dt * 3; // falls once the motor is out
   p.speed = p.vel.length();
 }
 
@@ -65,7 +65,7 @@ function wishDirection(p, ctx, dir) {
       p.searchT -= ctx.dt;
       if (p.searchT <= 0) {
         p.searchT = 0.25;
-        p.target = findEmitter(p, ctx.units(), dir);
+        p.target = findEmitter(p, ctx.emitters(), dir);
       }
     }
     if (!p.target) return null;

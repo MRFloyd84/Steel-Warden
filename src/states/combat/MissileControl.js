@@ -82,7 +82,7 @@ export class MissileControl {
       out.component = t.component;
       if (mode === 'semiActive') out.damageFactor = slot.def.missile.semiActiveBonus ?? 1;
     } else if (mode === 'antiRadar') {
-      out.target = pickEmitter(this.units.all, eye, aimDir, COMBAT.targeting.coneDeg, this.player);
+      out.target = pickEmitter(this.emitters?.() ?? this.units.all, eye, aimDir, COMBAT.targeting.coneDeg, this.player);
     }
     return out;
   }

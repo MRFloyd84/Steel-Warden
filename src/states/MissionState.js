@@ -29,6 +29,8 @@ import { createCockpitData, updateCockpitData } from './cockpitData.js';
 import { MissionCombat } from './combat/MissionCombat.js';
 import { MissileCamView } from './combat/MissileCamView.js';
 import { CockpitHits } from './combat/CockpitHits.js';
+import { WEATHER } from '../data/weather.js';
+import { WorldLink } from './WorldLink.js';
 import { damp } from '../util/math.js';
 
 const START_MODES = ['full', 'simple', 'auto'];
@@ -44,7 +46,8 @@ export class MissionState extends State {
     const cfg = game.config;
     const params = new URLSearchParams(window.location.search);
     this.mission = getMission(missionId);
-    this.world = new World(this.mission, cfg.terrain);
+    const weather = params.get('weather');
+    this.world = new World(this.mission, cfg.terrain, { bus: game.bus, scatterConfig: cfg.scatter, weather: WEATHER[weather] ? weather : null });
     const chosen = walkerId ?? params.get('walker');
     this.walker = getWalker(WALKERS[chosen] ? chosen : this.mission.playerStart.walker ?? 'bastion');
 
@@ -142,6 +145,11 @@ export class MissionState extends State {
       game, combat: this.combat, systems: this.systems, cockpit: this.cockpit, view: this.view,
       radio: (msg) => this.radioMessage(msg), config: cfg.hitFeedback,
     });
+    this.worldLink = new WorldLink({
+      game, world: this.world, motion: this.motion, entities: this.entities, combat: this.combat,
+      systems: this.systems, cockpit: this.cockpit, radio: (msg) => this.radioMessage(msg),
+    });
+    this.data.worldLink = this.worldLink;
     this.tmpVec = new THREE.Vector3();
     this.tmpProj = new THREE.Vector3();
 
@@ -171,6 +179,7 @@ export class MissionState extends State {
     this.systemsAudio.dispose();
     this.camView.dispose();
     this.hits.dispose();
+    this.worldLink.dispose();
     this.combat.dispose();
     this.automation.stop();
     this.link.dispose();
@@ -332,6 +341,7 @@ export class MissionState extends State {
     this.entities.update(dt);
     this.combat.update(dt);
     this.hits.update(dt);
+    this.worldLink.update(dt);
     this.systems.update(dt);
     this.checklist.update(this.systems.flags);
     this.automation.update(dt, this.systems.flags);
@@ -351,8 +361,10 @@ export class MissionState extends State {
     if (this.freeCam) {
       this.combat.render(fdt, { eye: this.combat.eye, aimDir: this.combat.aimDir });
       this.debugRig.apply(a);
+      this.worldLink.frame(fdt, renderer.camera, this.debugRig.pos, false);
       this.world.beforeRender(renderer.camera);
       renderer.render(this.world.scene);
+      this.worldLink.afterRender();
       this.hints.update({ reticle: null, tag: 'DEBUG-FREIFLUG', locked: true });
       return;
     }
@@ -368,8 +380,10 @@ export class MissionState extends State {
     if (external) {
       this.chase.apply(this.renderPose, this.walker.cockpit.eyeHeight, this.view, fdt);
       this.link.frame();
+      this.worldLink.frame(fdt, renderer.camera, this.renderPose, false);
       this.world.beforeRender(renderer.camera);
       renderer.render(this.world.scene);
+      this.worldLink.afterRender();
       if (!this.paused) {
         this.cockpitAudio.update(this.motion, this.systems.flags.busPowered, this.systems.s.reactor.power);
         this.systemsAudio.update();
@@ -382,9 +396,11 @@ export class MissionState extends State {
     this.link.frame();
     updateCockpitData(this.data, fdt, { motion: this.motion, controls: this.controls, systems: this.systems, stick: this.stickVisual, combat: this.combat });
     this.cockpit.update(fdt, this.data, this.view.torsoQuat, this.checklist, renderer.cockpitCamera);
+    this.worldLink.frame(fdt, renderer.camera, this.renderPose, true);
     this.camView.render(fdt);
     this.world.beforeRender(renderer.camera);
     renderer.renderWithCockpit(this.world.scene, this.cockpit.scene);
+    this.worldLink.afterRender();
     this.interaction.updateHover();
     if (!this.paused) {
       this.cockpitAudio.update(this.motion, this.systems.flags.busPowered, this.systems.s.reactor.power);
@@ -426,7 +442,7 @@ export class MissionState extends State {
   }
 
   debugInfo() {
-    return [...missionDebugLines(this), ...this.combat.debugLines(), this.hits.debugLine()];
+    return [...missionDebugLines(this), ...this.worldLink.debugLine(), ...this.combat.debugLines(), this.hits.debugLine()];
   }
 }
 

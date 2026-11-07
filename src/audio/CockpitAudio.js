@@ -1,3 +1,4 @@
+import { SURFACES } from '../data/surfaces.js';
 import * as THREE from 'three';
 import { MOTION_AUDIO } from '../data/sounds.js';
 import { DEG } from '../util/math.js';
@@ -37,14 +38,18 @@ export class CockpitAudio {
         if (test) play('lamp.test', id);
       }),
       bus.on('control:blocked', ({ id, reason }) => play(reason === 'end' ? 'rotary.end' : 'switch.blocked', id)),
-      bus.on('walker:footfall', ({ strength }) => {
+      bus.on('walker:footfall', ({ strength, surface }) => {
         foot = -foot || 1;
+        const pan = foot * MOTION_AUDIO.stepPanSpread;
+        const layer = SURFACES[surface]?.step;
         audio.play('footstep', {
-          gain: 0.35 + 0.65 * strength,
+          gain: (0.35 + 0.65 * strength) * (layer && layer !== 'footstep' ? 0.6 : 1),
           rate: this.profile.stepPitch,
-          pan: foot * MOTION_AUDIO.stepPanSpread,
+          pan,
         });
+        if (layer && layer !== 'footstep') audio.play(layer, { gain: 0.4 + 0.6 * strength, pan });
       }),
+      bus.on('walker:iceBreak', () => audio.play('ground.iceBreak')),
     ];
 
     this.airflow = audio.loop('airflow');

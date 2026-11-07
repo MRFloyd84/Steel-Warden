@@ -50,10 +50,20 @@ export class MissionCombat {
       onHit: (h) => this.onProjectileHit(h),
       onEnd: (p, reason) => this.onMissileEnd(p, reason),
       illuminated: (p) => this.missiles.illuminated(p),
+      obstacles: world.objects,
+      emitters: () => this.emitters,
+      gravity: world.sampler.gravity ?? 1,
     });
+    // Sight lines: terrain and buildings block the lock
+    this.targeting.los = (eye, point) => this.lineOfSight(eye, point);
+    this.weather = world.weatherDef;
+    this.targeting.rate = this.weather.lockRate ?? 1;
+    world.objects.onStage = (st, stage) => this.structureStage(st, stage);
+    this.offs = [];
     this.missiles = new MissileControl({
       game, controls, targeting: this.targeting, weapons: this.weapons, player: this.player, units: this.units, sound: this.sound,
     });
+    this.missiles.emitters = () => this.emitters;
     this.tracking = new TargetTracking({ controls, motion: this.player.motion, targeting: this.targeting, walker: this.player.walker, radio: () => radio(RADIO.trackingOff) });
     this.missileEnds = []; // { serial, reason } for the missile camera
     this.onPlayerHit = null; // set by CockpitHits
@@ -69,10 +79,26 @@ export class MissionCombat {
     this.time = 0;
     this.stats = { shots: 0, hits: 0 };
     if (systems.flags.shieldsReady) this.player.damage.fillShields();
-    this.offs = [
+    this.offs.push(
       game.bus.on('combat:armLost', ({ unit }) => unit === 'player' && radio(RADIO.armLost)),
       game.bus.on('combat:wreck', ({ unit, kind }) => unit === 'player' && kind === 'legs' && radio(RADIO.legsLost)),
-    ];
+    );
+  }
+
+  /** Units and buildings that emit radar (anti-radar missiles). */
+  get emitters() {
+    return [...this.units.all, ...this.world.objects.structures.filter((st) => st.emitting)];
+  }
+
+  /** Free sight line between two points (terrain, buildings, big rocks)? */
+  lineOfSight(a, b) {
+    const d = v3.subVectors(b, a);
+    const len = d.length();
+    if (len < 1) return true;
+    d.divideScalar(len);
+    const g = raycastTerrain(this.world.sampler, a, d, len - 2, 6);
+    if (g !== null) return false;
+    return !this.world.objects.blocked(a, b);
   }
 
   get sensorsRange() {
@@ -193,6 +219,11 @@ export class MissionCombat {
     }
     this.projectiles.update(dt);
     this.targeting.update(dt, this.eye, this.aimDir, this.sensorsRange);
+    // Sandstorm: the lock flickers out now and then
+    if (this.weather.lockDrop && this.targeting.target && Math.random() < this.weather.lockDrop * dt) {
+      this.targeting.lockTime = Math.max(0, this.targeting.lockTime - 1);
+      this.lockFlicker = this.time;
+    }
     this.tracking.update(dt, this.eye);
     sys.trackingActive = this.tracking.active;
   }
@@ -235,9 +266,15 @@ export class MissionCombat {
       const hit = u.volumes.intersectSegment(from, end);
       if (hit && (!best || hit.t < best.hit.t)) best = { unit: u, hit };
     }
-    const groundD = raycastTerrain(this.world.sampler, from, dir, d.range);
+    let groundD = raycastTerrain(this.world.sampler, from, dir, d.range);
+    const obs = this.world.objects.segment(from, end);
     let to;
-    if (best && (groundD === null || best.hit.t * d.range <= groundD)) {
+    if (obs && (!best || obs.t < best.hit.t) && (groundD === null || obs.t * d.range <= groundD)) {
+      to = obs.point;
+      this.hitObstacle(obs, d, dt);
+      groundD = null;
+      best = null;
+    } else if (best && (groundD === null || best.hit.t * d.range <= groundD)) {
       to = best.hit.point;
       this.hitUnit(best.unit, best.hit, d, dir, dt);
     } else if (groundD !== null) {
@@ -249,10 +286,11 @@ export class MissionCombat {
     this.beamDraw.set(slot.id, { from, to, color: d.visual.color });
   }
 
-  onProjectileHit({ proj, unit, hit, point, ground }) {
+  onProjectileHit({ proj, unit, hit, point, ground, obstacle }) {
     const d = proj.def;
     const dir = v1.copy(proj.vel).normalize();
     if (unit) this.hitUnit(unit, hit, d, dir, proj.damageFactor ?? 1);
+    if (obstacle) this.hitObstacle(obstacle, d, proj.damageFactor ?? 1);
     if (ground) {
       const big = d.kind === 'missile' || d.size === 'L';
       this.fx.groundHit(point, big ? 2 : 0.6);
@@ -265,8 +303,52 @@ export class MissionCombat {
     if (d.blastRadius) this.splash(point, d, unit);
   }
 
+  /** A projectile or beam (scale = dt share) hits a building or rock. */
+  hitObstacle(obs, d, scale) {
+    const show = scale >= 1 || Math.random() < scale * 12;
+    if (obs.structure) {
+      const st = obs.structure;
+      if (st.destructible && st.stage !== 'rubble') this.world.objects.damage(st, d.damage * scale * (d.vsArmor ?? 1));
+      if (show) {
+        this.fx.armorHit(obs.point, obs.normal, null, null, null, Math.min(2, (d.damage * Math.max(scale, 0.05)) / 25));
+        this.sound.at('impact.armor', obs.point, { rate: 0.8 });
+      }
+    } else if (show) {
+      this.fx.groundHit(obs.point, d.kind === 'missile' || d.size === 'L' ? 1.6 : 0.5);
+      this.sound.at('impact.ground', obs.point);
+    }
+  }
+
+  /** Building changed its stage: smoke, fire, explosion, radio. */
+  structureStage(st, stage) {
+    const top = new THREE.Vector3(0, st.bp.height * 0.8, 0);
+    const center = new THREE.Vector3(st.x, st.y + st.bp.height * 0.4, st.z);
+    if (stage === 'damaged') {
+      this.fx.addEmitter(st.object, top, 'smoke', 1.5);
+      this.sound.at('impact.partFall', center);
+    } else if (stage === 'rubble') {
+      const kind = st.def.onDestroy ?? 'smoke';
+      const r = Math.max(4, st.bp.radius * 0.5);
+      if (kind === 'explosion') {
+        this.fx.explosion(center, r);
+        this.sound.at('impact.explosion', center);
+      } else {
+        this.fx.blast(center, r, 'blast');
+        this.sound.at('impact.blast', center, { gain: 1.3 });
+      }
+      const low = new THREE.Vector3(0, 1, 0);
+      this.fx.addEmitter(st.object, low, kind === 'smoke' ? 'smoke' : 'fire', kind === 'smoke' ? 3 : 5);
+      this.fx.addEmitter(st.object, low, 'smoke', 3);
+      this.structureKills = (this.structureKills ?? 0) + 1;
+    }
+  }
+
   /** SPEER: blast damage on walkers near the impact (bypasses shields only partly). */
   splash(point, d, direct) {
+    for (const st of this.world.objects.near(point.x, point.z, d.blastRadius + 20)) {
+      const dist = Math.hypot(st.x - point.x, st.z - point.z) - st.radius * 0.5;
+      if (dist < d.blastRadius) this.world.objects.damage(st, d.damage * 0.5 * (1 - Math.max(0, dist) / d.blastRadius));
+    }
     for (const u of this.units.all) {
       if (u === direct || u.isPlayer || u.wreck?.kind === 'reactor') continue;
       const dist = u.volumes.center(v2).distanceTo(point);
@@ -323,7 +405,9 @@ export class MissionCombat {
       const hit = u.volumes.intersectSegment(eye, end);
       if (hit && (!best || hit.t < best.t)) best = { t: hit.t, unit: u };
     }
-    const g = raycastTerrain(this.world.sampler, eye, aimDir, range);
+    let g = raycastTerrain(this.world.sampler, eye, aimDir, range);
+    const obs = this.world.objects.segment(eye, end);
+    if (obs && (g === null || obs.t * range < g)) g = obs.t * range;
     let dist = AIM_DISTANCE;
     this.aimUnit = null;
     if (best && (g === null || best.t * range <= g)) {

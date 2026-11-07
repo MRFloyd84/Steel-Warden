@@ -30,7 +30,7 @@ export const MissileCamDisplay = {
     }
     const m = cam.missile;
     p.image(cam.canvas, 0, 0, w, h, 1);
-    p.static(0.12 + (m.lost ? 0.15 : 0));
+    p.static(0.12 + (m.lost ? 0.15 : 0) + (cam.weatherNoise ?? 0) * 0.6);
 
     // Crosshair
     const cx = w / 2;

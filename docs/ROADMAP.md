@@ -1,6 +1,6 @@
 # STEEL WARDEN – Fahrplan
 
-Stand: nach Phase A2b (Lenkraketen, Raketenkamera, Zielkapsel, Treffer im Cockpit). Dieses Dokument führt das Grundkonzept,
+Stand: nach Teil 2 (Karten-Erweiterung), davor A2b (Lenkraketen, Raketenkamera, Zielkapsel, Treffer im Cockpit). Dieses Dokument führt das Grundkonzept,
 die Cockpit-Erweiterung, das Missionsdokument und die Ergänzungen (Stützpunkt, Bergung,
 Funk, Radar, Kampf, Übung) zusammen.
 
@@ -50,6 +50,17 @@ Funk, Radar, Kampf, Übung) zusammen.
      - ✅ Schießstand mit Hügel, verdecktem Ziel und zwei strahlenden Zielen, Debugtasten.
      - Offen für A3/A4: Gegner nutzen Lenkraketen selbst (KI), Unit-Flag `emitting` kommt dann
        aus dem Radar-Modus aktiv/passiv.
+   - **Teil 2 Karten-Erweiterung ✅** (Plan in `docs/MAP-PLAN.md`):
+     - ✅ Feature-Generatoren je Theater (deterministisch, Seed), Bodenmaske `surfaceAt` mit
+       Wirkung auf Tempo, Reaktor, Beine, Eis-Einbruch und Schrittklang; Wasser-/Lavaflächen.
+     - ✅ Bauwerke mit Trefferzonen, Kollision, Zerstörungsstufen, Sichtlinie, Bus-Ereignis
+       `world:structure`; Sites mit eingeebnetem Gelände; Streuobjekte per Instancing.
+     - ✅ Kalvik, Ashmar, Brenn-Süd, Selene-7 ausgebaut; neu Morrow, Tessar, Synthese-Kernwelt.
+     - ✅ Wetter (6 Arten) mit Scheibenbelag, Sicht, Raketenkamera, Aufschaltung.
+     - ✅ Einsatzgebiet: Radarlinie, Zaun, Funkwarnung (Konsequenzen in Phase B).
+     - ✅ 7 Schauplatz-Testmissionen und „Bodenproben“.
+     - Offen: Karte (Kartenansicht gibt es noch nicht; die Grenzlinie kommt dort hinein),
+       Sprungdüsen (Schwerkraftfaktor ist vorbereitet), Bauwerke auf dem Radar (A4).
 3. **Synthese-Gegner** (Grundkonzept Phase 5):
    - Trefferzonen Beine / Waffenträger / Torso (Reaktor).
    - Zerstörungsart: Beine → bewegungsunfähig, volles Material, Waffen bergbar. Waffenträger
