@@ -2,17 +2,23 @@ import { State } from '../core/State.js';
 import { World } from '../render/World.js';
 import { MenuScreen } from '../ui/MenuScreen.js';
 import { ControlsScreen } from '../ui/ControlsScreen.js';
-import { MISSIONS } from '../data/missions.js';
+import { MISSIONS, getMission } from '../data/missions.js';
+import { missionError } from './missionStartup.js';
 
 /** Main menu over a slow orbital flyover of the first test theater. */
 export class MenuState extends State {
-  enter() {
+  enter({ error = null } = {}) {
     const game = this.game;
     this.screen = new MenuScreen(game.container, game.input, {
-      onStart: (missionId, walkerId) => game.states.change('mission', { missionId, walkerId }),
+      onStart: (missionId, walkerId) => {
+        const err = missionError(getMission(missionId));
+        if (err) this.screen.showError(err);
+        else game.states.change('mission', { missionId, walkerId });
+      },
       onControls: () => this.controls.open(),
     });
     this.screen.show();
+    if (error) this.screen.showError(error);
     this.controls = new ControlsScreen(game.container, game.input, game.bus, { onClose: () => this.screen.renderControls() });
     this.offLayout = game.bus.on('input:layout', () => this.screen.renderControls());
 

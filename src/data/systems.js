@@ -103,6 +103,16 @@ export const SYSTEMS = {
   shields: { chargeTime: 6, decayTime: 1.5 },
   weapons: { armTime: 1.5 },
 
+  // How far the AI notices the walker by its state (A4 radar builds on it):
+  // sight = factor on the enemy's visual range, detect = m at which it is located without
+  // sight (heat, noise). Sensors on (emitting): the enemy's ai.detectEmitting applies on top.
+  signature: {
+    cold: { sight: 0.35, detect: 0, label: 'kalt' },
+    battery: { sight: 0.35, detect: 0, label: 'Batterie' },
+    apu: { sight: 0.5, detect: 350, label: 'Hilfsaggregat' },
+    reactor: { sight: 1.0, detect: 1100, label: 'Reaktor' },
+  },
+
   alarms: {
     scramAlarmTime: 4, // s of critical alarm after an emergency shutdown
     faultAlarmTime: 3, // s after a bus fault

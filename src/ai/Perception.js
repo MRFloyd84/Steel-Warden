@@ -17,6 +17,8 @@ const d = new THREE.Vector3();
  *   emitting  an emitting target (player: SENSOREN switch on) is located up to
  *             ai.detectEmitting — position known, but not seen (no direct fire)
  *   noise     shots and explosions tell units nearby a position (AIDirector.noise)
+ *   signature target.signature { sight, detect } from the walker's systems state
+ *             (cold … reactor, data/systems.js): factor on sight range, located without sight
  *
  * Night: a lit floodlight makes the player visible as by day.
  */
@@ -57,7 +59,9 @@ export class Perception {
     const dx = t.x - eye.x;
     const dz = t.z - eye.z;
     const dist = Math.hypot(dx, dz);
-    const range = sight.range * this.rangeFactor(target);
+    // Signature (data/systems.js): a cold walker is only seen close up, a running reactor from afar
+    const sig = target.signature;
+    const range = sight.range * this.rangeFactor(target) * (sig?.sight ?? 1);
     let seen = false;
     if (dist <= range) {
       const off = Math.abs(wrap(Math.atan2(-dx, -dz) - yaw));
@@ -65,6 +69,7 @@ export class Perception {
     }
     if (seen) return 'seen';
     if (target.emitting && dist <= detectEmitting) return 'located';
+    if (sig?.detect && dist <= sig.detect) return 'located';
     return null;
   }
 }

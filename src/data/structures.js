@@ -46,9 +46,10 @@ export const STRUCTURES = {
     ],
     collide: [{ box: [28, 31], at: [0, 0] }],
   },
-  // Walk-in hangar (mission start): open front (-Z), walls collide one by one
+  // Walk-in hangar (mission start, site homeBase): two sliding door halves (zones doorL/doorR,
+  // opened by world/HangarDoor.js at deploy), walls collide one by one
   hangarBay: {
-    name: 'Walker-Hangar (offen)', faction: 'human', armor: 900, structure: 600, onDestroy: 'fire',
+    name: 'Walker-Hangar', faction: 'human', armor: 900, structure: 600, onDestroy: 'fire', destructible: false,
     parts: [
       { box: [34, 0.4, 36], at: [0, 0.2, 0], color: '#6e6b62' },
       { box: [34, 23, 1.6], at: [0, 11.5, 17.2], color: STEEL },
@@ -60,8 +61,33 @@ export const STRUCTURES = {
       { box: [3, 20, 3], at: [-12.5, 10, 12], color: '#545249' },
       { box: [3, 20, 3], at: [12.5, 10, 12], color: '#545249' },
       ...[-10, 10].map((x) => ({ box: [6, 0.3, 0.3], at: [x, 0.45, -14], color: WARN })),
+      // Door halves, outside the front wall line; they slide sideways along the outer walls
+      ...[-1, 1].flatMap((side) => {
+        const zone = side < 0 ? 'doorL' : 'doorR';
+        return [
+          { box: [16.2, 20, 0.8], at: [side * 8.1, 10, -18.4], color: '#5f5d55', zone },
+          { box: [16.2, 1.2, 0.9], at: [side * 8.1, 4, -18.45], color: WARN, zone },
+          { box: [16.2, 1.2, 0.9], at: [side * 8.1, 16, -18.45], color: WARN, zone },
+          { box: [0.6, 20, 1], at: [side * 0.3, 10, -18.45], color: DARK, zone },
+        ];
+      }),
     ],
-    collide: [{ box: [1.6, 36], at: [-16.2, 0] }, { box: [1.6, 36], at: [16.2, 0] }, { box: [34, 1.6], at: [0, 17.2] }, { box: [3, 3], at: [-12.5, 12] }, { box: [3, 3], at: [12.5, 12] }],
+    collide: [
+      { box: [1.6, 36], at: [-16.2, 0] }, { box: [1.6, 36], at: [16.2, 0] }, { box: [34, 1.6], at: [0, 17.2] },
+      { box: [3, 3], at: [-12.5, 12] }, { box: [3, 3], at: [12.5, 12] },
+      { box: [34, 1.2], at: [0, -18.4], door: true },
+    ],
+  },
+  // Drop zone marking on the ground (mission start, site dropZone): paint only
+  dropMarker: {
+    name: 'Absetzpunkt', faction: 'human', destructible: false, blocksSight: false,
+    parts: [
+      { ring: [22, 0.7, 28], at: [0, -0.25, 0], color: WARN },
+      { box: [30, 0.1, 1.4], at: [0, 0.1, 0], color: '#e8e2cf' },
+      { box: [1.4, 0.1, 30], at: [0, 0.1, 0], color: '#e8e2cf' },
+      ...[0, 90, 180, 270].map((a) => ({ cyl: [0.45, 1.6, 6], at: [Math.sin(a * Math.PI / 180) * 23, 0.8, Math.cos(a * Math.PI / 180) * 23], color: '#d8a22a', glow: true })),
+    ],
+    collide: [],
   },
   generator: {
     name: 'Generator', faction: 'human', armor: 180, structure: 120, onDestroy: 'explosion',
@@ -259,6 +285,23 @@ export const SCATTER_MODELS = {
  * The ground under them is levelled (radius + falloff).
  */
 export const SITES = {
+  // Own base with the start hangar (mission startup.location 'hangar'); door toward -Z
+  homeBase: {
+    name: 'Stützpunkt (Start)', flatten: { radius: 75, falloff: 60 },
+    items: [
+      { s: 'hangarBay', at: [0, 0] },
+      { s: 'depot', at: [-42, 12], rot: 90 },
+      { s: 'generator', at: [42, 10], rot: 90 },
+      { s: 'radarTower', at: [-46, -34] },
+      { s: 'relay', at: [44, -36] },
+      { s: 'landingPad', at: [0, 58] },
+    ],
+  },
+  // Drop zone (mission startup.location 'dropZone')
+  dropZone: {
+    name: 'Absetzpunkt', flatten: { radius: 40, falloff: 50 },
+    items: [{ s: 'dropMarker', at: [0, 0] }],
+  },
   outpost: {
     name: 'Stützpunkt', flatten: { radius: 70, falloff: 50 },
     items: [

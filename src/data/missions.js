@@ -28,6 +28,7 @@ export const MISSIONS = [
     seed: 90210,
     briefing: 'Waffenerprobung: 6 stehende und 3 laufende Ziel-Walker in 100–800 m, keine Gegenwehr. T schaltet auf. GOLIATH (stehend) und BASTION (laufend) strahlen Radar ab; ein MARDER steht verdeckt hinter dem Hügel links.',
     playerStart: { x: 0, z: 0, heading: 0, walker: 'bastion' },
+    startup: { mode: 'safe', location: 'dropZone', safeRadius: 200 },
     navPoints: [{ id: 'ALPHA', x: 0, z: -600 }],
     hills: [{ x: -150, z: -300, radius: 60, height: 34 }],
     // Keep the range a clean test field: no rivers, no rule-placed halls, no scatter
@@ -53,6 +54,7 @@ export const MISSIONS = [
     seed: 90210,
     briefing: 'Alle sechs Walker-Typen in Bewegung. Außenkamera mit Shift+V, Freiflug im Debug-Modus (^) mit Shift+F4.',
     playerStart: { x: 0, z: 30, heading: 0, walker: 'bastion' },
+    startup: { mode: 'safe', location: 'dropZone', safeRadius: 200 },
     terrainFeatures: false, autoStructures: false, scatter: false, weather: 'clear',
     navPoints: [{ id: 'ALPHA', x: 0, z: -400 }],
     spawns: [
@@ -72,6 +74,7 @@ export const MISSIONS = [
     seed: 1337,
     briefing: 'Eiswüste im Schneesturm: Gletscherspalten, Eisseen mit dünnem Eis (schwere Walker brechen ein), Schneewehen bremsen. Landeplatz 300 m voraus. Einsatzgebiet markiert.',
     playerStart: { x: 0, z: 0, heading: 0, walker: 'bastion' },
+    startup: { mode: 'safe', location: 'dropZone', safeRadius: 1500 },
     navPoints: [{ id: 'ALPHA', x: 80, z: -320 }, { id: 'BRAVO', x: -1400, z: -300 }],
     sites: [{ type: 'landingSite', at: [80, -320], rotation: 15 }],
     features: [
@@ -88,6 +91,7 @@ export const MISSIONS = [
     seed: 4242,
     briefing: 'Ascheregen. Lavaflüsse und heiße Zonen heizen den Reaktor, Lava zerstört die Beine. Basaltsäulen als Deckung. Raffinerie 350 m voraus.',
     playerStart: { x: 0, z: 0, heading: 1.2, walker: 'bastion' },
+    startup: { mode: 'safe', location: 'dropZone', safeRadius: 1500 },
     navPoints: [{ id: 'ALPHA', x: -330, z: -160 }, { id: 'BRAVO', x: 300, z: 1200 }],
     sites: [{ type: 'refineryPlant', at: [-330, -160], rotation: 30 }],
     features: [
@@ -103,6 +107,7 @@ export const MISSIONS = [
     seed: 90210,
     briefing: 'Industriegelände im Regen: Straßenraster mit Hallen, Rohrleitungen, Kühltürmen und Kränen. Stützpunkt 400 m voraus — Bauwerke lassen sich zerstören.',
     playerStart: { x: 0, z: 0, heading: 0, walker: 'bastion' },
+    startup: { mode: 'safe', location: 'hangar', safeRadius: 1500 },
     navPoints: [{ id: 'ALPHA', x: 0, z: -400 }, { id: 'BRAVO', x: 1500, z: 200 }],
     sites: [{ type: 'outpost', at: [0, -400], rotation: 0 }],
     area: [[-600, 250], [600, 250], [600, -1000], [-600, -1000]],
@@ -115,6 +120,7 @@ export const MISSIONS = [
     seed: 777,
     briefing: 'Kraterfeld ohne Atmosphäre, Geröll, niedrige Schwerkraft (Raketen fallen nach Brennschluss kaum). Landeplatz 300 m voraus.',
     playerStart: { x: 0, z: 0, heading: 2.4, walker: 'bastion' },
+    startup: { mode: 'safe', location: 'dropZone', safeRadius: 1500 },
     navPoints: [{ id: 'ALPHA', x: -200, z: 230 }, { id: 'BRAVO', x: 900, z: 900 }],
     sites: [{ type: 'landingSite', at: [-200, 230], rotation: 40 }],
   },
@@ -126,6 +132,7 @@ export const MISSIONS = [
     seed: 5150,
     briefing: 'Flaches Schwemmland mit Bodennebel: Kanäle, Deiche, Schilf, weicher Boden bremst schwere Walker. Stützpunkt jenseits des Kanals.',
     playerStart: { x: 0, z: 0, heading: 0, walker: 'bastion' },
+    startup: { mode: 'safe', location: 'dropZone', safeRadius: 1500 },
     navPoints: [{ id: 'ALPHA', x: 40, z: -460 }],
     sites: [{ type: 'outpost', at: [40, -460], rotation: 180 }],
     features: [
@@ -142,6 +149,7 @@ export const MISSIONS = [
     weather: 'sandstorm',
     briefing: 'Sandsturm: Sicht unter 300 m, Aufschaltung braucht länger und reißt ab. Felsbogen 260 m voraus, 140 m dahinter steht ein MARDER im Sichtschatten des rechten Pfeilers; links quert eine Schlucht — optische Rakete (HALBERD) um den Bogen lenken.',
     playerStart: { x: 160, z: 0, heading: 0, walker: 'halberd' },
+    startup: { mode: 'safe', location: 'dropZone', safeRadius: 200 },
     navPoints: [{ id: 'BOGEN', x: 160, z: -260 }, { id: 'SCHLUCHT', x: 0, z: -250 }],
     sites: [{ type: 'archGate', at: [160, -260], rotation: 0 }],
     spawns: [
@@ -156,6 +164,7 @@ export const MISSIONS = [
     seed: 1999,
     briefing: 'Kristalline Fremdwelt: regelmäßige Formen, leuchtende Adern im Boden. Synthese-Nest 380 m voraus (Pylone, Fertigungskuppel, Sensorknoten strahlt — Anti-Radar).',
     playerStart: { x: 0, z: 0, heading: 0, walker: 'bastion' },
+    startup: { mode: 'safe', location: 'dropZone', safeRadius: 1500 },
     navPoints: [{ id: 'ALPHA', x: 0, z: -380 }],
     sites: [{ type: 'synthNest', at: [0, -380], rotation: 0 }],
   },
@@ -168,6 +177,7 @@ export const MISSIONS = [
     weather: 'clear',
     briefing: 'Sechs Bodenarten nebeneinander, je 50 m breit und 300 m lang (von links): hart, weich, Wasser, Lava, dünnes Eis, heiß. Mit leichtem und schwerem Walker durchlaufen; das Debug-Overlay (^) zeigt die Bodenart.',
     playerStart: { x: 0, z: 0, heading: 0, walker: 'bastion' },
+    startup: { mode: 'safe', location: 'dropZone', safeRadius: 1500 },
     navPoints: [{ id: 'EIS', x: 90, z: -300 }],
     terrainFeatures: false,
     surface: { base: 'hard' },
@@ -192,6 +202,7 @@ export const MISSIONS = [
     seed: 2024,
     briefing: 'Nachterprobung. Sternenhimmel, geringe Restlichtverstärkung.',
     playerStart: { x: 0, z: 0, heading: 0.4, walker: 'bastion' },
+    startup: { mode: 'safe', location: 'dropZone', safeRadius: 1500 },
     navPoints: [{ id: 'ALPHA', x: -300, z: -1100 }],
   },
   // ---- A3: Synthesis enemies and AI ----
@@ -201,12 +212,13 @@ export const MISSIONS = [
     theater: 'industrial',
     timeOfDay: 'day',
     seed: 31337,
-    briefing: 'Ein Synthese-Jäger (SICHEL) gegen dich auf offenem Feld, 700 m voraus. Er kennt deine Position. Je Schwierigkeitsgrad einmal spielen und vergleichen (Treffsicherheit, Ausweichen, Flankieren).',
+    briefing: 'Ein Synthese-Jäger (SICHEL) gegen dich auf offenem Feld, 800 m voraus. Er kennt deine Position. Je Schwierigkeitsgrad einmal spielen und vergleichen (Treffsicherheit, Ausweichen, Flankieren).',
     playerStart: { x: 0, z: 0, heading: 0, walker: 'bastion' },
-    navPoints: [{ id: 'ALPHA', x: 0, z: -700 }],
+    startup: { mode: 'safe', location: 'dropZone', safeRadius: 700 },
+    navPoints: [{ id: 'ALPHA', x: 0, z: -800 }],
     terrainFeatures: false, autoStructures: false, scatter: false, weather: 'clear',
     forces: {
-      groups: [{ id: 'jaeger', role: 'hunt', units: [{ type: 'sichel', at: [0, -700], heading: 0 }] }],
+      groups: [{ id: 'jaeger', role: 'hunt', units: [{ type: 'sichel', at: [0, -800], heading: 0 }] }],
     },
     script: { steps: [{ type: 'destroy', groups: 'all', text: 'Jäger SICHEL ausschalten', done: 'Jäger ausgeschaltet.' }] },
   },
@@ -217,16 +229,19 @@ export const MISSIONS = [
     timeOfDay: 'day',
     seed: 7070,
     weather: 'clear',
-    briefing: 'Canyon in Tessar: die Schlucht vor dir knickt nach 750 m rechts ab. Von dort zieht eine Synthese-Patrouille (Späher SPLITTER + Jäger SICHEL) heran — ungesehen am Knick (KNICK) auf sie warten. SENSOREN aus, sonst orten sie deine Abstrahlung auf rund 1500 m. Der Späher ruft Verstärkung, sobald er dich sieht: 40 s später kommt ein weiterer Jäger aus dem Ostteil der Schlucht.',
+    briefing: 'Canyon in Tessar: die Schlucht vor dir knickt nach 750 m rechts ab. Sobald du die Schlucht betrittst, zieht von dort eine Synthese-Patrouille (Späher SPLITTER + Jäger SICHEL) heran — ungesehen am Knick (KNICK) auf sie warten. SENSOREN aus, sonst orten sie deine Abstrahlung auf rund 1500 m. Der Späher ruft Verstärkung, sobald er dich sieht: 40 s später kommt ein weiterer Jäger aus dem Ostteil der Schlucht.',
     playerStart: { x: 0, z: 0, heading: 0, walker: 'bastion' },
+    startup: { mode: 'safe', location: 'dropZone', safeRadius: 300 },
     navPoints: [{ id: 'KNICK', x: 0, z: -700 }, { id: 'OST', x: 700, z: -760 }],
+    // The patrol sets off when the walker enters the canyon
+    triggers: [{ id: 'schlucht', type: 'area', at: [0, -170], radius: 90 }],
     features: [
       { type: 'canyon', at: [0, -420], angle: 90, length: 760, width: 60, depth: 30, wall: 14, meander: 0.1 },
       { type: 'canyon', at: [400, -760], angle: 0, length: 860, width: 60, depth: 30, wall: 14, meander: 0.1 },
     ],
     forces: {
       groups: [{
-        id: 'patrouille', role: 'patrol', loop: false,
+        id: 'patrouille', role: 'patrol', loop: false, activate: 'onTrigger:schlucht',
         units: [{ type: 'splitter', at: [700, -760], heading: Math.PI / 2 }, { type: 'sichel', at: [740, -770], heading: Math.PI / 2 }],
         patrol: [[700, -760], [40, -760], [0, -320]],
       }],
@@ -243,9 +258,10 @@ export const MISSIONS = [
     weather: 'clear',
     briefing: 'Die Synthese hält die Raffinerie 700 m voraus: zwei Abwehrstachel und ein Brecher (MONOLITH, Schwarmraketen mit echter Aufschaltung). Die zwei Geschütztürme der Anlage sind in Feindeshand. Deckung nutzen!',
     playerStart: { x: 0, z: 0, heading: 0, walker: 'bastion' },
+    startup: { mode: 'safe', location: 'dropZone', safeRadius: 500 },
     navPoints: [{ id: 'ANLAGE', x: 0, z: -700 }],
     sites: [{ type: 'refineryPlant', at: [0, -700], rotation: 0, id: 'raffinerie' }],
-    structures: [{ type: 'spike', at: [-45, -635], rotation: 180, id: 'stachel-l' }, { type: 'spike', at: [45, -635], rotation: 180, id: 'stachel-r' }],
+    structures: [{ type: 'spike', at: [-45, -635], rotation: Math.PI, id: 'stachel-l' }, { type: 'spike', at: [45, -635], rotation: Math.PI, id: 'stachel-r' }],
     forces: {
       groups: [{ id: 'stellung', role: 'guard', units: [{ type: 'monolith', at: [10, -650], heading: 0 }] }],
       guns: ['spike', 'turret'],
@@ -260,6 +276,7 @@ export const MISSIONS = [
     seed: 8080,
     briefing: 'Drei Wellen setzen per Landefähre ab, die nächste kommt 10 s nach der vorigen. Welle 3 bringt einen Belagerer (OBELISK, Mörser) — er schießt nur, wenn ein anderer dich sieht.',
     playerStart: { x: 0, z: 0, heading: 0, walker: 'goliath' },
+    startup: { mode: 'safe', location: 'dropZone', safeRadius: 450 },
     navPoints: [{ id: 'LZ-1', x: 0, z: -600 }],
     terrainFeatures: false, autoStructures: false, scatter: false, weather: 'clear',
     forces: {
@@ -277,19 +294,19 @@ export const MISSIONS = [
     theater: 'industrial',
     timeOfDay: 'day',
     seed: 2601,
-    briefing: 'Kaltstart im Hangar. Walker hochfahren, durchs Tor raus, ALPHA anlaufen. Bei BRAVO patrouilliert eine Synthese-Gruppe (Späher SPLITTER + Jäger SICHEL) — stellen und ausschalten, danach zur EXTRAKTION. Sieht dich der Späher, ruft er eine Landefähre mit einem Brecher (MONOLITH, ca. 60 s). Mit SENSOREN an ortet die Synthese dich auf rund 1400 m.',
-    playerStart: { x: 0, z: 4, heading: 0, walker: 'bastion' },
-    navPoints: [{ id: 'ALPHA', x: 0, z: -500 }, { id: 'BRAVO', x: 650, z: -1350 }, { id: 'EXTRAKTION', x: -420, z: -1650 }],
-    structures: [{ type: 'hangarBay', at: [0, 0], rotation: 0, id: 'hangar' }],
-    sites: [{ type: 'landingSite', at: [-420, -1650], rotation: 20, id: 'lz' }],
-    area: [[-950, 300], [1250, 300], [1250, -2000], [-950, -2000]],
+    briefing: 'Kaltstart im Hangar des Stützpunkts. Walker in Ruhe hochfahren — die Synthese rückt erst an, wenn du ausrückst (Beinsperre gelöst): dann öffnet das Tor. ALPHA anlaufen. Bei BRAVO patrouilliert eine Synthese-Gruppe (Späher SPLITTER + Jäger SICHEL) — stellen und ausschalten, danach zur EXTRAKTION. Sieht dich der Späher, ruft er eine Landefähre mit einem Brecher (MONOLITH, ca. 60 s). Mit SENSOREN an ortet die Synthese dich auf rund 1400 m.',
+    playerStart: { x: 0, z: 0, heading: 0, walker: 'bastion' },
+    startup: { mode: 'safe', location: 'hangar', safeRadius: 1500 },
+    navPoints: [{ id: 'ALPHA', x: 0, z: -600 }, { id: 'BRAVO', x: 700, z: -1650 }, { id: 'EXTRAKTION', x: -480, z: -1900 }],
+    sites: [{ type: 'landingSite', at: [-480, -1900], rotation: 20, id: 'lz' }],
+    area: [[-1000, 300], [1300, 300], [1300, -2300], [-1000, -2300]],
     forces: {
       groups: [{
         id: 'patrouille', role: 'patrol',
-        units: [{ type: 'splitter', at: [650, -1280] }, { type: 'sichel', at: [625, -1305] }],
-        patrol: [[650, -1280], [880, -1480], [560, -1620], [430, -1360]],
+        units: [{ type: 'splitter', at: [700, -1580] }, { type: 'sichel', at: [675, -1605] }],
+        patrol: [[700, -1580], [930, -1780], [610, -1920], [480, -1660]],
       }],
-      reinforcements: { delay: 60, via: 'lander', points: [[950, -1700], [300, -1750]], trigger: 'call', groups: [{ units: [{ type: 'monolith' }] }] },
+      reinforcements: { delay: 60, via: 'lander', points: [[1000, -2000], [300, -2100]], trigger: 'call', groups: [{ units: [{ type: 'monolith' }] }] },
     },
     script: {
       steps: [
@@ -300,6 +317,37 @@ export const MISSIONS = [
     },
   },
 
+  {
+    id: 'test-scramble',
+    name: 'Alarmstart',
+    theater: 'industrial',
+    timeOfDay: 'dusk',
+    seed: 5150,
+    briefing: 'ALARMSTART: Eine Synthese-Späher-Gruppe (zwei SPLITTER) patrouilliert 1600 m vor dem Stützpunkt und hält nach 45 s auf ihn zu. Startprozedur „einfach“. Je früher der Reaktor läuft, desto weiter ortet dich die Synthese (Wärmesignatur ~1100 m, Hilfsaggregat ~350 m, kalt nur Sicht auf kurze Distanz). Das Tor öffnet erst beim Ausrücken.',
+    playerStart: { x: 0, z: 0, heading: 0, walker: 'bastion' },
+    startup: { mode: 'scramble', location: 'hangar', safeRadius: 1500, scrambleDelay: 45 },
+    navPoints: [{ id: 'ALPHA', x: 0, z: -600 }],
+    forces: {
+      groups: [{
+        id: 'spaeher', role: 'patrol',
+        units: [{ type: 'splitter', at: [250, -1600] }, { type: 'splitter', at: [220, -1625] }],
+        patrol: [[250, -1600], [-450, -1650], [600, -1700]],
+      }],
+    },
+    script: { steps: [{ type: 'destroy', groups: ['spaeher'], text: 'Späher-Gruppe abwehren', done: 'Späher abgewehrt. Stützpunkt sicher.' }] },
+  },
+  {
+    id: 'test-invalid',
+    name: 'Validierungsprobe (absichtlich fehlerhaft)',
+    theater: 'industrial',
+    timeOfDay: 'day',
+    seed: 1,
+    briefing: 'Absichtlich ungültig: ein Jäger steht 400 m vor dem Start, die Schutzzone ist 1500 m. Der Start wird mit Klartext-Fehler abgelehnt.',
+    playerStart: { x: 0, z: 0, heading: 0, walker: 'bastion' },
+    startup: { mode: 'safe', location: 'dropZone', safeRadius: 1500 },
+    navPoints: [{ id: 'ALPHA', x: 0, z: -400 }],
+    forces: { groups: [{ id: 'zu-nah', role: 'hunt', units: [{ type: 'sichel', at: [0, -400] }], patrol: [[0, -400], [300, -900]] }] },
+  },
 ];
 
 export function getMission(id) {

@@ -86,6 +86,11 @@ Funk, Radar, Kampf, Übung) zusammen.
    - Offen: Flugmodell für Drohnen; Reaktion auf aktives/passives Radar statt SENSOREN-Schalter
      (A4); Bergung der Wracks und Waffen (C); Wingmen als Verbündete (B); Bauwerke als
      Deckung nur über Gebäude, nicht über Geländekanten.
+   - ✅ Fix Startphase: Ereignis `deploy`, Gegner ruhen bis zum Ausrücken (`safe`), Alarmstart
+     (`scramble`) als Ausnahme, Startort Hangar mit Tor oder Absetzpunkt, Schutzzone mit
+     Validierung und Patrouillen-Sperre im Navigationsraster, Signatur je Systemzustand
+     (Grundlage für A4), Gruppen-Aktivierung über `onDeploy`/`immediate`/Trigger
+     (Bereich, Zeit), Testmission „Alarmstart“.
 4. **Radar und Tarnung**:
    - Schalter aktiv/passiv im Cockpit.
    - Aktiv: große, einstellbare Reichweite, macht sichtbar.

@@ -45,6 +45,10 @@ export const SOUND_EVENTS = {
   'torso.limit': { samples: ['piston_end'], gain: 0.35, rate: [0.9, 1.0], bus: 'cockpit', cooldown: 0.6 },
   'walker.settle': { samples: ['piston_rattle', 'piston_short'], gain: 0.3, rate: [0.85, 0.95], bus: 'cockpit', cooldown: 1.5 },
 
+  // Start base: hangar door (world/HangarDoor.js)
+  'base.door': { samples: ['hangar_door'], gain: 0.9, rate: [1, 1], bus: 'world' },
+  'base.horn': { samples: ['alarm_critical'], gain: 0.7, rate: [0.72, 0.74], bus: 'world' },
+
   // Startup procedure (systems:event types → see SYSTEM_EVENT_SOUNDS)
   'sys.relayOn': { samples: ['relay_on'], gain: 0.55, rate: [0.97, 1.03], bus: 'cockpit' },
   'sys.relayOff': { samples: ['relay_off'], gain: 0.5, rate: [0.97, 1.03], bus: 'cockpit' },

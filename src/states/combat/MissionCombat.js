@@ -12,6 +12,16 @@ import { MissileControl, angleTo } from './MissileControl.js';
 import { TargetTracking } from './TargetTracking.js';
 
 const AIM_DISTANCE = 800;
+/** Player signature from the systems state (data/systems.js → signature). */
+function signatureOf(sys) {
+  const sig = sys.cfg.signature;
+  const s = sys.s;
+  if (sys.flags.reactorRunning) return sig.reactor;
+  if (s.apu.mode === 'crank' || s.apu.mode === 'run') return sig.apu;
+  if (s.battery.on) return sig.battery;
+  return sig.cold;
+}
+
 const NOISE = { S: 600, M: 750, L: 900 }; // m — how far other units hear a shot
 const DEG = Math.PI / 180;
 const RADIO = {
@@ -222,7 +232,8 @@ export class MissionCombat {
     const power = sys.s.reactor.power;
     this.units.update(dt, { enabled: sys.flags.shieldsReady, rate: power * (preset.shields / 0.34) });
     // Until the radar (A4): the player emits while the SENSOREN switch is on
-    if (this.controls.has('sensors')) this.player.emitting = this.controls.value('sensors') === 1;
+    if (this.controls.has('sensors')) this.player.emitting = this.controls.value('sensors') === 1 && sys.s.power.bus;
+    this.player.signature = signatureOf(sys);
 
     this.beamDraw.clear();
     this.missiles.updateModes();

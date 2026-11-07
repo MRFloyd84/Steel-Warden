@@ -7,6 +7,8 @@
  * separate class), soft ground (a bit more expensive), buildings and big
  * scatter rocks (blocked). A* with 8 neighbours and a node budget, then the
  * path is smoothed by skipping waypoints with a free straight line.
+ * safeZone { x, z, r }: the start's safe radius — blocked for patrol paths
+ * (avoidSafe), open for fights.
  */
 const SQRT2 = Math.SQRT2;
 const BLOCKED = 255;
@@ -125,8 +127,10 @@ export class NavGrid {
    * Path from (x0, z0) to (x1, z1) as world points [[x, z], …] (start
    * excluded), or null. heavy: walker ≥ 50 t (thin ice blocked).
    */
-  findPath(x0, z0, x1, z1, { heavy = false, maxNodes = 4000 } = {}) {
+  findPath(x0, z0, x1, z1, { heavy = false, maxNodes = 4000, avoidSafe = false } = {}) {
     this.searches++;
+    // Patrols keep out of the start's safe zone (fights may enter); not if they are already inside
+    const avoid = avoidSafe && this.safeZone && !this.inSafeXZ(x0, z0) ? this.safeZone : null;
     let [sx, sz] = this.toCell(x0, z0);
     let [gx, gz] = this.toCell(x1, z1);
     const s = this.nearestOpen(sx, sz, heavy, 3) ?? [sx, sz];
@@ -169,6 +173,7 @@ export class NavGrid {
           const nz = cz + dz;
           const c = this.cost(nx, nz, heavy);
           if (c >= BLOCKED) continue;
+          if (avoid && this.inSafe(nx, nz)) continue;
           // No corner cutting past blocked cells
           if (dx && dz && (this.cost(cx + dx, cz, heavy) >= BLOCKED || this.cost(cx, cz + dz, heavy) >= BLOCKED)) continue;
           const ni = this.index(nx, nz);
@@ -188,7 +193,7 @@ export class NavGrid {
     for (let i = best; i !== -1 && i !== start; i = this.from[i]) cells.push(i);
     cells.reverse();
     if (!cells.length) return best === start && start === goal ? [[x1, z1]] : null;
-    return this.smooth(sx, sz, cells, heavy, best === goal ? [x1, z1] : null);
+    return this.smooth(sx, sz, cells, heavy, best === goal ? [x1, z1] : null, !!avoid);
   }
 
   h(ax, az, bx, bz) {
@@ -198,7 +203,7 @@ export class NavGrid {
   }
 
   /** Drops waypoints that a straight walkable line can skip. */
-  smooth(sx, sz, cells, heavy, exactGoal) {
+  smooth(sx, sz, cells, heavy, exactGoal, avoidSafe = false) {
     const pts = cells.map((i) => [i % this.n, (i / this.n) | 0]);
     const out = [];
     let ax = sx;
@@ -207,7 +212,7 @@ export class NavGrid {
     while (k < pts.length) {
       let far = k;
       for (let j = pts.length - 1; j > k; j--) {
-        if (this.lineFree(ax, az, pts[j][0], pts[j][1], heavy)) {
+        if (this.lineFree(ax, az, pts[j][0], pts[j][1], heavy, avoidSafe)) {
           far = j;
           break;
         }
@@ -223,14 +228,26 @@ export class NavGrid {
   }
 
   /** Walkable straight line between two cells (and not much more costly). */
-  lineFree(ax, az, bx, bz, heavy) {
+  lineFree(ax, az, bx, bz, heavy, avoidSafe = false) {
     const steps = Math.max(Math.abs(bx - ax), Math.abs(bz - az));
     for (let i = 1; i <= steps; i++) {
       const cx = Math.round(ax + ((bx - ax) * i) / steps);
       const cz = Math.round(az + ((bz - az) * i) / steps);
       if (this.cost(cx, cz, heavy) > 12) return false;
+      if (avoidSafe && this.safeZone && this.inSafe(cx, cz)) return false;
     }
     return true;
+  }
+
+  /** Cell inside the start's safe zone (patrols route around it). */
+  inSafe(cx, cz) {
+    const [x, z] = this.center(cx, cz);
+    return this.inSafeXZ(x, z);
+  }
+
+  inSafeXZ(x, z) {
+    const sz = this.safeZone;
+    return !!sz && Math.hypot(x - sz.x, z - sz.z) < sz.r;
   }
 
   /** Is the point on a walkable cell? */

@@ -29,15 +29,15 @@ function blueprint(type) {
 }
 
 /** Blueprint geometry split into a fixed base and a turning head zone (cached per stage). */
-function splitBlueprint(bp, stage, zone) {
+function splitBlueprint(bp, stage, zones) {
   bp.split ??= {};
-  const key = `${stage}:${zone}`;
+  const key = `${stage}:${zones.join(',')}`;
   if (!bp.split[key]) {
     const opts = stage === 'damaged' ? { tint: DAMAGED_TINT, tilt: 0.18 } : {};
     const parts = bp.def.parts;
     bp.split[key] = {
-      base: buildParts(parts.filter((p) => (p.zone ?? 'main') !== zone), opts),
-      head: buildParts(parts.filter((p) => p.zone === zone), opts),
+      base: buildParts(parts.filter((p) => !zones.includes(p.zone)), opts),
+      movers: Object.fromEntries(zones.map((z) => [z, buildParts(parts.filter((p) => p.zone === z), opts)])),
     };
   }
   return bp.split[key];
@@ -129,6 +129,7 @@ export class WorldObjects {
       z: z - sh.at[0] * s + sh.at[1] * c,
       rot,
     }));
+    st.collideAll = st.collide;
     st.radius = bp.radius;
     st.top = y + bp.height;
     // Minimal unit-like interface for homing missiles (anti-radar on emitters)
@@ -142,11 +143,41 @@ export class WorldObjects {
     return st;
   }
 
-  /** Lets the parts of a blueprint zone turn as a gun head (Gunner AI). */
+  /**
+   * Lets the parts of a blueprint zone move as one group (gun head, door half).
+   * Pose in st.movers[zone] = { x, y, z, yaw, group }; setMover() changes it.
+   */
+  makeMovable(st, zone) {
+    st.movers ??= {};
+    st.movers[zone] ??= { x: 0, y: 0, z: 0, yaw: 0, group: null };
+    this.setView(st, st.stage);
+    return st.movers[zone];
+  }
+
+  /** Gun head turning (Gunner AI). */
   makeTurning(st, zone) {
     st.headZone = zone;
     st.headYaw = 0;
-    this.setView(st, st.stage);
+    return this.makeMovable(st, zone);
+  }
+
+  setMover(st, zone, { x, y, z, yaw } = {}) {
+    const m = st.movers?.[zone];
+    if (!m) return;
+    if (x !== undefined) m.x = x;
+    if (y !== undefined) m.y = y;
+    if (z !== undefined) m.z = z;
+    if (yaw !== undefined) m.yaw = yaw;
+    if (m.group) {
+      m.group.position.set(m.x, m.y, m.z);
+      m.group.rotation.y = m.yaw;
+    }
+  }
+
+  /** Hangar door open: its parts no longer block (sight, shots), its collision goes. */
+  setDoorOpen(st, open) {
+    st.doorOpen = open;
+    st.collide = st.collideAll.filter((c) => open ? !c.door : true);
   }
 
   index(st) {
@@ -168,18 +199,24 @@ export class WorldObjects {
       st.object.add(new THREE.Mesh(bp.rubble, litMaterial));
       return;
     }
-    if (st.headZone) {
-      // Gun turret: the parts of the head zone turn (st.head.rotation.y)
-      const split = splitBlueprint(bp, stage, st.headZone);
-      for (const set of [split.base]) {
-        if (set.geometry) st.object.add(new THREE.Mesh(set.geometry, litMaterial));
-        if (set.glowGeometry) st.object.add(new THREE.Mesh(set.glowGeometry, glowMaterial));
+    if (st.movers) {
+      // Moving parts (gun head, hangar door halves): one group per zone, its pose in st.movers[zone]
+      const zones = Object.keys(st.movers);
+      const split = splitBlueprint(bp, stage, zones);
+      if (split.base.geometry) st.object.add(new THREE.Mesh(split.base.geometry, litMaterial));
+      if (split.base.glowGeometry) st.object.add(new THREE.Mesh(split.base.glowGeometry, glowMaterial));
+      for (const zone of zones) {
+        const m = st.movers[zone];
+        const g = new THREE.Group();
+        g.position.set(m.x, m.y, m.z);
+        g.rotation.y = m.yaw;
+        const set = split.movers[zone];
+        if (set.geometry) g.add(new THREE.Mesh(set.geometry, litMaterial));
+        if (set.glowGeometry) g.add(new THREE.Mesh(set.glowGeometry, glowMaterial));
+        st.object.add(g);
+        m.group = g;
       }
-      st.head = new THREE.Group();
-      st.head.rotation.y = st.headYaw ?? 0;
-      if (split.head.geometry) st.head.add(new THREE.Mesh(split.head.geometry, litMaterial));
-      if (split.head.glowGeometry) st.head.add(new THREE.Mesh(split.head.glowGeometry, glowMaterial));
-      st.object.add(st.head);
+      st.head = st.movers.gun?.group ?? null;
       return;
     }
     const set = stage === 'damaged' ? bp.damaged : bp.intact;
@@ -288,6 +325,7 @@ export class WorldObjects {
       b.copy(p1).applyMatrix4(s.inverse);
       const boxes = s.stage === 'damaged' ? s.bp.damaged.boxes : s.bp.intact.boxes;
       for (const bx of boxes) {
+        if (s.doorOpen && (bx.zone === 'doorL' || bx.zone === 'doorR')) continue;
         ray.origin.copy(a).applyMatrix4(bx.inverse);
         const end = b.clone().applyMatrix4(bx.inverse);
         ray.direction.subVectors(end, ray.origin);

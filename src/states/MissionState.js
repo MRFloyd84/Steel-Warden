@@ -40,6 +40,8 @@ import { AIDebugView } from '../render/AIDebugView.js';
 import { MissionScript } from './MissionScript.js';
 import { getDifficulty, DIFFICULTY } from '../data/difficulty.js';
 import { Storage } from '../core/Storage.js';
+import { startupOf, withStartSite } from './missionStartup.js';
+import { HangarDoor } from '../world/HangarDoor.js';
 
 const START_MODES = ['full', 'simple', 'auto'];
 const COMPONENT_LABELS = { torso: 'TORSO', armL: 'ARM L', armR: 'ARM R', legs: 'BEINE', sensors: 'SENSOR' };
@@ -53,7 +55,9 @@ export class MissionState extends State {
     const game = this.game;
     const cfg = game.config;
     const params = new URLSearchParams(window.location.search);
-    this.mission = getMission(missionId);
+    // Start site (hangar base or drop zone) is added to the mission; validation ran before (missionStartup.js)
+    this.mission = withStartSite(getMission(missionId));
+    this.startup = startupOf(this.mission, { hot: params.get('start') === 'hot' });
     const weather = params.get('weather');
     this.world = new World(this.mission, cfg.terrain, { bus: game.bus, scatterConfig: cfg.scatter, weather: WEATHER[weather] ? weather : null });
     const chosen = walkerId ?? params.get('walker');
@@ -74,7 +78,8 @@ export class MissionState extends State {
 
     // Startup procedure
     const urlMode = params.get('startmode');
-    this.startMode = START_MODES.includes(urlMode) ? urlMode : cfg.startup.mode;
+    // Scramble: simple procedure unless the URL (later the options) says otherwise
+    this.startMode = START_MODES.includes(urlMode) ? urlMode : this.startup.mode === 'scramble' ? 'simple' : cfg.startup.mode;
     this.systems = new WalkerSystems(this.controls, game.bus, {
       randomEvents: cfg.startup.randomEvents,
       monitorIds: this.cockpit.monitors.map((m) => m.id),
@@ -82,7 +87,7 @@ export class MissionState extends State {
       extraCircuit: !!this.walker.cockpit.extraCircuit,
       heat: { capacity: this.walker.heatCapacity, dissipation: this.walker.heatDissipation },
     });
-    const hot = params.get('start') === 'hot';
+    const hot = this.startup.mode === 'hot';
     if (hot) this.systems.forceHot();
     this.checklist = new StartupChecklist(this.startMode, { extraCircuit: this.systems.extraCircuit });
     if (hot) this.checklist.markAllDone();
@@ -169,8 +174,23 @@ export class MissionState extends State {
     this.ai = new AIDirector({
       mission: this.mission, world: this.world, entities: this.entities, combat: this.combat,
       difficulty: getDifficulty(this.difficultyId), radio: (msg) => this.radioMessage(msg),
-      lit: () => this.floodlight.on, bus: game.bus,
+      lit: () => this.floodlight.on, bus: game.bus, startup: this.startup,
     });
+    // Start phase: deploy (legs released on main power) starts the mission clock and the AI
+    this.deployed = false;
+    this.missionTime = 0;
+    this.door = null;
+    if (this.startup.location === 'hangar') {
+      const st = this.world.objects.structures.find((x) => x.id === 'start-0' && x.type === 'hangarBay');
+      if (st) {
+        this.door = new HangarDoor({
+          objects: this.world.objects, st, sound: this.combat.sound,
+          onPassable: (h) => this.ai.nav.invalidate(h.x, h.z, 40),
+        });
+        if (hot) this.door.openNow();
+      }
+    }
+    this.systems.scrambleAlarm = this.startup.mode === 'scramble' && !hot;
     this.combat.ai = this.ai;
     this.aiDebug = new AIDebugView({ scene: this.world.scene, container: game.container, renderer: game.renderer, director: this.ai, sampler: this.world.sampler });
     this.script = new MissionScript({
@@ -189,6 +209,9 @@ export class MissionState extends State {
     };
     game.renderer.canvas.addEventListener('click', this.onCanvasClick);
     if (!hot) {
+      if (this.startup.mode === 'scramble') {
+        this.radioMessage({ from: 'LEITSTELLE', text: `ALARMSTART! Synthese-Kontakt im Anflug auf den Stützpunkt, geschätzt ${Math.round(this.startup.scrambleDelay)} s. Sofort hochfahren!` });
+      }
       const intro = { simple: RADIO.coldStartSimple, auto: RADIO.coldStartAuto }[this.startMode] ?? RADIO.coldStart;
       this.radioMessage(intro);
     }
@@ -258,13 +281,37 @@ export class MissionState extends State {
     this.game.audio.play('radio.squelch');
   }
 
+  /** Deploy: legs released on main power — the walker is ready and may leave the start. */
+  checkDeploy() {
+    if (this.deployed) return;
+    const s = this.systems.s;
+    if (!this.systems.flags.legsReleased || s.power.source !== 'main') return;
+    this.deployed = true;
+    this.systems.scrambleAlarm = false;
+    this.ai.deploy();
+    this.door?.open();
+    this.game.bus.emit('mission:deploy', { time: this.stats.duration });
+    const nav = this.mission.navPoints?.[0];
+    const m = this.motion;
+    let text = 'Freigabe zum Ausrücken.';
+    if (this.door?.state === 'opening') text = 'Tor öffnet. Freigabe zum Ausrücken.';
+    if (nav) {
+      const dx = nav.x - m.x;
+      const dz = nav.z - m.z;
+      const bearing = Math.round((((Math.atan2(dx, -dz) * 180) / Math.PI) + 360) % 360);
+      text += ` Erster Navpunkt ${nav.id}, Kurs ${String(bearing).padStart(3, '0')}, ${Math.round(Math.hypot(dx, dz))} m.`;
+    }
+    this.radioMessage({ from: 'LEITSTELLE', text });
+  }
+
   finish(result) {
     this.game.states.change('debrief', {
       mission: this.mission,
       result,
       stats: {
         kills: this.combat.units.kills,
-        duration: this.stats.duration,
+        duration: this.missionTime, // from deploy
+        totalTime: this.stats.duration,
         distance: this.motion.distance,
         avgFps: this.stats.fpsFrames ? this.stats.fpsSum / this.stats.fpsFrames : 0,
       },
@@ -414,6 +461,9 @@ export class MissionState extends State {
       });
       this.world.update(this.motion.pose);
     }
+    this.checkDeploy();
+    if (this.deployed) this.missionTime += dt;
+    this.door?.update(dt);
     this.entities.update(dt);
     this.combat.update(dt);
     this.ai.update(dt);
@@ -437,9 +487,11 @@ export class MissionState extends State {
     this.entities.render(a, fdt, this.freeCam || external);
     this.aiDebug.setVisible(game.input.debugMode);
     this.aiDebug.update();
-    const objective = this.script.text;
-    this.objectiveEl.hidden = !objective;
-    if (objective && this.objectiveEl.textContent !== objective) this.objectiveEl.textContent = objective;
+    const t = Math.floor(this.missionTime);
+    const clock = this.deployed ? `T+${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}` : 'STARTPHASE';
+    const objective = this.script.text ? `${clock}  ·  ${this.script.text}` : clock;
+    this.objectiveEl.hidden = false;
+    if (this.objectiveEl.textContent !== objective) this.objectiveEl.textContent = objective;
     this.objectiveEl.classList.toggle('done', !!this.script.finished);
 
     if (this.freeCam) {

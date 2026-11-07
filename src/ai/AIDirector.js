@@ -35,7 +35,7 @@ const tmp = new THREE.Vector3();
  * Difficulty scales unit counts, reinforcement delay, sight, aim and tactics.
  */
 export class AIDirector {
-  constructor({ mission, world, entities, combat, difficulty, radio = () => {}, lit = () => false, bus = null }) {
+  constructor({ mission, world, entities, combat, difficulty, radio = () => {}, lit = () => false, bus = null, startup = null }) {
     this.mission = mission;
     this.world = world;
     this.entities = entities;
@@ -46,6 +46,15 @@ export class AIDirector {
     this.perception = new Perception({ world, mission, difficulty, lit });
     const start = mission.playerStart;
     this.nav = new NavGrid({ sampler: world.sampler, objects: world.objects, center: { x: start.x, z: start.z }, size: 4200, cell: 12 });
+    // Start phase (states/missionStartup.js): enemies rest until deploy (safe), or are
+    // awake from the start and move on the base after scrambleDelay (scramble)
+    this.startup = startup ?? { mode: 'hot', safeRadius: 0, scrambleDelay: 0 };
+    this.startPoint = { x: start.x, z: start.z };
+    if (this.startup.safeRadius > 0) this.nav.safeZone = { x: start.x, z: start.z, r: this.startup.safeRadius };
+    this.deployed = false;
+    this.deployTime = null;
+    this.scrambled = false;
+    this.triggers = (mission.triggers ?? []).map((t) => ({ ...t, fired: false }));
     this.gravity = world.sampler.gravity ?? 1;
     this.controllers = [];
     this.groups = [];
@@ -73,11 +82,19 @@ export class AIDirector {
     }
 
     const forces = mission.forces ?? {};
-    for (const g of forces.groups ?? []) this.spawnGroup(g, { known: g.role === 'hunt' });
+    const defaultActivate = this.startup.mode === 'scramble' ? 'immediate' : 'onDeploy';
+    for (const g of forces.groups ?? []) {
+      const activate = g.activate ?? defaultActivate;
+      this.spawnGroup(g, { known: g.role === 'hunt', active: activate === 'immediate', activate });
+    }
     const guns = forces.guns ?? [];
     for (const st of world.objects.structures) {
       const gun = GUNS[st.type];
-      if (gun && (guns.includes(st.type) || guns.includes(st.id))) this.gunners.push(new Gunner({ st, gun, director: this, difficulty, objects: world.objects }));
+      if (gun && (guns.includes(st.type) || guns.includes(st.id))) {
+        const gunner = new Gunner({ st, gun, director: this, difficulty, objects: world.objects });
+        gunner.active = this.startup.mode === 'scramble';
+        this.gunners.push(gunner);
+      }
     }
     this.reinf = forces.reinforcements ?? null;
     this.reinfState = 'ready'; // 'ready' | 'coming' | 'done'
@@ -118,11 +135,13 @@ export class AIDirector {
   // ---- spawning ----
 
   /** Spawns a group; at: centre for units without own positions. known: they know where the player is. */
-  spawnGroup(def, { known = false, at = null } = {}) {
+  spawnGroup(def, { known = false, at = null, active = true, activate = 'immediate' } = {}) {
     const id = def.id ?? `gruppe-${++this.groupSerial}`;
     const units = scaleUnits(def.units ?? [], this.diff.count);
     const center = at ?? (def.units?.[0]?.at ? { x: def.units[0].at[0], z: def.units[0].at[1] } : { x: 0, z: 0 });
     const group = new AIGroup({ id, role: def.role ?? 'patrol', patrol: def.patrol, loop: def.loop ?? true, home: { x: center.x, z: center.z } });
+    group.active = active;
+    group.activate = activate;
     const toPlayer = Math.atan2(-(this.player.motion.x - center.x), -(this.player.motion.z - center.z));
     units.forEach((ud, i) => {
       let x;
@@ -139,12 +158,76 @@ export class AIDirector {
       const ctrl = new AIController({ unit: u, director: this, difficulty: this.diff });
       ctrl.home = { x, z };
       group.add(ctrl);
+      ctrl.dormant = !active;
       this.controllers.push(ctrl);
-      if (known) ctrl.learn(this.player, this.player.volumes.componentCenter('torso', tmp), velocityOf(this.player, new THREE.Vector3()), 'net');
+      if (known && active) ctrl.learn(this.player, this.player.volumes.componentCenter('torso', tmp), velocityOf(this.player, new THREE.Vector3()), 'net');
     });
     this.groups.push(group);
     this.updateSides();
     return group;
+  }
+
+  /** Wakes a resting group; hunters learn where the player is. */
+  activateGroup(g, why) {
+    if (g.active) return;
+    g.active = true;
+    g.activatedBy = why;
+    for (const c of g.members) {
+      c.dormant = false;
+      if (g.role === 'hunt') c.learn(this.player, this.player.volumes.componentCenter('torso', tmp), velocityOf(this.player, new THREE.Vector3()), 'net');
+    }
+  }
+
+  /** The walker is ready and leaves the start: mission clock and resting AI start. */
+  deploy() {
+    if (this.deployed) return;
+    this.deployed = true;
+    this.deployTime = this.time;
+    for (const g of this.groups) if (g.activate === 'onDeploy') this.activateGroup(g, 'deploy');
+    for (const gun of this.gunners) gun.active = true;
+  }
+
+  /** AI is running at all (after deploy; with scramble from the start). */
+  get awake() {
+    return this.deployed || this.startup.mode === 'scramble';
+  }
+
+  updateTriggers() {
+    if (!this.deployed) return;
+    const since = this.time - this.deployTime;
+    const m = this.player.motion;
+    for (const t of this.triggers) {
+      if (t.fired) continue;
+      const fire = t.type === 'time' ? since >= t.after : t.type === 'area' ? Math.hypot(m.x - t.at[0], m.z - t.at[1]) < t.radius : false;
+      if (!fire) continue;
+      t.fired = true;
+      for (const g of this.groups) if (g.activate === `onTrigger:${t.id}`) this.activateGroup(g, t.id);
+    }
+  }
+
+  /** Scramble: after the delay the awake groups move on the base (they know the place, not the walker). */
+  updateScramble() {
+    if (this.startup.mode !== 'scramble' || this.scrambled || this.time < this.startup.scrambleDelay) return;
+    this.scrambled = true;
+    const pos = new THREE.Vector3(this.startPoint.x, this.world.sampler.heightAt(this.startPoint.x, this.startPoint.z) + 8, this.startPoint.z);
+    for (const c of this.controllers) {
+      if (c.dormant || c.dead) continue;
+      c.alert = { pos: pos.clone(), time: c.time, persist: true }; // until they get there
+      if (c.state === 'idle' || c.state === 'patrol') c.setState('investigate');
+    }
+    this.radio({ from: 'LEITSTELLE', text: 'Synthese-Gruppe hält auf den Stützpunkt zu!' });
+  }
+
+  /** Distance of the nearest living enemy group (leader) to the start point. */
+  nearestGroupToStart() {
+    let best = null;
+    for (const g of this.groups) {
+      const l = g.leader ?? g.alive[0];
+      if (!l) continue;
+      const d = Math.hypot(l.unit.motion.x - this.startPoint.x, l.unit.motion.z - this.startPoint.z);
+      if (!best || d < best.d) best = { g, d };
+    }
+    return best;
   }
 
   /** Debug: a scout and a hunter 300 m ahead of the player, hunting. */
@@ -248,7 +331,7 @@ export class AIDirector {
   /** Shots and explosions: units in hearing range learn the position. */
   noise(pos, radius, source) {
     for (const c of this.controllers) {
-      if (c.dead || c.unit === source) continue;
+      if (c.dead || c.dormant || c.unit === source) continue;
       const m = c.unit.motion;
       if (Math.hypot(pos.x - m.x, pos.z - m.z) < radius) c.hear(pos, source);
     }
@@ -283,22 +366,26 @@ export class AIDirector {
     this.time += dt;
     this.updateSides();
     for (const g of this.groups) g.update(dt);
+    this.updateTriggers();
+    this.updateScramble();
     if (this.frozen) {
       for (const c of this.controllers) c.unit.locking = null;
     } else {
-      for (const c of this.controllers) c.step(dt);
+      for (const c of this.controllers) if (!c.dormant) c.step(dt);
     }
-    for (const g of this.gunners) g.update(dt);
+    for (const g of this.gunners) if (g.active) g.update(dt);
     for (let n = 0; n < PATHS_PER_STEP && this.pathQueue.length; n++) {
       const c = this.pathQueue.shift();
       c.pathPending = false;
       if (c.dead || !c.hasGoal) continue;
       const m = c.unit.motion;
-      c.path = this.nav.findPath(m.x, m.z, c.goal.x, c.goal.z, { heavy: c.heavy });
+      c.path = this.nav.findPath(m.x, m.z, c.goal.x, c.goal.z, { heavy: c.heavy, avoidSafe: c.pathAvoidSafe });
       c.pathAt = c.time;
     }
-    this.updateReinforcements(dt);
-    this.updateWaves(dt);
+    if (this.awake) {
+      this.updateReinforcements(dt);
+      this.updateWaves(dt);
+    }
     for (let i = this.landers.length - 1; i >= 0; i--) {
       const l = this.landers[i];
       l.update(dt);
@@ -317,6 +404,11 @@ export class AIDirector {
       `KI ${this.diff.name}${this.frozen ? ' EINGEFROREN' : ''}: Einheiten ${active.length}/${this.controllers.length}  Gruppen ${this.groups.length}  Geschütze ${this.gunners.filter((g) => !g.dead).length}  Pfade ${this.nav.searches} (offen ${this.pathQueue.length})  Sicht ${this.perception.checks}  Takt ${this.tickMs.toFixed(2)} ms`
         + `${this.reinf ? `  Verstärkung ${this.reinfState}${this.reinfState === 'coming' ? ` ${this.reinfT.toFixed(0)} s` : ''}` : ''}${this.waves.length ? `  Welle ${Math.min(this.waves.length, Math.floor(this.waveIndex) + 1)}/${this.waves.length} (vernichtet ${this.wavesCleared})` : ''}${this.landers.length ? `  Landefähren ${this.landers.length}` : ''}`,
     ];
+    const st = this.startup;
+    const near = this.nearestGroupToStart();
+    const sig = this.player.signature;
+    lines.push(`Start ${st.mode}${st.mode === 'scramble' ? ` (Angriff nach ${st.scrambleDelay} s${this.scrambled ? ', läuft' : ''})` : ''}  Schutzzone ${st.safeRadius} m  ${this.deployed ? `deploy bei ${this.deployTime.toFixed(0)} s` : 'vor deploy'}  nächste Gruppe ${near ? `${near.g.id} ${Math.round(near.d)} m` : '-'}  Signatur ${sig ? `${sig.label} (Sicht ×${sig.sight}, Ortung ${sig.detect} m)` : '-'}${this.player.emitting ? ' + Sensoren' : ''}`);
+    lines.push(`  Gruppen: ${this.groups.map((g) => `${g.id} ${g.active ? 'aktiv' : `ruhend (${g.activate})`}`).join(' · ')}${this.triggers.length ? `  Trigger: ${this.triggers.map((t) => `${t.id}${t.fired ? '✓' : ''}`).join(' ')}` : ''}`);
     for (const c of active.slice(0, 8)) {
       const m = c.unit.motion;
       const d = c.target ? Math.round(Math.hypot(c.target.pos.x - m.x, c.target.pos.z - m.z)) : '-';

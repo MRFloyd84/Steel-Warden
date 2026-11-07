@@ -94,6 +94,10 @@ Schnellstart-Parameter (Dev und Build):
   5 Schwierigkeitsgrade, Wracks mit Bergungswert, Reaktorexplosion mit Flächenschaden,
   KI-Debugansicht. Fünf Testmissionen inklusive Meilenstein „Erster Einsatz“.
 
+- **Fix Startphase:** Gegner ruhen bis zum Ausrücken (`deploy`: Beinsperre gelöst auf
+  Reaktorstrom); Alarmstart als bewusste Ausnahme, Startort Hangar (Tor öffnet beim
+  Ausrücken) oder Absetzpunkt, Schutzzone mit Validierung, Signatur je Systemzustand.
+
 Fahrplan für die nächsten Phasen inklusive Stützpunkt, Bergung, Funk, Radar und Missionen:
 `docs/ROADMAP.md`.
 
@@ -399,6 +403,46 @@ holografischer Zaun. Funkwarnung bei Annäherung und beim Verlassen, sonst noch 
    mit Deichen, Schilf), Tessar (Sandsturm, Schluchten, Felsbogen) und die Kernwelt (Adern,
    Synthese-Nest). Einsatzgebiet mit Zaun in Kalvik, Brenn-Süd und Morrow.
 
+## Startphase und Ausrücken
+
+Jede Mission hat eine Startphase (`startup` in `src/data/missions.js`, Details in
+`src/states/missionStartup.js` und `docs/STARTUP-PLAN.md`):
+
+- **Sicherer Start (Standard):** Die Gegner ruhen, bis du **ausrückst** — Beinsperre gelöst,
+  Bus auf Reaktorstrom. Erst dann laufen KI, Geschütze, Verstärkung, Wellen und die
+  Missionsuhr (oben rechts „STARTPHASE“, danach „T+mm:ss“). Funk: Freigabe mit Kurs und
+  Entfernung zum ersten Navpunkt.
+- **Alarmstart:** Gegner sind von Anfang an wach und rücken nach `scrambleDelay` auf den
+  Stützpunkt vor. Alarmfunkspruch, die Hauptwarnlampe blinkt bis zum Ausrücken,
+  Startprozedur „einfach“.
+- **Heiß:** Walker startet einsatzbereit (`?start=hot`).
+- **Startort:** Hangar am eigenen Stützpunkt (Tor zu, bis du ausrückst; dann Hupe,
+  Rundumleuchten, Schiebetor) oder Absetzpunkt mit Bodenmarkierung.
+- **Schutzzone:** In `safeRadius` um den Start dürfen keine KI-Einheiten, Patrouillenpunkte
+  oder Absetzpunkte liegen; Verstöße meldet das Menü beim Start im Klartext. Patrouillen
+  laufen um die Zone herum, Gefechte dürfen hinein.
+- **Signatur:** Kalt sieht dich die Synthese nur aus der Nähe (Sicht ×0,35), mit
+  Hilfsaggregat wirst du auf 350 m geortet, mit laufendem Reaktor auf 1100 m (Wärme), mit
+  SENSOREN an wie bisher auf 1400–1600 m. Werte in `src/data/systems.js` (`signature`).
+- **Gruppen wecken:** `activate: 'onDeploy' | 'immediate' | 'onTrigger:<id>'` mit
+  `triggers` vom Typ `area` (Bereich betreten) oder `time` (s seit dem Ausrücken). Im
+  *Hinterhalt* setzt sich die Patrouille erst in Bewegung, wenn du die Schlucht betrittst.
+- Debug-Overlay: Startmodus, Schutzzone, Zeitpunkt des Ausrückens, nächste Gegnergruppe zum
+  Startort, aktuelle Signatur, je Gruppe ruhend/aktiv, Trigger.
+
+**Testanleitung Startphase:**
+1. *Erster Einsatz* mit voller Startprozedur und bewusst langsam (ein paar Minuten
+   warten, im Debug-Modus `^` zeigt das Overlay „patrouille ruhend“ und die Entfernung): die
+   Gegner rühren sich nicht. Beim Lösen der Beinsperre öffnet das Hangartor, Funk gibt den
+   Kurs zu ALPHA, die Uhr beginnt.
+2. *Alarmstart* (`test-scramble`) zweimal: einmal sofort `Shift+S` (Automatik) — der
+   Reaktor läuft früh, die Späher orten dich schon auf rund 1100–1500 m und kommen gezielt;
+   einmal 60–70 s warten und dann hochfahren — die Späher rücken nach 45 s auf den Stützpunkt
+   vor, finden dich aber erst, wenn der Reaktor läuft, und suchen bis dahin um den Hangar.
+3. *Validierungsprobe* (`test-invalid`, absichtlich fehlerhaft) starten: das Menü meldet,
+   welche Einheit und welche Patrouillenpunkte wie weit innerhalb der Schutzzone liegen.
+   Eigene Probe: in einer Mission eine Einheit mit `at` nah an den Start setzen.
+
 ## Gegner und KI (A3)
 
 **Synthese-Einheiten** (`src/data/enemies.js`, Modelle in `src/data/enemyModels.js`). Gleiche
@@ -462,7 +506,7 @@ zeigt je Einheit Zustand, Ziel, Entfernung und Torso, dazu KI-Takt, Pfade, Verst
 
 **Testanleitung A3** (Missionen im Menü unten; `?mission=…` springt direkt hinein):
 
-1. *Duell* (`test-duel`): ein Jäger 700 m voraus kennt deine Position. Je Schwierigkeitsgrad
+1. *Duell* (`test-duel`): ein Jäger 800 m voraus kennt deine Position, sobald du ausrückst. Je Schwierigkeitsgrad
    einmal spielen (Menü → Schwierigkeit oder `&difficulty=…`): Anfänger schießt spät und weit
    daneben und kommt frontal, Normal flankiert manchmal und trifft gut, Elite hält kaum still
    und trifft fast jede Salve. Im Debug-Modus sieht man Kegel, Zustand und Pfad.

@@ -97,7 +97,27 @@ export class MenuScreen extends Overlay {
     this.select(this.selected + delta);
   }
 
+  /** Plain-text error over the menu (invalid mission); any confirm/click closes it. */
+  showError(text) {
+    this.errorEl?.remove();
+    const el = document.createElement('pre');
+    el.className = 'menu-error crt';
+    el.textContent = `${text}\n\n[Klick oder Enter schließt]`;
+    el.addEventListener('click', () => this.hideError());
+    this.root.appendChild(el);
+    this.errorEl = el;
+  }
+
+  hideError() {
+    this.errorEl?.remove();
+    this.errorEl = null;
+  }
+
   start() {
+    if (this.errorEl) {
+      this.hideError();
+      return;
+    }
     Storage.save('difficulty', this.difficultySelect.value);
     this.onStart(MISSIONS[this.selected].id, this.walkerSelect.value);
   }

@@ -98,6 +98,7 @@ export class Gunner {
       this.yaw += dt * 0.15; // slow watch sweep
     }
     st.headYaw = this.yaw;
+    if (st.movers?.[this.gun.head]) st.movers[this.gun.head].yaw = this.yaw;
     if (st.head) st.head.rotation.y = this.yaw;
 
     const visible = !!this.contact?.visible;

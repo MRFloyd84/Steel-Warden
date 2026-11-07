@@ -4,6 +4,8 @@ import { MenuState } from './states/MenuState.js';
 import { MissionState } from './states/MissionState.js';
 import { DebriefState } from './states/DebriefState.js';
 import { validateFactoryLoadouts } from './sim/loadout.js';
+import { missionError } from './states/missionStartup.js';
+import { getMission } from './data/missions.js';
 
 // Fail loudly on broken weapon data before anything else runs.
 validateFactoryLoadouts();
@@ -19,7 +21,15 @@ const params = new URLSearchParams(window.location.search);
 if (params.has('debug') && params.get('debug') !== '0') game.setDebugMode(true);
 const quickMission = params.get('mission');
 if (quickMission) {
-  game.states.change('mission', { missionId: quickMission });
+  // An invalid mission (startup checks, states/missionStartup.js) lands in the menu with the reason
+  let error = null;
+  try {
+    error = missionError(getMission(quickMission));
+  } catch (e) {
+    error = e.message;
+  }
+  if (error) game.states.change('menu', { error });
+  else game.states.change('mission', { missionId: quickMission });
 } else {
   game.states.change('menu');
 }

@@ -121,7 +121,7 @@ export class AIController {
 
   /** A shot or explosion was heard at pos (source: who caused it). */
   hear(pos, source) {
-    if (this.dead) return;
+    if (this.dead || this.dormant) return;
     if (source && source.side && source.side !== this.unit.side && source.volumes) this.learn(source, pos, v1.set(0, 0, 0), 'noise');
     else this.alert = { pos: pos.clone(), time: this.time };
   }
@@ -215,7 +215,7 @@ export class AIController {
       this.retreated ||= health < ai.retreatAt;
       this.setState('retreat');
     }
-    if (this.alert && this.time - this.alert.time > MEMORY) this.alert = null;
+    if (this.alert && !this.alert.persist && this.time - this.alert.time > MEMORY) this.alert = null;
     const dist = c ? Math.hypot(c.pos.x - m.x, c.pos.z - m.z) : Infinity;
     const recent = c && this.time - c.seenAt < 4;
 
@@ -250,6 +250,9 @@ export class AIController {
         }
         this.setGoal(pos.x, pos.z, 0.5 + ai.aggression * 0.45, { arrive: 40 });
         if (Math.hypot(pos.x - m.x, pos.z - m.z) < 45) {
+          // Arrived and nothing to see: search around the spot for a while
+          this.searchPos = pos.clone();
+          this.searchUntil = this.time + 40;
           this.alert = null;
           this.setState('search');
         }
@@ -295,7 +298,7 @@ export class AIController {
 
       case 'search': {
         if (c?.visible) return this.engage(c);
-        const pos = c?.pos ?? this.alert?.pos;
+        const pos = c?.pos ?? this.alert?.pos ?? (this.time < (this.searchUntil ?? 0) ? this.searchPos : null);
         if (!pos) {
           this.setState('idle');
           return;
@@ -497,11 +500,15 @@ export class AIController {
     this.backing = backing;
     const nav = this.d.nav;
     if (!nav) return;
-    if (!changed && !(this.path && this.time - this.pathAt > 6)) return;
+    const avoid = (this.state === 'idle' || this.state === 'patrol') && !!nav.safeZone;
+    if (!changed && !(this.path && this.time - this.pathAt > 6) && avoid === !!this.pathAvoidSafeWanted) return;
+    this.pathAvoidSafeWanted = avoid;
     const m = this.unit.motion;
     const [ax, az] = nav.toCell(m.x, m.z);
     const [bx, bz] = nav.toCell(x, z);
-    if (nav.lineFree(ax, az, bx, bz, this.heavy)) {
+    // Patrols route around the start's safe zone
+    this.pathAvoidSafe = (this.state === 'idle' || this.state === 'patrol') && !!nav.safeZone && !nav.inSafeXZ(m.x, m.z);
+    if (nav.lineFree(ax, az, bx, bz, this.heavy, this.pathAvoidSafe)) {
       this.path = null;
       return;
     }
@@ -511,7 +518,7 @@ export class AIController {
   /** Motion input for this step (called by MissionEntities). */
   drive(dt) {
     const m = this.unit.motion;
-    if (this.d.frozen || this.dead) {
+    if (this.d.frozen || this.dead || this.dormant) {
       m.throttle.value = 0;
       return IDLE;
     }
