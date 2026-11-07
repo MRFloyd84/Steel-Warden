@@ -61,6 +61,11 @@ Funk, Radar, Kampf, Übung) zusammen.
      - ✅ 7 Schauplatz-Testmissionen und „Bodenproben“.
      - Offen: Karte (Kartenansicht gibt es noch nicht; die Grenzlinie kommt dort hinein),
        Sprungdüsen (Schwerkraftfaktor ist vorbereitet), Bauwerke auf dem Radar (A4).
+   - **Steuerung aufgeräumt ✅:** Aktionsregister `src/input/actions.js` mit Kontexten,
+     Belegungsoberfläche (Tastatur, Maus, Gamepad/HOTAS, Profile, Export/Import), Funkmenü
+     (vorbereitet für die 7 Wingmen-Befehle), Tastenhilfe, README-Generator `tools/gen-controls.mjs`.
+     Feld `secondaryChain` je Walker (rechte Maustaste); im Hangar einstellbar, sobald es ihn gibt.
+     Offen: Sprungdüsen (Leertaste ist belegt, KESTREL hat Daten, Physik fehlt), Radar R/Shift+R ab A4.
 3. **Synthese-Gegner** (Grundkonzept Phase 5):
    - Trefferzonen Beine / Waffenträger / Torso (Reaktor).
    - Zerstörungsart: Beine → bewegungsunfähig, volles Material, Waffen bergbar. Waffenträger

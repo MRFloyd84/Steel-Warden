@@ -32,16 +32,3 @@ export function esc(text) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 }
-
-/** Human-readable label for a KeyboardEvent.code. */
-export function keyLabel(code) {
-  const special = {
-    ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→',
-    ShiftLeft: 'Shift', ShiftRight: 'Shift R', Space: 'Leertaste',
-    Escape: 'Esc', Enter: 'Enter', NumpadEnter: 'Num Enter', Period: '.', Comma: ',',
-  };
-  if (special[code]) return special[code];
-  if (code.startsWith('Key')) return code.slice(3);
-  if (code.startsWith('Digit')) return code.slice(5);
-  return code;
-}

@@ -40,7 +40,9 @@ export class Game {
     if (this.states.applyPending()) this.time.resetAccumulator();
     const state = this.states.current;
 
-    if (this.input.wasPressed('toggleDebug')) this.debug.toggle();
+    // Debug mode (^ key or ?debug): only then the debug keys work
+    if (this.input.pressed('debugMode')) this.setDebugMode(!this.input.debugMode);
+    if (this.input.pressed('debugOverlay')) this.debug.toggle();
 
     if (state) {
       state.frame(dt);
@@ -52,6 +54,12 @@ export class Game {
     this.debug.update(dt);
   }
 
+  setDebugMode(on) {
+    this.input.setDebugMode(on);
+    this.debug.setVisible(on);
+    this.bus.emit('debug:mode', { on });
+  }
+
   collectDebugInfo() {
     const info = this.renderer.info;
     const lines = [
@@ -59,7 +67,8 @@ export class Game {
       `Draw ${info.render.calls}  Tris ${(info.render.triangles / 1000).toFixed(1)}k  Geo ${info.memory.geometries}`,
       `Render ${this.renderer.width}x${this.renderer.height} (x${this.renderer.renderScale})`,
       `State ${this.states.currentName ?? '-'}  Dropped steps ${this.time.droppedSteps}`,
-      `Pad ${this.input.gamepad.connected ? this.input.gamepad.id.slice(0, 28) : 'none'}`,
+      `Pad ${this.input.gamepad.connected ? this.input.gamepad.id.slice(0, 28) : 'none'}  Kontext ${this.input.context}${this.input.debugMode ? ' +debug' : ''}`,
+      ...this.input.conflicts.map((c) => `KONFLIKT ${c.text}`),
       `Audio ${this.audio.state}  samples ${this.audio.bank?.loaded ?? 0}/${this.audio.bank?.total ?? 0}  voices ${this.audio.voices}`,
     ];
     const state = this.states.current;

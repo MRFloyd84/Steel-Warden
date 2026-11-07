@@ -19,6 +19,8 @@ export class DebriefState extends State {
   }
 
   frame() {
-    if (this.game.input.wasPressed('confirm')) this.game.states.change('menu');
+    const input = this.game.input;
+    input.setContext('menu');
+    if (input.pressed('menuConfirm')) this.game.states.change('menu');
   }
 }

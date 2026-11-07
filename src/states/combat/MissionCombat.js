@@ -17,6 +17,7 @@ const RADIO = {
   blocked: { from: 'TECHNIK', text: 'Waffen gesichert oder ohne Reaktorleistung — Feuerfreigabe prüfen.' },
   armLost: { from: 'TECHNIK', text: 'Arm verloren! Waffen dort ausgefallen.' },
   legsLost: { from: 'TECHNIK', text: 'Beinantrieb zerstört — wir sind bewegungsunfähig.' },
+  radarLater: { from: 'TECHNIK', text: 'Radarumschaltung aktiv/passiv folgt mit dem neuen Radar.' },
   noPod: { from: 'TECHNIK', text: 'Keine Zielkapsel an Bord — Komponentenwahl nicht möglich.' },
   podLost: { from: 'TECHNIK', text: 'Zielkapsel ausgefallen — Komponentenwahl nicht möglich.' },
   trackingOff: { from: 'TECHNIK', text: 'Zielnachführung aus — Ziel außerhalb des Torso-Schwenkbereichs.' },
@@ -72,7 +73,7 @@ export class MissionCombat {
     this.aimDir = new THREE.Vector3(0, 0, -1);
     this.eye = new THREE.Vector3();
     this.aimUnit = null;
-    this.triggers = { chain: false, groups: [false, false, false, false], all: false };
+    this.triggers = { chain: false, secondary: false, all: false };
     this.beamDraw = new Map(); // slot id → { from, to } this step
     this.lastBlockedRadio = -Infinity;
     this.lockAnnounced = false;
@@ -107,30 +108,42 @@ export class MissionCombat {
 
   // ---- input (per frame) ----
 
+  /**
+   * Combat actions (input/actions.js). canAim: the torso aims (no free
+   * look). Keys 1–4 choose the active chain, left mouse fires it, right
+   * mouse fires the second chain, Shift + left mouse all weapons.
+   */
   frame(input, { canAim }) {
-    const w = this.weapons;
-    if (input.wasPressed('nextChain')) {
-      w.nextChain();
-      this.game.audio.play('weapon.chain');
+    for (let i = 0; i < 4; i++) {
+      if (input.pressed(`chain${i + 1}`)) this.chooseChain(i);
     }
-    if (input.wasPressed('shieldFront')) this.shiftShields(1);
-    if (input.wasPressed('shieldRear')) this.shiftShields(-1);
-    if (input.wasPressed('missileGuidance')) this.missiles.cycleMode();
-    if (input.wasPressed('targetTracking') && this.controls.has('targetTracking')) this.controls.toggle('targetTracking');
-    if (input.wasPressed('targetComponent')) this.cycleComponent();
-    if (input.comboPressed('debugEmitting')) this.toggleEmitting();
-    if (input.comboPressed('targetCycle')) this.targeting.cycle(this.units.all, this.eye, this.aimDir, this.sensorsRange);
-    else if (input.wasPressed('targetSelect')) this.targeting.select(this.units.all, this.eye, this.aimDir, this.sensorsRange);
+    if (input.pressed('chainNext')) this.chooseChain(-1, 1);
+    if (input.pressed('chainPrev')) this.chooseChain(-1, -1);
+    if (input.pressed('shieldFront')) this.shiftShields(1);
+    if (input.pressed('shieldRear')) this.shiftShields(-1);
+    if (input.pressed('missileGuidance')) this.missiles.cycleMode();
+    if (input.pressed('targetTracking') && this.controls.has('targetTracking')) this.controls.toggle('targetTracking');
+    if (input.pressed('targetComponent')) this.cycleComponent();
+    if (input.pressed('debugEmitting')) this.toggleEmitting();
+    if (input.pressed('targetCycle')) this.targeting.cycle(this.units.all, this.eye, this.aimDir, this.sensorsRange);
+    if (input.pressed('targetSelect')) this.targeting.select(this.units.all, this.eye, this.aimDir, this.sensorsRange);
+    if (input.pressed('radarMode') || input.pressed('radarRange')) this.radio(RADIO.radarLater);
 
-    const mouseFire = canAim && input.mouse.locked && input.isDown('fire');
-    const padFire = canAim && input.gamepad.connected && input.bindings.gamepad.buttons.fire?.some((b) => input.gamepad.isDown(b));
+    // Mouse triggers only count with the pointer caught (a click to catch it must not fire)
+    const pointerOk = input.pointerLocked || input.gamepad.connected;
     const t = this.triggers;
-    const was = t.chain || t.all || t.groups.some(Boolean);
-    t.chain = mouseFire || padFire;
-    for (let g = 0; g < 4; g++) t.groups[g] = canAim && input.isDown(`fireGroup${g + 1}`);
-    t.all = canAim && input.isDown('fireAll');
-    const now = t.chain || t.all || t.groups.some(Boolean);
-    if (now && !was && !this.systems.canFire) this.blocked();
+    const was = this.firing;
+    t.chain = canAim && pointerOk && input.held('fireChain');
+    t.secondary = canAim && pointerOk && input.held('fireSecondary');
+    t.all = canAim && pointerOk && input.held('fireAll');
+    if (this.firing && !was && !this.systems.canFire) this.blocked();
+  }
+
+  /** Chooses chain i (or steps by `step`); clicks, or dry-clicks if there is no such chain. */
+  chooseChain(i, step = 0) {
+    const w = this.weapons;
+    const ok = step ? !!w.nextChain(step) : w.selectChain(i);
+    this.game.audio.play(ok ? 'weapon.chain' : 'weapon.dryFire');
   }
 
   /** Tab: next component of the target (needs a working target pod). */
@@ -169,7 +182,7 @@ export class MissionCombat {
   /** Any trigger held this frame. */
   get firing() {
     const t = this.triggers;
-    return t.chain || t.all || t.groups.some(Boolean);
+    return t.chain || t.secondary || t.all;
   }
 
   shiftShields(dir) {
@@ -208,7 +221,7 @@ export class MissionCombat {
       power,
       weaponShare: preset.weapons,
       chain: this.triggers.chain,
-      groups: this.triggers.groups,
+      secondary: this.triggers.secondary,
       all: this.triggers.all,
       fire: (slot, i) => this.fire(slot, i),
       beam: (slot, sdt, on) => this.beamStep(slot, sdt, on),

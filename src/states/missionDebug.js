@@ -1,7 +1,7 @@
 import { DEG } from '../util/math.js';
 import { compassDeg } from './cockpitData.js';
 
-/** Debug overlay lines for the mission state (F3). */
+/** Debug overlay lines for the mission state (debug mode). */
 export function missionDebugLines(st) {
   const m = st.motion;
   const p = m.pose;

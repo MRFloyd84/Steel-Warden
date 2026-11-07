@@ -1,17 +1,19 @@
-import { Overlay, esc, keyLabel } from './Overlay.js';
+import { Overlay, esc } from './Overlay.js';
 import { MISSIONS } from '../data/missions.js';
 import { getTheater } from '../data/theaters.js';
-import { ACTION_LABELS } from '../data/inputBindings.js';
+import { ACTIONS } from '../input/actions.js';
+import { tokenLabel } from '../input/keyLabels.js';
 import { WALKERS, WALKER_ORDER, CLASS_LABELS } from '../data/walkers.js';
 
 const TIME_LABELS = { day: 'Tag', dusk: 'Dämmerung', night: 'Nacht' };
 
 /** Main menu: test-mission list and a controls reference. */
 export class MenuScreen extends Overlay {
-  constructor(container, bindings, { onStart }) {
+  constructor(container, input, { onStart, onControls }) {
     super(container, 'menu-screen');
     this.selected = 0;
     this.onStart = onStart;
+    this.input = input;
 
     const missions = MISSIONS.map((m, i) => {
       const theater = getTheater(m.theater);
@@ -22,10 +24,6 @@ export class MenuScreen extends Overlay {
         </button>`;
     }).join('');
 
-    const controls = Object.entries(bindings.keys)
-      .filter(([action]) => ACTION_LABELS[action])
-      .map(([action, codes]) => `<tr><td>${esc(ACTION_LABELS[action] ?? action)}</td><td>${codes.map((c) => `<kbd>${esc(keyLabel(c))}</kbd>`).join(' ')}</td></tr>`)
-      .join('');
 
     this.root.innerHTML = `
       <div class="menu-panel crt">
@@ -48,9 +46,8 @@ export class MenuScreen extends Overlay {
           </section>
           <section>
             <h2>Steuerung</h2>
-            <div class="controls-scroll"><table class="controls">${controls}
-              <tr><td>Torso drehen / Kette feuern</td><td><kbd>Maus</kbd> (Klick fängt Zeiger)</td></tr>
-            </table></div>
+            <div class="controls-scroll"><table class="controls" data-role="controls"></table></div>
+            <button class="btn" data-role="controlsBtn">Steuerung anpassen</button>
           </section>
         </div>
         <footer class="menu-footer">Erprobung · Waffen und Schaden</footer>
@@ -66,7 +63,18 @@ export class MenuScreen extends Overlay {
       el.addEventListener('dblclick', () => this.start());
     });
     this.root.querySelector('[data-role="start"]').addEventListener('click', () => this.start());
+    this.root.querySelector('[data-role="controlsBtn"]').addEventListener('click', () => onControls?.());
+    this.controlsTable = this.root.querySelector('[data-role="controls"]');
+    this.renderControls();
     this.select(0);
+  }
+
+  /** Short key list (the help actions) with the real keyboard labels. */
+  renderControls() {
+    this.controlsTable.innerHTML = ACTIONS.filter((a) => a.help).map((a) => {
+      const keys = this.input.keys[a.id].map((t) => `<kbd>${esc(tokenLabel(t))}</kbd>`).join(' ') || '–';
+      return `<tr><td>${esc(a.label)}</td><td>${keys}</td></tr>`;
+    }).join('') + '<tr><td>Torso und Fadenkreuz</td><td><kbd>Maus</kbd> (Klick fängt den Zeiger)</td></tr>';
   }
 
   select(index) {

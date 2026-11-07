@@ -1,5 +1,6 @@
 /**
- * Weapons page: active fire chain, capacitor, and per weapon its group,
+ * Weapons page: active fire chain (keys 1–4), second chain (right mouse
+ * button), capacitor, and per weapon its group,
  * load state, ammunition and barrel heat. Failed or empty weapons are
  * greyed out; weapons in the active chain are marked. Missile launchers
  * show their guidance mode; weapons on a heavily damaged arm turn red.
@@ -20,6 +21,8 @@ export const WeaponDisplay = {
     p.text(r.chainMode === 'salvo' ? 'SALVE' : 'FOLGE', w - 8, 12, { size: 10, align: 'right', alpha: 0.75 });
     // Chain tabs
     r.chains.forEach((_, i) => p.rect(8 + i * 18, 22, 14, 6, i === r.chainIndex ? 1 : 0.35, i === r.chainIndex));
+    // Second trigger (right mouse button)
+    p.text(`RMT ${r.secondaryName}`, 14 + r.chains.length * 18, 25, { size: 9, alpha: 0.8 });
     p.text('ENERGIE', w - 104, 26, { size: 9, alpha: 0.7 });
     p.rect(w - 58, 21, 50, 8, 0.5);
     p.rect(w - 57, 22, 48 * r.capacitor, 6, 0.9, true);

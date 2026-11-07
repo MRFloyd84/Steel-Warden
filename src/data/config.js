@@ -119,7 +119,7 @@ export const CONFIG = {
     steerSensitivity: 1.6, // mouse → missile turn
   },
 
-  // Debug free camera (F7).
+  // Debug free camera (debug mode, Shift+F4).
   testRig: {
     eyeHeight: 9,
     groundSpeed: 14,

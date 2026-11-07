@@ -31,6 +31,9 @@ import { MissileCamView } from './combat/MissileCamView.js';
 import { CockpitHits } from './combat/CockpitHits.js';
 import { WEATHER } from '../data/weather.js';
 import { WorldLink } from './WorldLink.js';
+import { HelpPanel } from '../ui/HelpPanel.js';
+import { RadioMenu } from '../ui/RadioMenu.js';
+import { ControlsScreen } from '../ui/ControlsScreen.js';
 import { damp } from '../util/math.js';
 
 const START_MODES = ['full', 'simple', 'auto'];
@@ -112,8 +115,10 @@ export class MissionState extends State {
     this.debugRig = new TestRig(game.renderer.camera, this.world.sampler, cfg.testRig);
     this.freeCam = false;
 
-    this.hints = new MissionHints(game.container, game.input.bindings);
+    this.hints = new MissionHints(game.container);
     this.hints.show();
+    this.help = new HelpPanel(game.container, game.input, game.bus);
+    this.radioMenu = new RadioMenu(game.container, { onCommand: (cmd) => this.radioCommand(cmd) });
     this.cursor = new CockpitCursor(game.container);
     this.interaction = new CockpitInteraction({
       cockpit: this.cockpit,
@@ -127,7 +132,9 @@ export class MissionState extends State {
     this.pauseScreen = new PauseScreen(game.container, {
       onResume: () => this.setPaused(false),
       onAbort: () => this.finish('aborted'),
+      onControls: () => this.controlsScreen.open(),
     });
+    this.controlsScreen = new ControlsScreen(game.container, game.input, game.bus, { onClose: () => {} });
 
     this.paused = false;
     this.wireframe = false;
@@ -154,7 +161,7 @@ export class MissionState extends State {
     this.tmpProj = new THREE.Vector3();
 
     this.onCanvasClick = () => {
-      if (!this.paused) game.input.mouse.requestLock();
+      if (!this.paused) game.input.requestPointerLock();
     };
     game.renderer.canvas.addEventListener('click', this.onCanvasClick);
     if (!hot) {
@@ -173,7 +180,7 @@ export class MissionState extends State {
     const game = this.game;
     game.renderer.canvas.removeEventListener('click', this.onCanvasClick);
     this.unsubLock();
-    game.input.mouse.releaseLock();
+    game.input.releasePointerLock();
     game.audio.setPaused(false);
     this.cockpitAudio.dispose();
     this.systemsAudio.dispose();
@@ -188,8 +195,12 @@ export class MissionState extends State {
     this.floodlight.dispose();
     this.entities.dispose();
     this.hints.destroy();
+    this.help.destroy();
+    this.radioMenu.destroy();
     this.cursor.destroy();
     this.pauseScreen.destroy();
+    this.controlsScreen.close();
+    this.controlsScreen.destroy();
     this.cockpit.dispose();
     this.world.dispose();
     this.world = null;
@@ -200,13 +211,19 @@ export class MissionState extends State {
     this.game.audio.setPaused(on);
     if (on) {
       this.interaction.endHold();
-      this.game.input.mouse.releaseLock();
+      this.game.input.releasePointerLock();
+      this.radioMenu.hide();
       this.pauseScreen.show();
     } else {
       this.pauseScreen.hide();
-      this.game.input.mouse.requestLock();
+      this.game.input.requestPointerLock();
       this.game.time.resetAccumulator();
     }
+  }
+
+  /** Radio menu choice (wingmen arrive with phase B). */
+  radioCommand(cmd) {
+    this.radioMessage({ from: 'FUNK', text: `${cmd.label}: keine Flügelleute im Einsatz.` });
   }
 
   radioMessage({ from, text }) {
@@ -227,43 +244,68 @@ export class MissionState extends State {
     });
   }
 
+  /** Input context from what the player is doing (input/actions.js → CONTEXTS). */
+  currentContext() {
+    if (this.paused || this.radioMenu.open) return 'menu';
+    if (this.freeCam) return 'freeCam';
+    if (this.viewMode === 'external') return 'external';
+    if (this.view.freeLook) return 'freeLook';
+    if (this.combat.missiles.steering) return 'missileCam';
+    return 'combat';
+  }
+
   frame(dt) {
     const input = this.game.input;
     this.frameDt = dt;
-    // Esc both exits pointer lock (which pauses) and arrives as a key —
-    // ignore the key right after the lock was lost so we don't unpause.
-    if (input.wasPressed('pause') && performance.now() - this.lockLostAt > 250) {
-      this.setPaused(!this.paused);
-    }
+    input.setContext(this.currentContext());
+    this.help.update(input, dt);
+
+    // Menus: radio menu or pause (Esc closes; the key right after a pointer-lock
+    // loss is ignored because that same Esc already opened the pause)
     if (this.paused) {
-      input.mouse.consumeDelta();
+      if (this.controlsScreen.visible) {
+        if (input.pressed('menuBack')) this.controlsScreen.back();
+      } else if (input.pressed('menuBack') && performance.now() - this.lockLostAt > 300) this.setPaused(false);
+      input.discardMotion();
+      return;
+    }
+    if (this.radioMenu.open) {
+      // The key that closes the menu (digit, Esc) must not act in combat this frame
+      this.radioMenu.handle(input);
+      input.discardMotion();
+      return;
+    }
+    if (input.pressed('pause')) {
+      this.setPaused(true);
+      return;
+    }
+    if (input.pressed('radioMenu')) {
+      this.radioMenu.show();
       return;
     }
 
-    if (input.wasPressed('debugFreeCam')) this.toggleFreeCam();
-    if (input.wasPressed('externalView')) this.viewMode = this.viewMode === 'cockpit' ? 'external' : 'cockpit';
+    if (input.pressed('debugFreeCam')) this.toggleFreeCam();
+    if (input.pressed('externalView')) this.viewMode = this.viewMode === 'cockpit' ? 'external' : 'cockpit';
     const external = this.viewMode === 'external';
-    if (input.wasPressed('toggleWireframe')) {
+    if (input.pressed('debugWireframe')) {
       this.wireframe = !this.wireframe;
       this.world.terrain.setWireframe(this.wireframe);
     }
-    if (input.wasPressed('toggleHints')) this.hints.toggleBar();
-    if (input.wasPressed('cockpitLight') && this.controls.has('cockpitLight')) {
-      // Shortcut for the INNENLICHT knob: toggles between NACHT and TAG.
-      this.controls.setValue('cockpitLight', this.controls.value('cockpitLight') === 2 ? 1 : 2);
-    }
-    if (input.wasPressed('freeLookToggle')) this.view.toggleLatch();
-    if (input.wasPressed('centerTorso')) this.motion.centerTorso();
-    if (input.wasPressed('throttleStop')) this.motion.throttle.stop();
-    if (input.wasPressed('checklist')) this.cockpit.clipboard?.toggle();
-    if (input.comboPressed('autoStart') && !this.systems.flags.legsReleased) {
+    if (input.pressed('freeLookToggle')) this.view.toggleLatch();
+    if (input.pressed('centerTorso')) this.motion.centerTorso();
+    if (input.pressed('alignLegs')) this.motion.alignLegsToTorso();
+    if (input.pressed('throttleStop')) this.motion.throttle.stop();
+    if (input.pressed('checklist')) this.cockpit.clipboard?.toggle();
+    if (input.pressed('jumpJets') && !this.walker.jumpJets) this.hints.flash('Keine Sprungdüsen an Bord');
+    if (input.pressed('autoStart') && !this.systems.flags.legsReleased) {
       this.automation.start('auto');
       this.radioMessage(RADIO.autoStart);
     }
 
-    this.view.setHold(input.isDown('freeLookHold') && !this.freeCam);
+    this.view.setHold(input.held('freeLookHold') && !this.freeCam);
     if (this.view.freeLook && !external) this.interaction.activate();
     else this.interaction.deactivate();
+    input.setContext(this.currentContext());
 
     this.combat.frame(input, { canAim: !this.freeCam && !(this.view.freeLook && !external) });
     this.camView.frame(input);
@@ -271,24 +313,23 @@ export class MissionState extends State {
 
     let look = { x: 0, y: 0 };
     if (this.freeCam) {
-      look = input.lookDelta(dt);
+      look = input.look(dt);
       this.debugRig.look(look.x, look.y);
     } else if (this.view.freeLook && external) {
       // Outside view: free look orbits the camera around the walker.
-      look = input.lookDelta(dt);
+      look = input.look(dt);
       this.view.look(look.x, look.y);
       look = { x: 0, y: 0 };
     } else if (this.view.freeLook) {
-      // Mouse moves the cockpit cursor; pushing past the screen edge turns the head.
-      const m = input.mouse.consumeDelta();
+      // Mouse (or right stick) moves the cockpit cursor; pushing past the screen edge turns the head.
+      const m = input.cursorDelta(dt);
       const over = this.interaction.move(m.x, m.y);
-      const pad = input.gamepadLook(dt);
-      const sens = input.bindings.mouse.sensitivity;
-      this.view.look(over.x * sens + pad.x, over.y * sens + pad.y);
+      const sens = input.sensitivity;
+      this.view.look(over.x * sens, over.y * sens);
       this.interaction.handleInput(input);
     } else {
-      input.mouse.consumeWheel();
-      look = input.lookDelta(dt);
+      input.wheel();
+      look = input.look(dt);
       // Optical missile: while fire is held the mouse steers the missile, the torso stays put
       if (this.combat.firing && this.combat.missiles.steer(look.x, look.y, this.game.config.missileCam.steerSensitivity)) {
         look = { x: 0, y: 0 };
@@ -389,7 +430,7 @@ export class MissionState extends State {
         this.systemsAudio.update();
       }
       this.radioLog.update(this.stats.duration);
-      this.hints.update({ reticle: renderer.project(this.combat.aimPoint, this.tmpProj), tag: 'AUSSENKAMERA', locked: game.input.mouse.locked || this.paused, target: this.targetBox() });
+      this.hints.update({ reticle: renderer.project(this.combat.aimPoint, this.tmpProj), tag: 'AUSSENKAMERA', locked: game.input.pointerLocked || this.paused, target: this.targetBox() });
       return;
     }
     this.floodlight.update(this.renderPose, this.view.torsoQuat, this.view.aimDir);
@@ -412,7 +453,7 @@ export class MissionState extends State {
     this.hints.update({
       reticle,
       tag: this.view.freeLook ? 'FREIER BLICK · BEDIENEN' : null,
-      locked: game.input.mouse.locked || this.paused,
+      locked: game.input.pointerLocked || this.paused,
       target: this.targetBox(),
       aimOnUnit: !!this.combat.aimUnit,
     });

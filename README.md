@@ -15,7 +15,7 @@ npm run build      # statischer Build nach dist/
 Schnellstart-Parameter (Dev und Build):
 
 - `?mission=test-ice` – Menü überspringen (IDs siehe `src/data/missions.js`)
-- `?debug=1` – Debug-Overlay sofort anzeigen
+- `?debug` – Debug-Modus an (Overlay und Debug-Tasten)
 - `?weather=sandstorm` – Wetter erzwingen (`clear`, `snowstorm`, `sandstorm`, `ashfall`, `groundFog`, `rain`)
 
 ## Stand
@@ -73,38 +73,170 @@ Schnellstart-Parameter (Dev und Build):
   Bodennebel, Regen) mit Partikeln und Belag auf der Scheibe, Einsatzgebiet mit Zaun und
   Radarlinie. Acht Testmissionen.
 
+- **Steuerung aufgeräumt:** zentrales Aktionsregister mit Kontexten (Kampf, freier Blick,
+  Raketenkamera, Außenkamera, Menü, Debug), Shift-Kombinationen mit Vorrang, Debug-Tasten nur im
+  Debug-Modus, keine Browser-Kollisionen, Funkmenü, Tastenhilfe je Kontext mit echter
+  Tastaturbeschriftung, Belegungsoberfläche mit Gamepad/HOTAS-Profilen, README-Tabellen
+  werden aus dem Register erzeugt.
+
 Fahrplan für die nächsten Phasen inklusive Stützpunkt, Bergung, Funk, Radar und Missionen:
 `docs/ROADMAP.md`.
 
-## Bedienung im Cockpit
+## Steuerung
 
-- Rechte Maustaste halten oder `V`: freier Blick mit Cockpit-Cursor; Maus über den Bildrand
-  hinaus dreht den Kopf
-- Linksklick (oder `F`, Pad A): Schalter umlegen, Schutzkappe öffnen, offene Kappe schließen
-- Drehregler: linke/rechte Hälfte anklicken oder Mausrad
-- Taster und Lampen: gedrückt halten (Lampentest); Schubhebel: anklicken und ziehen
-- `C` oder Klick aufs Klemmbrett (links an der Wand): Checkliste holen und weglegen
-- `Shift+S`: automatische Startprozedur (Schalter bewegen sich sichtbar)
-- `K`: Außenkamera an/aus (rechte Maustaste/`V` kreist dann um den Walker), `F7`: Debug-Freiflug
-- Walker im Menü wählen oder per URL `?walker=kestrel|marder|bastion|halberd|goliath|koloss`
+Alle Tasten laufen über ein zentrales Aktionsregister (`src/input/actions.js`) mit Kontexten:
+dieselbe Taste darf im freien Blick etwas anderes tun als im Kampf, aber nie doppelt im selben
+Kontext. Belegt wird nach physischer Taste; angezeigt wird die Beschriftung der eigenen
+Tastatur (QWERTZ). Eigene Belegung: Hauptmenü oder Pause → **Steuerung** (zwei Plätze je
+Aktion plus Gamepad, Konfliktprüfung mit Tauschen, Gamepad/HOTAS-Achsen mit Live-Anzeige,
+Totzone, Profile, Maus-Empfindlichkeit, Export/Import, Standard wiederherstellen). Im Einsatz
+blendet `H` die Tasten des aktuellen Kontexts ein; beim ersten Einsatz erscheinen die acht
+wichtigsten Tasten von selbst.
+
+- **Kampf = Taste, Cockpit = Schalter.** Startprozedur, Licht, Systemschalter, Lenkart-Drehschalter,
+  Monitor-Taster, Energie-Presets bedient man im freien Blick (`V` oder mittlere Maustaste halten)
+  per Klick; Mausrad dreht Regler; Schubhebel anklicken und ziehen.
+- **Feuerketten:** `1`–`4` wählen die aktive Kette (linke Maustaste), die rechte Maustaste feuert
+  die zweite Kette (ab Werk die Raketenkette, `secondaryChain` in `walkers.js`),
+  `Shift` + linke Maustaste alle Waffen. Waffengruppen sind nur noch Bausteine der Ketten.
+- **Optische Rakete:** Beim Start schaltet der Monitor selbst auf die Raketenkamera (Kontext
+  Raketenkamera); bei gehaltenem Feuer lenkt die Maus die Rakete. Nach Einschlag oder Absturz
+  zurück. `M` dient zum Zuschauen bei aktiven/halbaktiven Raketen.
+- **Funkmenü** `F`: Ziffern 1–7 wählen den Befehl, `Esc` schließt (bis Phase B: keine Flügelleute).
+- **Pause:** `Esc` gibt die Maus frei und pausiert in einem Schritt; `Esc` oder „Fortsetzen“ geht
+  weiter, ein Klick ins Bild fängt die Maus wieder. Fokuswechsel lässt alle gehaltenen Tasten los,
+  der Schub bleibt stehen.
+- **Debug-Modus:** `^` (links neben der 1) oder `?debug` — erst dann wirken die Debug-Tasten
+  (Overlay `F2`, Drahtgitter `F4`, Freiflug `Shift+F4`, Treffer `F8`, Aufschaltung `F9` …).
+  Doppelbelegungen meldet die Konsole und das Overlay.
+- Walker im Menü wählen oder per URL `?walker=kestrel|marder|bastion|halberd|goliath|koloss`.
+
+**Testanleitung Steuerung** (`?mission=range&start=hot`):
+
+1. *Jede Kategorie einmal:* Bewegung (`W`/`S`, `A`/`D`, `X`, `C`, `Shift+C` nach seitlichem
+   Zielen: die Beine drehen nach, der Torso bleibt auf dem Ziel), Waffen (`1`–`3` wählen die
+   Kette — Waffenmonitor oben links; linke Maustaste, rechte Maustaste = RAKETEN, `Shift` + links
+   = alle), Ziel (`T`, `Shift+T`, `Tab`, `G`, `L`, `M`), Systeme (`Q`/`E` Schildenergie),
+   Sicht (`V`, mittlere Maustaste halten, `Shift+V`, `K`), Kommunikation (`F` → `3` → Funkspruch;
+   `H` zeigt die Tasten des jeweiligen Kontexts — im freien Blick andere als im Kampf).
+2. *Neu belegen und Konflikt:* Hauptmenü → Steuerung → bei „Zielnachführung an/aus“ auf `G`
+   klicken, `T` drücken → Hinweis „T ist im selben Kontext schon belegt …“ → Tauschen.
+   Danach liegt die Zielnachführung auf `T`, das Aufschalten auf `G`. Seite neu laden: bleibt.
+   „Maus & Datei“ → Standard wiederherstellen (zweimal klicken).
+3. *Fokusverlust:* `W` halten, mit Alt+Tab wegwechseln, `W` loslassen, zurück: der Schub steht
+   auf dem letzten Wert und läuft nicht weiter hoch.
+4. *Pointer-Lock-Verlust:* im Kampf `Esc`: Maus frei und Pause in einem Schritt. `Esc` oder
+   „Fortsetzen“ geht weiter, ein Klick ins Bild fängt die Maus.
+5. *Gamepad:* anschließen, einen Knopf drücken. Linker Stick fährt, rechter zielt, RT/LT feuern,
+   RB schaltet auf, LB halten = freier Blick (rechter Stick bewegt den Cursor, A bedient),
+   Kreuz ↑/↓ Kette, ←/→ Schildenergie, Y Funkmenü (B schließt), Start Pause, Select Hilfe.
+   Unter Steuerung → „Gamepad / HOTAS“ bewegen sich die Achsenbalken live; Achse zuordnen mit
+   „bewegen…“, Totzone, Profil speichern (z. B. „HOTAS“).
+6. *Debug:* `F8` tut nichts. `^` schaltet den Debug-Modus ein (Overlay erscheint), jetzt wirkt `F8`.
+
+<!-- controls:start -->
+_Erzeugt aus `src/input/actions.js` mit `node tools/gen-controls.mjs` — nicht von Hand ändern. Tasten nach deutscher QWERTZ-Beschriftung._
+
+**Bewegung**
+
+| Aktion | Tastatur / Maus | Gamepad | Kontext |
+|---|---|---|---|
+| Schub erhöhen | `W` / `↑` | – | Kampf, freier Blick, Raketenkamera, Außenkamera |
+| Schub verringern | `S` / `↓` | – | Kampf, freier Blick, Raketenkamera, Außenkamera |
+| Schub auf Null | `X` | B | Kampf, freier Blick, Raketenkamera, Außenkamera |
+| Beine links drehen | `A` / `←` | – | Kampf, freier Blick, Raketenkamera, Außenkamera |
+| Beine rechts drehen | `D` / `→` | – | Kampf, freier Blick, Raketenkamera, Außenkamera |
+| Torso zentrieren | `C` | A | Kampf, Außenkamera |
+| Beine auf Torsorichtung ausrichten | `Shift+C` | – | Kampf, Außenkamera |
+| Sprungdüsen (nur wenn vorhanden) | `Leertaste` | – | Kampf, Außenkamera |
+
+**Waffen**
+
+| Aktion | Tastatur / Maus | Gamepad | Kontext |
+|---|---|---|---|
+| Aktive Feuerkette feuern | `LMT` | RT | Kampf, Raketenkamera, Außenkamera |
+| Zweite Kette feuern (Raketen) | `RMT` | LT | Kampf, Raketenkamera, Außenkamera |
+| Notfallkette: alle Waffen | `Shift+LMT` | – | Kampf, Raketenkamera, Außenkamera |
+| Feuerkette 1 wählen | `1` | – | Kampf, Außenkamera |
+| Feuerkette 2 wählen | `2` | – | Kampf, Außenkamera |
+| Feuerkette 3 wählen | `3` | – | Kampf, Außenkamera |
+| Feuerkette 4 wählen | `4` | – | Kampf, Außenkamera |
+| Vorige Feuerkette | – | Kreuz ↑ | Kampf, Außenkamera |
+| Nächste Feuerkette | – | Kreuz ↓ | Kampf, Außenkamera |
+
+**Ziel**
+
+| Aktion | Tastatur / Maus | Gamepad | Kontext |
+|---|---|---|---|
+| Ziel unter Fadenkreuz bzw. nächstes | `T` | RB | Kampf, Außenkamera |
+| Ziele durchschalten | `Shift+T` | – | Kampf, Außenkamera |
+| Komponente am Ziel (Zielkapsel) | `Tab` | – | Kampf |
+| Zielnachführung an/aus | `G` | X | Kampf |
+| Lenkart durchschalten | `L` | – | Kampf |
+| Raketenkamera (zuschauen) | `M` | – | Kampf, Außenkamera |
+
+**Systeme**
+
+| Aktion | Tastatur / Maus | Gamepad | Kontext |
+|---|---|---|---|
+| Schildenergie nach vorn | `Q` | Kreuz ← | Kampf, Raketenkamera |
+| Schildenergie nach hinten | `E` | Kreuz → | Kampf, Raketenkamera |
+| Radar aktiv/passiv (ab A4) | `R` | – | Kampf |
+| Radarreichweite (ab A4) | `Shift+R` | – | Kampf |
+| Automatischer Start | `Shift+S` | – | Kampf, freier Blick |
+
+**Sicht und Bedienung**
+
+| Aktion | Tastatur / Maus | Gamepad | Kontext |
+|---|---|---|---|
+| Freier Blick umschalten | `V` | – | Kampf, freier Blick, Außenkamera |
+| Freier Blick (halten) | `MMT` | LB | Kampf, freier Blick, Außenkamera |
+| Schalter bedienen | `LMT` | A | freier Blick |
+| Außenkamera | `Shift+V` | – | Kampf, Außenkamera |
+| Klemmbrett / Checkliste | `K` | – | Kampf, freier Blick |
+
+**Kommunikation**
+
+| Aktion | Tastatur / Maus | Gamepad | Kontext |
+|---|---|---|---|
+| Funkmenü | `F` | Y | Kampf, freier Blick, Außenkamera |
+| Tastenhilfe ein/aus | `H` | Select | überall |
+| Pause | `Esc` | Start | Kampf, freier Blick, Raketenkamera, Außenkamera, Freiflug |
+
+**Menü**
+
+| Aktion | Tastatur / Maus | Gamepad | Kontext |
+|---|---|---|---|
+| Menü: hoch | `↑` / `W` | Kreuz ↑ | Menü |
+| Menü: runter | `↓` / `S` | Kreuz ↓ | Menü |
+| Menü: bestätigen | `Enter` / `Num Enter` | A | Menü |
+| Menü: zurück / schließen | `Esc` | B | Menü |
+| Menü: Eintrag 1–7 | `1`–`7` | – | Menü |
+
+**Debug**
+
+| Aktion | Tastatur / Maus | Gamepad | Kontext |
+|---|---|---|---|
+| Debug-Modus an/aus | `^` | – | überall |
+| Debug: Overlay | `F2` | – | Debug |
+| Debug: Drahtgitter | `F4` | – | Debug |
+| Debug: Freiflug | `Shift+F4` | – | Debug |
+| Debug: Treffer auf mich | `F8` | – | Debug |
+| Debug: schwerer Treffer (Seiten der Reihe nach) | `Shift+F8` | – | Debug |
+| Debug: feindliche Aufschaltung | `F9` | – | Debug |
+| Debug: Ziel strahlt an/aus | `Shift+F9` | – | Debug |
+| Freiflug: vorwärts | `W` / `↑` | – | Freiflug |
+| Freiflug: zurück | `S` / `↓` | – | Freiflug |
+| Freiflug: links | `A` / `←` | – | Freiflug |
+| Freiflug: rechts | `D` / `→` | – | Freiflug |
+| Freiflug: hoch | `Leertaste` | RB | Freiflug |
+| Freiflug: runter | `Q` | LB | Freiflug |
+| Freiflug: schnell | `Shift` | L3 | Freiflug |
+
+Kontexte: **Kampf** = Kampf (Cockpit, normaler Blick) · **freier Blick** = Freier Blick (Schalter bedienen) · **Raketenkamera** = Raketenkamera (optische Rakete) · **Außenkamera** = Außenkamera · **Menü** = Menü (Funkmenü, Pause, Hauptmenü) · **Freiflug** = Debug-Freiflug · **Debug** = Debug-Modus (Zusatzschicht).
+<!-- controls:end -->
 
 ## Kampf
-
-| Taste | Wirkung |
-|---|---|
-| Linke Maustaste | aktive Feuerkette feuern (Maus muss gefangen sein, nicht im freien Blick) |
-| `1`–`4` | Waffengruppe feuern |
-| `R` | nächste Feuerkette (3 ab Werk, Anzeige auf dem Waffenmonitor) |
-| `G` | Notfallkette: alle Waffen |
-| `T` / `Shift+T` | Ziel unter dem Fadenkreuz aufschalten, sonst das nächste im Torso-Kegel / durchschalten |
-| `,` / `.` | Schildenergie Richtung Heck / Front verschieben (je ±2 Stufen) |
-| `B` | Lenkart weiterschalten (Drehschalter LENKUNG: UNGEL · AKTIV · HALB · A-RAD · OPT) |
-| `Tab` | Zielkapsel: Komponente am Ziel wählen (Torso, Arm L, Arm R, Beine, Sensoren) |
-| `H` | Zielnachführung ein/aus (Schalter ZIELNACHF., Lampe NACHF.) |
-| `M` | Raketenkamera ein/aus (Taster KAM) |
-| Gamepad | RT feuern, LT nächste Kette |
-| `F8` / `Shift+F8` | Debug: Treffer auf mich (zufällig / schwer, Seiten der Reihe nach) |
-| `F9` / `Shift+F9` | Debug: nächster Gegner schaltet auf und feuert / Ziel strahlt (Anti-Radar) ein/aus |
 
 **Lenkraketen.** Welche Lenkarten ein Werfer kann, steht in `src/data/weapons.js`
 (`guidance`); kann er die gewählte nicht, schießt er ungelenkt (Waffenmonitor zeigt die Lenkart
@@ -143,63 +275,63 @@ die Technik meldet sich. Waffen, Schaden, Hitze und Energie: `src/data/weapons.j
 
 **Testanleitung Schießstand** (`?mission=range&start=hot`, 6 stehende und 3 laufende Ziele):
 
-1. *Schild gegen Panzer:* Marder (190 m) aufschalten (`T`), 2–3 s Gruppe 1 (Laser) — die
-   Frontschilde brechen schnell zusammen, danach Panzerschaden. Den laufenden Marder (250 m)
-   mit Gruppe 2 (Autokanone, Schrot) beschießen — die Schilde halten deutlich länger.
-   Zielmonitor und `F3` zeigen Schilde und Komponenten.
+1. *Schild gegen Panzer:* Marder (190 m) aufschalten (`T`), Kette 1 (`1`, ARME: Laser,
+   Autokanone, Schrot) 2–3 s mit der linken Maustaste — erst brechen die Frontschilde zusammen,
+   danach Panzerschaden. Kette 3 (`3`, DAUERFEUER) auf den laufenden Marder (250 m).
+   Zielmonitor und Debug-Overlay (`^`) zeigen Schilde und Komponenten.
 2. *Beine abschießen:* auf den KESTREL (110 m) zufahren und auf die Beine zielen. Bei „schwer“
    wird er langsamer, bei „zerstört“ kniet er ab und raucht (Zielmonitor: BEWEGUNGSUNFÄHIG).
 3. *Arm abschießen:* einen Walker von der Seite auf den Arm beschießen. Der Arm fällt ab, die
    Waffe bleibt mit blinkendem Marker liegen.
-4. *Überhitzen und neu starten:* `G` gedrückt halten. HITZE leuchtet, der Hitzebalken auf dem
+4. *Überhitzen und neu starten:* `Shift` + linke Maustaste gedrückt halten (alle Waffen). HITZE leuchtet, der Hitzebalken auf dem
    Systemmonitor steigt, nach etwa 9 s (BASTION) folgt die Notabschaltung. Danach Neustart
-   laut Klemmbrett (`C`): Pumpen prüfen, VORH, Zündkappe zu/auf, ZÜND, Hauptbus REAKT, BETR.
+   laut Klemmbrett (`K`): Pumpen prüfen, VORH, Zündkappe zu/auf, ZÜND, Hauptbus REAKT, BETR.
 
 **Testanleitung A2b** (Schießstand, `?mission=range&start=hot`; der Hügel liegt links vorn,
 dahinter steht verdeckt ein MARDER; GOLIATH (560 m, stehend) und der laufende BASTION strahlen):
 
-1. *Ungelenkt:* `B` bis UNGEL, den laufenden MARDER (250 m) aufschalten, `3` — die Raketen
+1. *Ungelenkt:* `L` bis UNGEL, den laufenden MARDER (250 m) aufschalten, rechte Maustaste — die Raketen
    fliegen geradeaus, gegen das bewegte Ziel geht das meiste daneben.
-2. *Aktiv:* `B` auf AKTIV, MARDER mit `T` aufschalten und im Kegel halten: Pieptöne werden
-   schneller, dann Dauerton und roter Ring. `M` (Kamera an), `3` feuern und sofort den Torso
+2. *Aktiv:* `L` auf AKTIV, MARDER mit `T` aufschalten und im Kegel halten: Pieptöne werden
+   schneller, dann Dauerton und roter Ring. `M` (Kamera an), rechte Maustaste und sofort den Torso
    wegdrehen — die HABICHT treffen trotzdem, die Kamera zeigt AUFG. Vorher (ohne volle
    Aufschaltung) zeigt der Waffenmonitor AUFSCHALT. und es startet nichts.
-3. *Halbaktiv:* `B` auf HALB, aufschalten, feuern und das Ziel im Kegel halten → Treffer mit
+3. *Halbaktiv:* `L` auf HALB, aufschalten, feuern und das Ziel im Kegel halten → Treffer mit
    mehr Schaden. Zweiter Versuch: nach dem Start wegdrehen → die Raketen verlieren das Ziel
    und schlagen im Gelände ein.
-4. *Anti-Radar:* `B` auf A-RAD, ohne Aufschaltung grob Richtung GOLIATH (links, 560 m) zielen,
-   `3` — die Raketen schwenken auf ihn ein. `Shift+F9` macht das aufgeschaltete Ziel zum
-   Strahler oder schaltet es ab (`F3` zeigt die Strahler).
-5. *Optisch hinter den Hügel:* Walker HALBERD (`?walker=halberd`), `B` auf OPT. Knapp über
-   den Hügel zielen, `3` gedrückt halten: der Zielmonitor schaltet auf die Raketenkamera
+4. *Anti-Radar:* `L` auf A-RAD, ohne Aufschaltung grob Richtung GOLIATH (links, 560 m) zielen,
+   rechte Maustaste — die Raketen schwenken auf ihn ein. Im Debug-Modus (`^`) macht `Shift+F9`
+   das aufgeschaltete Ziel zum Strahler oder schaltet es ab (das Overlay zeigt die Strahler).
+5. *Optisch hinter den Hügel:* Walker HALBERD (`?walker=halberd`), `L` auf OPT. Knapp über
+   den Hügel zielen, rechte Maustaste gedrückt halten: der Zielmonitor schaltet auf die Raketenkamera
    (H = Höhe über Grund, BRENN = Restbrenndauer). Mit der Maus über den Hügelkamm lenken, dann
    auf den verdeckten MARDER stürzen. Einschlag → Weißrauschen, danach wieder Zielmonitor.
    Loslassen der Feuertaste: die Rakete fliegt geradeaus weiter.
 6. *Beine mit der Zielkapsel:* BASTION, MARDER (190 m) aufschalten, `Tab` bis BEINE
    (Zielmonitor rahmt BEINE ein, im HUD sitzt der kleine Rahmen auf den Beinen). Fadenkreuz
-   grob auf den Walker, `2` halten — die Autokanonen- und Schrot-Treffer laufen auf die Beine
+   grob auf den Walker, Kette 1 (`1`, ARME) mit der linken Maustaste halten — die Treffer laufen auf die Beine
    zusammen, bis er abkniet (im Test nach etwa 25 s). Mit einem Walker ohne Kapsel (MARDER)
    meldet `Tab` „Keine Zielkapsel an Bord“.
-7. *Treffer auf allen vier Seiten:* `Shift+F8` viermal (vorn, rechts, hinten, links): zuerst
+7. *Treffer auf allen vier Seiten:* Debug-Modus an (`^`), `Shift+F8` viermal (vorn, rechts, hinten, links): zuerst
    blaues Leuchten mit Brummen auf der jeweiligen Seite (Schild), sobald der Schild leer ist
    Kopfstoß, Funken aus dem Paneel der Seite und Monitorflackern. Weiter `Shift+F8` bis der
    Torso schwer ist: Risse in der Scheibe, Rauch zieht auf, bei kritischem Reaktor rotes
    Notlicht, Hupe, WARNUNG blinkt. Noch mehr Treffer zerstören den Reaktor (der Walker ist dann
    ein Wrack; ein Missionsende dafür kommt mit Phase B).
-8. *Monitorausfall:* `F8` mehrmals (ab 20 Schaden fällt mit 18 % ein Monitor aus) — oder
+8. *Monitorausfall:* im Debug-Modus `F8` mehrmals (ab 20 Schaden fällt mit 18 % ein Monitor aus) — oder
    schneller über die Konsole `steelWarden.states.current.hits.breakMonitor('mfdRadar','noise')`.
    Ein Monitor zeigt Schnee oder bleibt schwarz, der Systemmonitor meldet ANZEIGE DEFEKT,
    MONITORE TEST zeigt BILDRÖHRE / ANZEIGEN … FEHLER.
-9. *Feindliche Aufschaltung:* `F9`: der nächste Gegner schaltet auf (schnelles Piepen, RAKETE
+9. *Feindliche Aufschaltung:* im Debug-Modus `F9`: der nächste Gegner schaltet auf (schnelles Piepen, RAKETE
    blinkt, roter Keil auf dem Radar), nach 3,5 s startet er eine Rakete (Dauerton, RAKETE
    leuchtet), die einschlägt.
-10. *Zielnachführung:* MARDER aufschalten, `H` (Lampe NACHF.): der Torso folgt. Mit der Maus
+10. *Zielnachführung:* MARDER aufschalten, `G` (Lampe NACHF.): der Torso folgt. Mit der Maus
    gegensteuern — kurz Vorrang, dann zieht die Nachführung zurück. Mit den Beinen wegdrehen,
    bis das Ziel hinter dem Schwenkbereich liegt: Schalter fällt auf AUS, Lampe aus, Funkspruch.
 
 ## Welt (Teil 2)
 
-**Bodenarten** (Werte in `src/data/surfaces.js`, `F3` zeigt die Bodenart unter dem Walker):
+**Bodenarten** (Werte in `src/data/surfaces.js`, das Debug-Overlay `^` zeigt die Bodenart unter dem Walker):
 
 | Boden | Wirkung |
 |---|---|
@@ -228,17 +360,17 @@ holografischer Zaun. Funkwarnung bei Annäherung und beim Verlassen, sonst noch 
 
 1. *Bodenproben* (Menü „Bodenproben“, sechs Streifen von links: hart, weich, Wasser, Lava,
    dünnes Eis, heiß). Mit KESTREL (`?walker=kestrel`) und KOLOSS (`?walker=koloss`) je einen
-   Streifen entlanglaufen und Tempo (Schubanzeige/`F3`) und Kerntemperatur (Systemmonitor)
+   Streifen entlanglaufen und Tempo (Schubanzeige/Debug-Overlay `^`) und Kerntemperatur (Systemmonitor)
    vergleichen. Im Wasser fällt die Temperatur, in Lava steigt sie, und der Schadensmonitor
    zeigt die Beine sinken. Auf dem Eis-Streifen (Navpunkt EIS) läuft der KESTREL drüber, der
    KOLOSS bricht mit Krachen ein, steckt 4 s fest und watet dann weiter.
-2. *Bauwerk zerstören:* „Testgelände Brenn-Süd“, auf den Stützpunkt 400 m voraus zugehen, `G`
-   auf ein Gebäude halten. Erst Rauch und dunklere, verbogene Teile, dann Trümmer mit Feuer
+2. *Bauwerk zerstören:* „Testgelände Brenn-Süd“, auf den Stützpunkt 400 m voraus zugehen, `Shift` + linke
+   Maustaste auf ein Gebäude halten. Erst Rauch und dunklere, verbogene Teile, dann Trümmer mit Feuer
    bzw. Explosion (Generator). Danach kann man über die Trümmer laufen; vorher hält das Gebäude
-   den Walker auf. `F3` zählt Bauwerke und Trümmer.
+   den Walker auf. Das Debug-Overlay (`^`) zählt Bauwerke und Trümmer.
 3. *Optische Rakete um den Felsbogen:* „Testgelände Canyonwüste Tessar“ (HALBERD), für klare
    Sicht `?mission=test-canyon&weather=clear`. Der MARDER hinter dem rechten Pfeiler lässt sich
-   nicht aufschalten. `B` auf OPT, leicht links vom rechten Pfeiler durch den Bogen zielen, `3`
+   nicht aufschalten. `L` auf OPT, leicht links vom rechten Pfeiler durch den Bogen zielen, rechte Maustaste
    halten und die SPEER nach dem Bogen nach rechts auf den MARDER lenken.
 4. *Sandstorm-Sicht:* dieselbe Mission ohne `weather`-Parameter: Sicht unter 300 m, Sand auf
    der Scheibe, Wind. Einen Walker aufschalten — die Aufschaltung dauert länger (Faktor 0,6),
@@ -263,7 +395,7 @@ BETRIEBSART BETR für volle Leistung.
 
 **Testszenarien**
 
-1. *Korrekter Start:* Checkliste (`C`) Punkt für Punkt abarbeiten. Am Ende sind alle
+1. *Korrekter Start:* Checkliste (`K`) Punkt für Punkt abarbeiten. Am Ende sind alle
    Statuslampen links aus, Funkspruch „Bereit zum Ausrücken", der Walker fährt.
 2. *Zündung ohne Kühlung:* Batterie, Hilfsaggregat, VORH — KÜHLPUMPEN auslassen — zünden.
    Die Kerntemperatur steigt über 700 °C (HITZE, WARNUNG, Alarm), bei 900 °C Notabschaltung:
@@ -281,6 +413,8 @@ eingebettet, damit der Offline-Build per `file://` funktioniert. Klang und Misch
 
 ## Datenpflege
 
+- `src/input/actions.js` – alle Eingabe-Aktionen: Kontexte, Typ, Standardtasten, Gamepad, Achsen;
+  danach `node tools/gen-controls.mjs` für die Tabellen in dieser README
 - `src/data/config.js` – Engine-Einstellungen und Fahrgefühl (`feel`, `view`, `cockpit`)
 - `src/data/walkers.js` – Walker-Werte, Hardpoints, Baukosten, Startdauer-Abweichungen
 - `src/data/walkerModels.js` – Baupläne der Walker-Modelle (Profil, Beine, Arme, Aufbauten, Farben)

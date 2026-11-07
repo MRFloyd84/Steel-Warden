@@ -80,9 +80,9 @@ export class CockpitInteraction {
   /** Discrete input for this frame. */
   handleInput(input) {
     if (!this.active) return;
-    if (input.wasPressed('interact')) this.press();
-    if (input.wasReleased('interact')) this.endHold();
-    const wheel = input.mouse.consumeWheel();
+    if (input.pressed('interact')) this.press();
+    if (input.released('interact')) this.endHold();
+    const wheel = input.wheel();
     if (wheel && this.hover) this.wheel(wheel);
   }
 
@@ -180,7 +180,7 @@ export class CockpitInteraction {
     const active = !!this.held;
     if (id === 'throttle') return { title: `SCHUBHEBEL ${Math.round(this.throttle.value * 100)} %`, hint: 'ziehen: auf/ab · Mausrad: 5 %', active };
     if (id === 'stick') return { title: 'STEUERKNÜPPEL', hint: 'folgt Maus und Lenkung' };
-    if (id === 'clipboard') return { title: 'CHECKLISTE', hint: 'Klick: heranholen / weglegen · Taste C' };
+    if (id === 'clipboard') return { title: 'CHECKLISTE', hint: 'Klick: heranholen / weglegen · Taste K' };
     if (id === 'nameplate') return { title: 'TYPENSCHILD', hint: this.cockpit.walker.name };
     const extra = this.cockpit.extraParts.get(id);
     if (extra?.item.type === 'monitor') return { title: DISPLAY_NAMES[extra.item.display] ?? extra.item.display };

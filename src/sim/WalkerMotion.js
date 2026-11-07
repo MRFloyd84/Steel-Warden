@@ -90,7 +90,16 @@ export class WalkerMotion {
     this.pitchTarget = clamp(this.pitchTarget - dy, pMin * DEG, pMax * DEG);
   }
 
+  /**
+   * Shift+C: the legs turn (at their turn rate) until they point where the
+   * torso looks; the torso keeps its world heading meanwhile.
+   */
+  alignLegsToTorso() {
+    if (Math.abs(this.twist) > 0.01) this.aligning = true;
+  }
+
   centerTorso() {
+    this.aligning = false;
     this.twistTarget = 0;
     this.pitchTarget = 0;
   }
@@ -104,13 +113,25 @@ export class WalkerMotion {
     const lim = this.limits;
     if (lim.throttleLocked) this.throttle.value = 0;
     else this.throttle.update(dt, input.throttleRate, input.throttleAbs);
-    const turn = lim.canMove ? input.turn : 0;
+    let turn = lim.canMove ? input.turn : 0;
+    if (turn) this.aligning = false; // manual turning takes over
+    else if (this.aligning) {
+      if (Math.abs(this.twist) < 0.5 * DEG) this.aligning = false;
+      else turn = -Math.sign(this.twist); // legs turn toward the torso
+    }
     this.turnInput = turn;
+    const yawBefore = this.legYaw;
 
     // Leg heading
     const speedFrac = Math.abs(this.speed) / w.maxSpeed;
     const turnRate = w.turnRate * DEG * (1 + (f.turnAtSpeed - 1) * speedFrac);
     this.legYaw -= turn * turnRate * dt;
+    if (this.aligning) {
+      // Keep the torso's world heading: twist shrinks by what the legs turned
+      const turned = this.legYaw - yawBefore;
+      this.twist -= turned;
+      this.twistTarget -= turned;
+    }
 
     // Speed with slope influence
     const fx = -Math.sin(this.legYaw);

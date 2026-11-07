@@ -14,9 +14,9 @@ game.states.register('menu', new MenuState(game));
 game.states.register('mission', new MissionState(game));
 game.states.register('debrief', new DebriefState(game));
 
-// Dev shortcut: ?mission=<id> skips the menu, ?debug=1 shows the overlay.
+// Dev shortcut: ?mission=<id> skips the menu, ?debug switches debug mode on (overlay + debug keys).
 const params = new URLSearchParams(window.location.search);
-if (params.get('debug') === '1') game.debug.setVisible(true);
+if (params.has('debug') && params.get('debug') !== '0') game.setDebugMode(true);
 const quickMission = params.get('mission');
 if (quickMission) {
   game.states.change('mission', { missionId: quickMission });

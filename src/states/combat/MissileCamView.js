@@ -48,21 +48,27 @@ export class MissileCamView {
     this.manual = !this.manual;
   }
 
-  /** M key: presses the KAM button like a click would. */
+  /**
+   * M: watch active/semi-active missiles by hand (presses the KAM button so
+   * it moves in the cockpit). Optical missiles switch the camera on by themselves.
+   */
   frame(input) {
+    if (!input.pressed('missileCamera')) return;
     if (!this.controls.has('missileCamera')) {
-      if (input.wasPressed('missileCamera')) this.toggle();
+      this.toggle();
       return;
     }
-    const down = input.isDown('missileCamera');
-    if (input.wasPressed('missileCamera')) this.controls.press('missileCamera');
-    else if (this.keyHeld && !down) this.controls.release('missileCamera');
-    this.keyHeld = down || input.wasPressed('missileCamera');
+    this.controls.press('missileCamera');
+    this.releaseAt = this.time + 0.15;
   }
 
   /** Per render frame, before the cockpit is drawn. */
   update(dt) {
     this.time += dt;
+    if (this.releaseAt && this.time >= this.releaseAt) {
+      this.releaseAt = 0;
+      this.controls.release('missileCamera');
+    }
     const c = this.combat;
     const proj = c.projectiles;
     for (const e of c.missileEnds) {

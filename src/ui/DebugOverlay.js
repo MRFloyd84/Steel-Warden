@@ -1,6 +1,6 @@
 import { CONFIG } from '../data/config.js';
 
-/** Text overlay (F3) refreshed a few times per second from a provider callback. */
+/** Text overlay (debug mode: ^, F2) refreshed a few times per second from a provider callback. */
 export class DebugOverlay {
   constructor(container, provider) {
     this.provider = provider;

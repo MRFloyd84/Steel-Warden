@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { clamp, damp } from '../util/math.js';
 
 /**
- * Debug free camera (F7) for inspecting terrain and, later, walker models:
+ * Debug free camera (debug mode, Shift+F4) for inspecting terrain and, later, walker models:
  * ground mode follows the surface, fly mode moves freely. Runs at the
  * fixed step; the camera interpolates between the last two sim positions.
  */
@@ -51,9 +51,9 @@ export class TestRig {
 
   update(dt, input) {
     const c = this.cfg;
-    const move = input.axis('move');
-    const strafe = input.axis('strafe');
-    const speed = (this.fly ? c.flySpeed : c.groundSpeed) * (input.isDown('boost') ? c.boostFactor : 1);
+    const move = input.axis('camMove');
+    const strafe = input.axis('camStrafe');
+    const speed = (this.fly ? c.flySpeed : c.groundSpeed) * (input.held('camBoost') ? c.boostFactor : 1);
 
     const sy = Math.sin(this.yaw);
     const cy = Math.cos(this.yaw);
@@ -66,7 +66,7 @@ export class TestRig {
     this.target.set((fx * move + rx * strafe) * speed, 0, (fz * move + rz * strafe) * speed);
     if (this.fly) {
       const pitchLift = Math.sin(this.pitch) * move * speed;
-      this.target.y = pitchLift + input.axis('vertical') * speed;
+      this.target.y = pitchLift + input.axis('camVertical') * speed;
     }
     this.vel.lerp(this.target, damp(c.responsiveness, dt));
 

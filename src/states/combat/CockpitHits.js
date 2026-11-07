@@ -53,9 +53,9 @@ export class CockpitHits {
   // ---- debug keys (per frame) ----
 
   frame(input) {
-    if (input.comboPressed('debugHitHeavy')) this.debugHit(true);
-    else if (input.wasPressed('debugHit')) this.debugHit(false);
-    if (input.wasPressed('debugEnemyLock') && !input.comboPressed('debugEmitting')) this.startEnemyLock();
+    if (input.pressed('debugHitHeavy')) this.debugHit(true);
+    if (input.pressed('debugHit')) this.debugHit(false);
+    if (input.pressed('debugEnemyLock')) this.startEnemyLock();
   }
 
   /** F8: random side, component and strength. Shift+F8: heavy hit, the four sides in turn. */

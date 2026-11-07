@@ -127,8 +127,8 @@ export const ENERGY_PRESETS = {
 
 /** Radio lines (sender, text) for system events. */
 export const RADIO = {
-  coldStart: { from: 'TECHNIK', text: 'Walker ist kalt. Checkliste mit C, Schalter im freien Blick (V).' },
-  coldStartSimple: { from: 'TECHNIK', text: 'Vereinfachter Start: Batterie ein, den Rest fahren wir mit. Checkliste mit C.' },
+  coldStart: { from: 'TECHNIK', text: 'Walker ist kalt. Checkliste mit K, Schalter im freien Blick (V). Tasten: H.' },
+  coldStartSimple: { from: 'TECHNIK', text: 'Vereinfachter Start: Batterie ein, den Rest fahren wir mit. Checkliste mit K.' },
   coldStartAuto: { from: 'TECHNIK', text: 'Walker ist kalt. Shift+S startet die automatische Startprozedur.' },
   autoStart: { from: 'TECHNIK', text: 'Automatische Startprozedur läuft.' },
   ready: { from: 'TECHNIK', text: 'Alle Systeme grün. Beinsperre gelöst — bereit zum Ausrücken.' },

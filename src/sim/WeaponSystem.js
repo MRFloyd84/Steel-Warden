@@ -44,9 +44,9 @@ export class WeaponSystem {
       };
     });
     this.byId = Object.fromEntries(this.slots.map((s) => [s.id, s]));
-    this.chains = chains.map((c) => ({ ...c, weapons: [...c.weapons] }));
+    this.chains = chains.map((c) => ({ ...c, weapons: [...c.weapons], seqPos: 0 }));
     this.chainIndex = 0;
-    this.seqPos = 0;
+    this.secondaryIndex = secondaryChainIndex(this.chains, walker.secondaryChain, this.byId);
     this.seqGap = 0;
     this.capacitor = walker.reactorOutput * COMBAT.energy.capacitorPerOutput;
     this.capacitorMax = this.capacitor;
@@ -58,9 +58,22 @@ export class WeaponSystem {
     return this.chains[this.chainIndex];
   }
 
-  nextChain() {
-    this.chainIndex = (this.chainIndex + 1) % this.chains.length;
-    this.seqPos = 0;
+  get secondaryChain() {
+    return this.chains[this.secondaryIndex];
+  }
+
+  /** Keys 1–4: choose the active chain; returns false if there is no such chain. */
+  selectChain(index) {
+    if (index < 0 || index >= this.chains.length) return false;
+    this.chainIndex = index;
+    this.activeChain.seqPos = 0;
+    return true;
+  }
+
+  nextChain(step = 1) {
+    const n = this.chains.length;
+    this.chainIndex = (this.chainIndex + step + n) % n;
+    this.activeChain.seqPos = 0;
     return this.activeChain;
   }
 
@@ -100,7 +113,8 @@ export class WeaponSystem {
 
   /**
    * ctx: { canFire, power (0..1 reactor), weaponShare (energy split),
-   *        chain (bool), groups [4 bools], all (bool),
+   *        chain (bool, active chain), secondary (bool, second chain), all (bool),
+   *        groups [4 bools] (unused by the player since chains are chosen with 1–4),
    *        fire(slot, shotIndex), beam(slot, dt, on) }
    */
   update(dt, ctx) {
@@ -111,16 +125,24 @@ export class WeaponSystem {
     this.seqGap = Math.max(0, this.seqGap - dt);
 
     // Which weapons are triggered
-    const chain = this.activeChain;
     const wanted = new Set();
+    const sequenced = new Set(); // picked from a sequence chain: next one only after the gap
     if (ctx.all) for (const s of this.slots) wanted.add(s);
-    for (let g = 0; g < 4; g++) if (ctx.groups[g]) for (const s of this.slots) if (s.group === g + 1) wanted.add(s);
-    let sequenceSlot = null;
-    if (ctx.chain && chain) {
+    for (let g = 0; g < 4; g++) if (ctx.groups?.[g]) for (const s of this.slots) if (s.group === g + 1) wanted.add(s);
+    const fireChain = (chain) => {
+      if (!chain) return;
       if (chain.mode === 'salvo') for (const id of chain.weapons) wanted.add(this.byId[id]);
-      else sequenceSlot = this.pickSequence(chain);
-    }
-    if (sequenceSlot) wanted.add(sequenceSlot);
+      else {
+        const s = this.pickSequence(chain);
+        if (s) {
+          wanted.add(s);
+          sequenced.add(s);
+        }
+      }
+    };
+    if (ctx.chain) fireChain(this.activeChain);
+    // Same chain on both triggers: fire it once
+    if (ctx.secondary && (this.secondaryChain !== this.activeChain || !ctx.chain)) fireChain(this.secondaryChain);
 
     for (const s of this.slots) {
       const d = s.def;
@@ -189,7 +211,7 @@ export class WeaponSystem {
       s.heat += d.heatPerShot;
       s.firedAt = this.time;
       this.shotsFired++;
-      if (s === sequenceSlot) this.seqGap = COMBAT.sequenceGap;
+      if (sequenced.has(s)) this.seqGap = COMBAT.sequenceGap;
       const gap = d.burstGap ?? 0;
       if (d.burst > 1 && gap > 0) {
         ctx.fire(s, 0);
@@ -226,9 +248,9 @@ export class WeaponSystem {
     if (this.seqGap > 0) return null;
     const n = chain.weapons.length;
     for (let i = 0; i < n; i++) {
-      const s = this.byId[chain.weapons[(this.seqPos + i) % n]];
+      const s = this.byId[chain.weapons[(chain.seqPos + i) % n]];
       if (s.def.kind === 'beam' ? !s.disabled && s.beamCool <= 0 : this.canShoot(s) || s.charge > 0) {
-        if (s.charge <= 0 && s.def.kind !== 'beam') this.seqPos = (this.seqPos + i + 1) % n;
+        if (s.charge <= 0 && s.def.kind !== 'beam') chain.seqPos = (chain.seqPos + i + 1) % n;
         return s;
       }
     }
@@ -243,6 +265,8 @@ export class WeaponSystem {
       chainName: chain?.name ?? '',
       chainMode: chain?.mode ?? 'salvo',
       chains: this.chains.map((c) => c.name),
+      secondaryIndex: this.secondaryIndex,
+      secondaryName: this.secondaryChain?.name ?? '',
       capacitor: this.capacitor / this.capacitorMax,
       slots: this.slots.map((s) => ({
         id: s.id,
@@ -274,4 +298,19 @@ function loadShare(s) {
   if (s.charge > 0) return s.charge / d.chargeTime;
   if (s.cooldown > 0 && d.fireRate > 0) return 1 - s.cooldown * d.fireRate;
   return 1;
+}
+
+/**
+ * Chain for the second trigger (right mouse button): the walker's
+ * secondaryChain (by name), else the first chain with a missile launcher,
+ * else chain 2.
+ */
+function secondaryChainIndex(chains, name, byId) {
+  if (name) {
+    const i = chains.findIndex((c) => c.name === name);
+    if (i >= 0) return i;
+  }
+  const withMissiles = chains.findIndex((c) => c.weapons.some((id) => byId[id]?.def.missile));
+  if (withMissiles >= 0) return withMissiles;
+  return Math.min(1, chains.length - 1);
 }

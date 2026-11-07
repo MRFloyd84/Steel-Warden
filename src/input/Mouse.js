@@ -10,13 +10,22 @@ export class Mouse {
     this.down = new Set();
     this.pressed = new Set();
     this.released = new Set();
+    this.onRaw = null; // (button) → true if consumed (rebinding capture)
 
     document.addEventListener('mousemove', (e) => {
       if (!this.locked) return;
       this.dx += e.movementX;
       this.dy += e.movementY;
     });
+    // Capture for the controls screen sees clicks anywhere
+    window.addEventListener('mousedown', (e) => {
+      if (this.onRaw?.(e.button)) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }, true);
     element.addEventListener('mousedown', (e) => {
+      if (e.button === 1) e.preventDefault(); // no autoscroll on the middle button
       this.down.add(e.button);
       this.pressed.add(e.button);
     });

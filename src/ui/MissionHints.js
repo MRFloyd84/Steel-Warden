@@ -1,38 +1,23 @@
-import { Overlay, esc, keyLabel } from './Overlay.js';
+import { Overlay } from './Overlay.js';
 
 /**
  * In-mission HTML layer: torso aim reticle (projected, so it slides off
- * centre during free look), free-look tag, pointer-lock hint and a key
- * reference bar (F1). The vector HUD proper replaces the reticle later.
+ * centre during free look), free-look tag, pointer-lock hint and short
+ * notes. The key reference is the help panel (H). The vector HUD proper
+ * replaces the reticle later.
  */
 export class MissionHints extends Overlay {
-  constructor(container, bindings) {
+  constructor(container) {
     super(container, 'mission-hints');
-    const k = (action) => keyLabel(bindings.keys[action][0]);
-    const hints = [
-      `[${k('throttleUp')}/${k('throttleDown')}] Schub`,
-      `[${k('throttleStop')}] Stopp`,
-      `[${k('turnLeft')}/${k('turnRight')}] Beine`,
-      'Maus: Torso',
-      `[RMT/${k('freeLookToggle')}] Umsehen + Bedienen (Klick, Mausrad)`,
-      `[${k('centerTorso')}] Zentrieren`,
-      `[${k('cockpitLight')}] Licht`,
-      `[${k('checklist')}] Checkliste`,
-      '[LMT] Kette feuern', `[1–4] Gruppen`, `[${k('nextChain')}] Kette`, `[${k('fireAll')}] Alle`,
-      `[${k('targetSelect')}] Ziel`, `[${k('targetComponent')}] Komponente`, `[${k('shieldRear')}/${k('shieldFront')}] Schild`,
-      `[${k('missileGuidance')}] Lenkart`, `[${k('missileCamera')}] Kamera`, `[${k('targetTracking')}] Nachführung`,
-      '[Shift+S] Autostart',
-      `[${k('debugFreeCam')}] Freiflug`,
-      `[${k('toggleHints')}] Hilfe`,
-    ];
     this.root.innerHTML = `
       <div class="crosshair" data-role="reticle"></div>
       <div class="target-box" data-role="target"><span class="target-label"></span></div>
       <div class="lock-ring" data-role="lock" hidden></div>
       <div class="comp-box" data-role="comp" hidden><span></span></div>
       <div class="view-tag" data-role="tag"></div>
-      <div class="hint-bar" data-role="bar">${esc(hints.join('   '))}</div>
-      <div class="click-hint" data-role="click">Klick ins Bild, um die Maus zu fangen</div>`;
+      <div class="flash-note" data-role="flash" hidden></div>
+      <div class="click-hint" data-role="click">Klicken zum Fortsetzen (Maus fangen)</div>`;
+    this.flashEl = this.root.querySelector('[data-role="flash"]');
     this.reticle = this.root.querySelector('[data-role="reticle"]');
     this.targetEl = this.root.querySelector('[data-role="target"]');
     this.targetLabel = this.targetEl.querySelector('.target-label');
@@ -42,15 +27,21 @@ export class MissionHints extends Overlay {
     this.compLabel = this.compEl.querySelector('span');
     this.lockEl = this.root.querySelector('[data-role="lock"]');
     this.tag = this.root.querySelector('[data-role="tag"]');
-    this.bar = this.root.querySelector('[data-role="bar"]');
     this.clickHint = this.root.querySelector('[data-role="click"]');
     this.tag.hidden = true;
     this.lastTag = null;
   }
 
-  toggleBar() {
-    this.bar.hidden = !this.bar.hidden;
+  /** Short note in the middle of the screen (e.g. "Keine Sprungdüsen an Bord"). */
+  flash(text, ms = 1800) {
+    this.flashEl.textContent = text;
+    this.flashEl.hidden = false;
+    clearTimeout(this.flashTimer);
+    this.flashTimer = setTimeout(() => (this.flashEl.hidden = true), ms);
   }
+
+  /** Kept for old callers: the key reference moved to the help panel (H). */
+  toggleBar() {}
 
   /** @param reticle {x, y} in CSS pixels or null to hide */
   update({ reticle, tag, locked, target = null, aimOnUnit = false }) {
