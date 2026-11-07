@@ -114,6 +114,8 @@ export const ACTIONS = [
   { id: 'debugHitHeavy', label: 'Debug: schwerer Treffer (Seiten der Reihe nach)', category: 'debug', contexts: ['debug'], type: 'press', keys: ['Shift+F8'] },
   { id: 'debugEnemyLock', label: 'Debug: feindliche Aufschaltung', category: 'debug', contexts: ['debug'], type: 'press', keys: ['F9'] },
   { id: 'debugEmitting', label: 'Debug: Ziel strahlt an/aus', category: 'debug', contexts: ['debug'], type: 'toggle', keys: ['Shift+F9'] },
+  { id: 'aiFreeze', label: 'Debug: Gegner einfrieren', category: 'debug', contexts: ['debug'], type: 'toggle', keys: ['Shift+F2', 'NumpadMultiply'] },
+  { id: 'aiSpawn', label: 'Debug: KI-Gruppe vor mir absetzen', category: 'debug', contexts: ['debug'], type: 'press', keys: ['Insert', 'NumpadAdd'] },
   { id: 'camForward', label: 'Freiflug: vorwärts', category: 'debug', contexts: ['freeCam'], type: 'hold', keys: ['KeyW', 'ArrowUp'] },
   { id: 'camBack', label: 'Freiflug: zurück', category: 'debug', contexts: ['freeCam'], type: 'hold', keys: ['KeyS', 'ArrowDown'] },
   { id: 'camLeft', label: 'Freiflug: links', category: 'debug', contexts: ['freeCam'], type: 'hold', keys: ['KeyA', 'ArrowLeft'] },

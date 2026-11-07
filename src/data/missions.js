@@ -14,6 +14,10 @@
  *   area           mission area polygon [[x, z], …] — fence, radar border, radio warning
  *   terrainFeatures: false, surface, scatter: false, autoStructures: false, surfaceColors, surfaceTints
  *                  overrides for test fields
+ *
+ * Enemies and objectives (A3):
+ *   forces         groups, guns, reinforcements, waves — see ai/AIDirector.js
+ *   script         objectives (nav, destroy, waves, extract) — see states/MissionScript.js
  */
 export const MISSIONS = [
   {
@@ -190,6 +194,112 @@ export const MISSIONS = [
     playerStart: { x: 0, z: 0, heading: 0.4, walker: 'bastion' },
     navPoints: [{ id: 'ALPHA', x: -300, z: -1100 }],
   },
+  // ---- A3: Synthesis enemies and AI ----
+  {
+    id: 'test-duel',
+    name: 'Duell',
+    theater: 'industrial',
+    timeOfDay: 'day',
+    seed: 31337,
+    briefing: 'Ein Synthese-Jäger (SICHEL) gegen dich auf offenem Feld, 700 m voraus. Er kennt deine Position. Je Schwierigkeitsgrad einmal spielen und vergleichen (Treffsicherheit, Ausweichen, Flankieren).',
+    playerStart: { x: 0, z: 0, heading: 0, walker: 'bastion' },
+    navPoints: [{ id: 'ALPHA', x: 0, z: -700 }],
+    terrainFeatures: false, autoStructures: false, scatter: false, weather: 'clear',
+    forces: {
+      groups: [{ id: 'jaeger', role: 'hunt', units: [{ type: 'sichel', at: [0, -700], heading: 0 }] }],
+    },
+    script: { steps: [{ type: 'destroy', groups: 'all', text: 'Jäger SICHEL ausschalten', done: 'Jäger ausgeschaltet.' }] },
+  },
+  {
+    id: 'test-ambush',
+    name: 'Hinterhalt',
+    theater: 'canyon',
+    timeOfDay: 'day',
+    seed: 7070,
+    weather: 'clear',
+    briefing: 'Canyon in Tessar: die Schlucht vor dir knickt nach 750 m rechts ab. Von dort zieht eine Synthese-Patrouille (Späher SPLITTER + Jäger SICHEL) heran — ungesehen am Knick (KNICK) auf sie warten. SENSOREN aus, sonst orten sie deine Abstrahlung auf rund 1500 m. Der Späher ruft Verstärkung, sobald er dich sieht: 40 s später kommt ein weiterer Jäger aus dem Ostteil der Schlucht.',
+    playerStart: { x: 0, z: 0, heading: 0, walker: 'bastion' },
+    navPoints: [{ id: 'KNICK', x: 0, z: -700 }, { id: 'OST', x: 700, z: -760 }],
+    features: [
+      { type: 'canyon', at: [0, -420], angle: 90, length: 760, width: 60, depth: 30, wall: 14, meander: 0.1 },
+      { type: 'canyon', at: [400, -760], angle: 0, length: 860, width: 60, depth: 30, wall: 14, meander: 0.1 },
+    ],
+    forces: {
+      groups: [{
+        id: 'patrouille', role: 'patrol', loop: false,
+        units: [{ type: 'splitter', at: [700, -760], heading: Math.PI / 2 }, { type: 'sichel', at: [740, -770], heading: Math.PI / 2 }],
+        patrol: [[700, -760], [40, -760], [0, -320]],
+      }],
+      reinforcements: { delay: 40, via: 'edge', points: [[780, -760]], trigger: 'call', groups: [{ units: [{ type: 'sichel' }] }] },
+    },
+    script: { steps: [{ type: 'destroy', groups: ['patrouille'], text: 'Patrouille im Canyon ausschalten', done: 'Patrouille ausgeschaltet.' }] },
+  },
+  {
+    id: 'test-stellung',
+    name: 'Stellung',
+    theater: 'industrial',
+    timeOfDay: 'day',
+    seed: 4455,
+    weather: 'clear',
+    briefing: 'Die Synthese hält die Raffinerie 700 m voraus: zwei Abwehrstachel und ein Brecher (MONOLITH, Schwarmraketen mit echter Aufschaltung). Die zwei Geschütztürme der Anlage sind in Feindeshand. Deckung nutzen!',
+    playerStart: { x: 0, z: 0, heading: 0, walker: 'bastion' },
+    navPoints: [{ id: 'ANLAGE', x: 0, z: -700 }],
+    sites: [{ type: 'refineryPlant', at: [0, -700], rotation: 0, id: 'raffinerie' }],
+    structures: [{ type: 'spike', at: [-45, -635], rotation: 180, id: 'stachel-l' }, { type: 'spike', at: [45, -635], rotation: 180, id: 'stachel-r' }],
+    forces: {
+      groups: [{ id: 'stellung', role: 'guard', units: [{ type: 'monolith', at: [10, -650], heading: 0 }] }],
+      guns: ['spike', 'turret'],
+    },
+    script: { steps: [{ type: 'destroy', groups: ['stellung'], text: 'Brecher MONOLITH ausschalten', done: 'Brecher ausgeschaltet — Stellung genommen.' }] },
+  },
+  {
+    id: 'test-waves',
+    name: 'Welle',
+    theater: 'industrial',
+    timeOfDay: 'dusk',
+    seed: 8080,
+    briefing: 'Drei Wellen setzen per Landefähre ab, die nächste kommt 10 s nach der vorigen. Welle 3 bringt einen Belagerer (OBELISK, Mörser) — er schießt nur, wenn ein anderer dich sieht.',
+    playerStart: { x: 0, z: 0, heading: 0, walker: 'goliath' },
+    navPoints: [{ id: 'LZ-1', x: 0, z: -600 }],
+    terrainFeatures: false, autoStructures: false, scatter: false, weather: 'clear',
+    forces: {
+      waves: [
+        { delay: 6, via: 'lander', points: [[0, -600]], groups: [{ units: [{ type: 'splitter' }, { type: 'splitter' }] }] },
+        { delay: 10, via: 'lander', points: [[-450, -420], [450, -420]], groups: [{ units: [{ type: 'sichel' }, { type: 'splitter' }] }, { units: [{ type: 'splitter' }] }] },
+        { delay: 10, via: 'lander', points: [[0, -700], [350, -950]], groups: [{ units: [{ type: 'monolith' }, { type: 'sichel' }] }, { units: [{ type: 'obelisk' }] }] },
+      ],
+    },
+    script: { steps: [{ type: 'waves', text: 'Drei Wellen abwehren', done: 'Alle Wellen abgewehrt.' }] },
+  },
+  {
+    id: 'first-sortie',
+    name: 'Erster Einsatz',
+    theater: 'industrial',
+    timeOfDay: 'day',
+    seed: 2601,
+    briefing: 'Kaltstart im Hangar. Walker hochfahren, durchs Tor raus, ALPHA anlaufen. Bei BRAVO patrouilliert eine Synthese-Gruppe (Späher SPLITTER + Jäger SICHEL) — stellen und ausschalten, danach zur EXTRAKTION. Sieht dich der Späher, ruft er eine Landefähre mit einem Brecher (MONOLITH, ca. 60 s). Mit SENSOREN an ortet die Synthese dich auf rund 1400 m.',
+    playerStart: { x: 0, z: 4, heading: 0, walker: 'bastion' },
+    navPoints: [{ id: 'ALPHA', x: 0, z: -500 }, { id: 'BRAVO', x: 650, z: -1350 }, { id: 'EXTRAKTION', x: -420, z: -1650 }],
+    structures: [{ type: 'hangarBay', at: [0, 0], rotation: 0, id: 'hangar' }],
+    sites: [{ type: 'landingSite', at: [-420, -1650], rotation: 20, id: 'lz' }],
+    area: [[-950, 300], [1250, 300], [1250, -2000], [-950, -2000]],
+    forces: {
+      groups: [{
+        id: 'patrouille', role: 'patrol',
+        units: [{ type: 'splitter', at: [650, -1280] }, { type: 'sichel', at: [625, -1305] }],
+        patrol: [[650, -1280], [880, -1480], [560, -1620], [430, -1360]],
+      }],
+      reinforcements: { delay: 60, via: 'lander', points: [[950, -1700], [300, -1750]], trigger: 'call', groups: [{ units: [{ type: 'monolith' }] }] },
+    },
+    script: {
+      steps: [
+        { type: 'nav', id: 'ALPHA', radius: 70, text: 'Navpunkt ALPHA anlaufen', done: 'ALPHA erreicht. Weiter nach BRAVO, dort wurde eine Synthese-Patrouille gemeldet.' },
+        { type: 'destroy', groups: ['patrouille'], nav: 'BRAVO', text: 'Synthese-Patrouille bei BRAVO stellen', done: 'Patrouille ausgeschaltet. Zur EXTRAKTION.' },
+        { type: 'extract', id: 'EXTRAKTION', radius: 60, text: 'EXTRAKTION erreichen', done: 'Extraktion erreicht. Einsatz erfüllt.' },
+      ],
+    },
+  },
+
 ];
 
 export function getMission(id) {

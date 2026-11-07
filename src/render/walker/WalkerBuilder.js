@@ -23,6 +23,8 @@ export function buildWalkerParts(plan, walker) {
   };
 
   const parts = { torso: [], sensors: [], pelvis: [], armL: [], armR: [] };
+  // Self-lit pieces (Synthesis veins and crystals), per part
+  const glow = { torso: [], sensors: [], pelvis: [], armL: [], armR: [] };
   const mounts = {};
 
   // Torso hull: side profile extruded across the width, narrowed toward the top
@@ -81,9 +83,26 @@ export function buildWalkerParts(plan, walker) {
     parts.pelvis.push(colored(new THREE.CylinderGeometry(r, r, r * 1.6, 6).rotateZ(Math.PI / 2).translate(side * plan.legs.hipWidth, 0, 0), color('joint')));
   }
 
+  // Synthesis arms: a glowing seam along each weapon pod
+  if (P.glow) {
+    for (const [key, side] of [['armL', -1], ['armR', 1]]) {
+      const [pw, ph, pl] = arm.pod;
+      glow[key].push(box([0.06, 0.06, pl * 0.8], [side * arm.upper[0] * 0.2 + side * (pw / 2 + 0.03), -arm.drop + ph * 0.2, -pl * 0.25], 'glow'));
+    }
+  }
+
   // Extras
   for (const ex of plan.extras ?? []) {
-    const list = parts[ex.part === 'pelvis' ? 'pelvis' : ex.part === 'sensors' ? 'sensors' : 'torso'];
+    const key = ex.part === 'pelvis' ? 'pelvis' : ex.part === 'sensors' ? 'sensors' : 'torso';
+    const list = parts[key];
+    if (ex.kind === 'shard') {
+      const g = new THREE.ConeGeometry(ex.size[0], ex.size[1], 4).translate(0, ex.size[1] / 2, 0);
+      if (ex.rot) g.applyMatrix4(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(ex.rot[0] * DEG, ex.rot[1] * DEG, ex.rot[2] * DEG)));
+      g.translate(ex.at[0], ex.at[1], ex.at[2]);
+      (ex.glow ? glow[key] : list).push(colored(g, color(ex.glow ? 'glow' : ex.color ?? 'accent')));
+    }
+    if (ex.kind === 'plate') list.push(box(ex.size, ex.at, ex.color ?? 'base', ex.rot));
+    if (ex.kind === 'vein') glow[key].push(colored(beamGeometry(ex.a, ex.b, ex.w, ex.w), color('glow')));
     if (ex.kind === 'box') list.push(box(ex.size, ex.at, ex.color ?? 'base'));
     if (ex.kind === 'beam') list.push(colored(beamGeometry(ex.a, ex.b, ex.w, ex.w), color('metal')));
     if (ex.kind === 'jet') {
@@ -107,6 +126,7 @@ export function buildWalkerParts(plan, walker) {
 
   const geometries = {};
   for (const [name, list] of Object.entries(parts)) geometries[name] = list.length ? merge(list) : null;
+  for (const [name, list] of Object.entries(glow)) geometries[`${name}Glow`] = list.length ? merge(list) : null;
   geometries.legs = buildLegGeometries(plan, color);
   return { geometries, hardpointMounts };
 }
@@ -136,6 +156,7 @@ function buildLegGeometries(plan, color) {
   const style = L.style;
   const box = (size, at, col) => colored(new THREE.BoxGeometry(...size).translate(...at), color(col));
 
+  if (style === 'insect') return insectLegs(plan, color, box);
   const thigh = [box([tw, L.thigh, tw * 1.1], [0, -L.thigh / 2, 0], 'base')];
   const knee = colored(new THREE.CylinderGeometry(tw * 0.55, tw * 0.55, tw * 1.2, 6).rotateZ(Math.PI / 2).translate(0, -L.thigh, 0), color('joint'));
   thigh.push(knee);
@@ -166,5 +187,33 @@ function buildLegGeometries(plan, color) {
     foot.push(box([fw * 0.9, fh * 0.5, fl * 0.35], [0, -fh * 0.25 + fh * 0.35, -fl * 0.5], 'base'));
     if (style === 'heavy') foot.push(box([fw * 0.7, fh * 1.2, fl * 0.4], [0, fh * 0.3, fl * 0.05], 'base'));
   }
+  return { thigh: merge(thigh), shin: merge(shin), foot: merge(foot) };
+}
+
+/**
+ * Synthesis legs: thin, angular segments with a crystal spur at the knee,
+ * the foot a fan of three long claws; a glowing seam runs down the shin.
+ */
+function insectLegs(plan, color, box) {
+  const L = plan.legs;
+  const [tw, sw] = L.thick;
+  const thigh = [
+    box([tw, L.thigh, tw * 0.8], [0, -L.thigh / 2, 0], 'base'),
+    colored(new THREE.ConeGeometry(tw * 0.5, tw * 2.2, 4).rotateX(Math.PI * 0.6).translate(0, -L.thigh, tw * 0.9), color('accent')),
+    colored(new THREE.CylinderGeometry(tw * 0.5, tw * 0.5, tw, 4).rotateZ(Math.PI / 2).translate(0, -L.thigh, 0), color('joint')),
+  ];
+  const shin = [
+    box([sw, L.shin, sw * 0.9], [0, -L.shin / 2, 0], 'base'),
+    box([sw * 0.4, L.shin * 0.8, sw * 0.4], [0, -L.shin * 0.45, -sw * 0.6], 'dark'),
+  ];
+  if (plan.paint.glow) shin.push(box([0.07, L.shin * 0.7, 0.07], [0, -L.shin * 0.5, sw * 0.5], 'glow'));
+  const [fw, fh, fl] = L.foot;
+  const foot = [box([fw * 0.35, fh, fl * 0.3], [0, -fh / 2, 0], 'dark')];
+  for (const a of [-35, 0, 35]) {
+    const g = new THREE.ConeGeometry(fw * 0.12, fl, 4).rotateX(-Math.PI / 2).translate(0, -fh * 0.7, -fl * 0.45);
+    g.rotateY(a * DEG);
+    foot.push(colored(g, color('base')));
+  }
+  foot.push(colored(new THREE.ConeGeometry(fw * 0.1, fl * 0.5, 4).rotateX(Math.PI / 2).translate(0, -fh * 0.6, fl * 0.3), color('accent')));
   return { thigh: merge(thigh), shin: merge(shin), foot: merge(foot) };
 }

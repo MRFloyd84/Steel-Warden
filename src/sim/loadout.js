@@ -1,3 +1,4 @@
+import { ENEMIES } from '../data/enemies.js';
 import { WEAPONS, SIZE_RANK } from '../data/weapons.js';
 import { WALKERS } from '../data/walkers.js';
 
@@ -47,7 +48,7 @@ export function loadoutWeight(loadout) {
 /** Checks every walker's factory loadout once at start-up; throws with all problems listed. */
 export function validateFactoryLoadouts() {
   const errors = [];
-  for (const w of Object.values(WALKERS)) {
+  for (const w of [...Object.values(WALKERS), ...Object.values(ENEMIES)]) {
     const { problems } = checkLoadout(w, w.defaultLoadout, w.defaultGroups, w.defaultChains);
     for (const p of problems) errors.push(`${w.name}: ${p}`);
   }

@@ -55,6 +55,26 @@ const BUILDERS = {
     box(0.32, 0.3, 0.6, 0, 0, -0.3, BODY), cyl(0.11, 0.06, -0.63, '#1c2a2a', 10), cyl(0.07, 0.04, -0.67, '#9fd8ff', 8),
     box(0.03, 0.35, 0.03, 0.1, 0.32, -0.15, METAL),
   ] }),
+  // Synthesis: angular crystal housings
+  crystalGun: () => ({ length: 1.6, parts: [
+    box(0.4, 0.34, 0.7, 0, 0, -0.35, '#2b2442'),
+    colored(new THREE.ConeGeometry(0.16, 1.0, 4).rotateX(-Math.PI / 2).translate(0, 0, -1.1), '#5ef2e6'),
+    box(0.06, 0.4, 0.5, 0.2, 0.05, -0.4, '#6b55a0'),
+  ] }),
+  crystalLance: () => ({ length: 2.4, parts: [
+    box(0.55, 0.45, 1.0, 0, 0, -0.5, '#2b2442'),
+    colored(new THREE.ConeGeometry(0.22, 1.6, 4).rotateX(-Math.PI / 2).translate(0, 0, -1.6), '#8f6ef0'),
+    box(0.7, 0.06, 0.6, 0, 0.26, -0.6, '#5ef2e6'),
+  ] }),
+  crystalPod: () => ({ length: 0.9, parts: [
+    box(0.8, 0.6, 0.9, 0, 0, -0.45, '#2b2442'),
+    ...[-0.22, 0, 0.22].map((x) => colored(new THREE.ConeGeometry(0.1, 0.25, 4).rotateX(-Math.PI / 2).translate(x, 0.05, -0.95), '#b48cff')),
+  ] }),
+  mortar: () => ({ length: 2.2, parts: [
+    box(1.0, 0.9, 1.2, 0, 0, -0.4, '#2b2442'),
+    cyl(0.32, 1.6, -1.4, '#3a2f55', 6, 0, 0.1),
+    cyl(0.4, 0.12, -2.2, '#5ef2e6', 6, 0, 0.1),
+  ] }),
   emp: () => {
     const dish = colored(new THREE.ConeGeometry(0.5, 0.35, 10, 1, true).rotateX(-Math.PI / 2).translate(0, 0, -1.35), '#8fa6b8');
     return { length: 1.5, parts: [box(0.5, 0.45, 0.8, 0, 0, -0.4, BODY), cyl(0.1, 0.5, -1.0, METAL, 6), dish, cyl(0.06, 0.25, -1.45, '#9fd8ff', 6)] };

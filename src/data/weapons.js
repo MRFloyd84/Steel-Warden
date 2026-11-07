@@ -21,6 +21,8 @@
  * kind 'equipment'  carried, never fires (targetPod: component selection with Tab)
  * effect      optional: { kind: 'disrupt' | 'emp', time } — electronics / shields knocked out
  * visual.model  weapon model on the hardpoint (render/walker/WeaponModels.js)
+ * ballistic   true: the projectile falls (artillery, high arc aimed by the AI); blastRadius splash
+ * faction     'synth' for enemy-only weapons
  */
 export const WEAPONS = {
   'lux-12': {
@@ -103,6 +105,58 @@ export const WEAPONS = {
     blastRadius: 14,
     visual: { model: 'speer', muzzleFx: 'flashYellow', projectileFx: 'bigRocket', impactFx: 'bigBlast', color: '#ffb050', length: 3 },
     sound: 'weapon.speer',
+  },
+  // ---- Synthesis weapons (enemy only, faction 'synth') ----
+  'syn-splitter': {
+    id: 'syn-splitter', name: 'Splitterwerfer', short: 'SPLITTER', type: 'energy', size: 'S', weight: 1.0, faction: 'synth',
+    kind: 'bolt', damage: 5, damageType: 'energy', vsShield: 1.2, vsArmor: 1.0,
+    range: 280, projectileSpeed: 750, fireRate: 6, chargeTime: 0, energyCost: 2, heatPerShot: 0.6,
+    ammoPerMagazine: null, reloadTime: 0, ammoPerTon: null, spread: 1.4, burst: 1, lockTime: 0, guidance: null,
+    visual: { model: 'crystalGun', muzzleFx: 'flashBlue', projectileFx: 'boltCyan', impactFx: 'sparks', color: '#5ef2e6', length: 2.5 },
+    sound: 'weapon.laser',
+  },
+  'syn-impuls': {
+    id: 'syn-impuls', name: 'Impulsprisma', short: 'IMPULS', type: 'energy', size: 'M', weight: 2.5, faction: 'synth',
+    kind: 'bolt', damage: 16, damageType: 'energy', vsShield: 1.4, vsArmor: 0.9,
+    range: 520, projectileSpeed: 1000, fireRate: 1.6, chargeTime: 0, energyCost: 8, heatPerShot: 3,
+    ammoPerMagazine: null, reloadTime: 0, ammoPerTon: null, spread: 0.6, burst: 1, lockTime: 0, guidance: null,
+    visual: { model: 'crystalGun', muzzleFx: 'flashBlue', projectileFx: 'boltViolet', impactFx: 'plasma', color: '#b48cff', length: 4 },
+    sound: 'weapon.laser',
+  },
+  'syn-lanze': {
+    id: 'syn-lanze', name: 'Kristalllanze', short: 'LANZE', type: 'energy', size: 'M', weight: 3.0, faction: 'synth',
+    kind: 'beam', damage: 26, damageType: 'energy', vsShield: 1.4, vsArmor: 0.9,
+    range: 450, projectileSpeed: 0, fireRate: 0, chargeTime: 0, energyCost: 12, heatPerShot: 6,
+    beamTime: 1.4, cooldown: 2.6,
+    ammoPerMagazine: null, reloadTime: 0, ammoPerTon: null, spread: 0, burst: 1, lockTime: 0, guidance: null,
+    visual: { model: 'crystalLance', muzzleFx: 'flashBlue', projectileFx: 'beamCyan', impactFx: 'burn', color: '#5ef2e6' },
+    sound: 'weapon.beam',
+  },
+  'syn-hammer': {
+    id: 'syn-hammer', name: 'Kristallhammer', short: 'HAMMER', type: 'ballistic', size: 'L', weight: 5.0, faction: 'synth',
+    kind: 'bolt', damage: 55, damageType: 'ballistic', vsShield: 0.7, vsArmor: 1.4,
+    range: 650, projectileSpeed: 1100, fireRate: 0.4, chargeTime: 0, energyCost: 4, heatPerShot: 6,
+    ammoPerMagazine: 6, reloadTime: 4, ammoPerTon: 60, spread: 0.3, burst: 1, lockTime: 0, guidance: null,
+    visual: { model: 'crystalLance', muzzleFx: 'flashYellow', projectileFx: 'tracer', impactFx: 'sparks', color: '#d8c2ff', length: 5 },
+    sound: 'weapon.railgun',
+  },
+  'syn-schwarm': {
+    id: 'syn-schwarm', name: 'Schwarmraketen', short: 'SCHWARM', type: 'missile', size: 'M', weight: 3.0, faction: 'synth',
+    kind: 'missile', damage: 9, damageType: 'missile', vsShield: 0.6, vsArmor: 1.2,
+    range: 750, projectileSpeed: 180, fireRate: 0.12, chargeTime: 0, energyCost: 3, heatPerShot: 2,
+    ammoPerMagazine: 6, reloadTime: 8, ammoPerTon: 48, spread: 3, burst: 6, burstGap: 0.12, lockTime: 2.5,
+    guidance: ['dumb', 'active'],
+    missile: { launchSpeed: 50, thrust: 110, maxSpeed: 190, burnTime: 4.5, turnRate: 60, seekerCone: 45 },
+    visual: { model: 'crystalPod', muzzleFx: 'flashBlue', projectileFx: 'rocket', impactFx: 'blast', color: '#b48cff', length: 1.3 },
+    sound: 'weapon.rocket',
+  },
+  'syn-moerser': {
+    id: 'syn-moerser', name: 'Schwerkraftmörser', short: 'MÖRSER', type: 'ballistic', size: 'L', weight: 7.0, faction: 'synth',
+    kind: 'bolt', ballistic: true, damage: 60, damageType: 'ballistic', vsShield: 0.7, vsArmor: 1.3, blastRadius: 16,
+    range: 1600, projectileSpeed: 135, fireRate: 0.2, chargeTime: 0, energyCost: 5, heatPerShot: 6,
+    ammoPerMagazine: 3, reloadTime: 6, ammoPerTon: 30, spread: 1.2, burst: 1, lockTime: 0, guidance: null,
+    visual: { model: 'mortar', muzzleFx: 'flashYellow', projectileFx: 'orbBlue', impactFx: 'plasma', color: '#b48cff', length: 3 },
+    sound: 'weapon.particle',
   },
   'target-pod': {
     id: 'target-pod', name: 'ZK-1 Zielkapsel', short: 'ZIELKAPSEL', type: 'universal', size: 'S', weight: 1.0,

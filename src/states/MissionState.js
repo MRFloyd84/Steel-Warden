@@ -35,6 +35,11 @@ import { HelpPanel } from '../ui/HelpPanel.js';
 import { RadioMenu } from '../ui/RadioMenu.js';
 import { ControlsScreen } from '../ui/ControlsScreen.js';
 import { damp } from '../util/math.js';
+import { AIDirector } from '../ai/AIDirector.js';
+import { AIDebugView } from '../render/AIDebugView.js';
+import { MissionScript } from './MissionScript.js';
+import { getDifficulty, DIFFICULTY } from '../data/difficulty.js';
+import { Storage } from '../core/Storage.js';
 
 const START_MODES = ['full', 'simple', 'auto'];
 const COMPONENT_LABELS = { torso: 'TORSO', armL: 'ARM L', armR: 'ARM R', legs: 'BEINE', sensors: 'SENSOR' };
@@ -157,6 +162,25 @@ export class MissionState extends State {
       systems: this.systems, cockpit: this.cockpit, radio: (msg) => this.radioMessage(msg),
     });
     this.data.worldLink = this.worldLink;
+
+    // AI (A3): difficulty from the menu (URL ?difficulty= for tests)
+    const diffId = params.get('difficulty');
+    this.difficultyId = DIFFICULTY[diffId] ? diffId : Storage.load('difficulty', 'normal');
+    this.ai = new AIDirector({
+      mission: this.mission, world: this.world, entities: this.entities, combat: this.combat,
+      difficulty: getDifficulty(this.difficultyId), radio: (msg) => this.radioMessage(msg),
+      lit: () => this.floodlight.on, bus: game.bus,
+    });
+    this.combat.ai = this.ai;
+    this.aiDebug = new AIDebugView({ scene: this.world.scene, container: game.container, renderer: game.renderer, director: this.ai, sampler: this.world.sampler });
+    this.script = new MissionScript({
+      mission: this.mission, director: this.ai, combat: this.combat, data: this.data,
+      radio: (msg) => this.radioMessage(msg), onFinish: (result) => this.finish(result),
+    });
+    this.objectiveEl = document.createElement('div');
+    this.objectiveEl.className = 'objective';
+    this.objectiveEl.hidden = true;
+    game.container.appendChild(this.objectiveEl);
     this.tmpVec = new THREE.Vector3();
     this.tmpProj = new THREE.Vector3();
 
@@ -185,6 +209,9 @@ export class MissionState extends State {
     this.cockpitAudio.dispose();
     this.systemsAudio.dispose();
     this.camView.dispose();
+    this.aiDebug.dispose();
+    this.ai.dispose();
+    this.objectiveEl.remove();
     this.hits.dispose();
     this.worldLink.dispose();
     this.combat.dispose();
@@ -285,6 +312,14 @@ export class MissionState extends State {
     }
 
     if (input.pressed('debugFreeCam')) this.toggleFreeCam();
+    if (input.pressed('aiFreeze')) {
+      this.ai.frozen = !this.ai.frozen;
+      this.hints.flash(this.ai.frozen ? 'Gegner eingefroren' : 'Gegner aktiv');
+    }
+    if (input.pressed('aiSpawn')) {
+      const g = this.ai.spawnDebugGroup();
+      this.hints.flash(`KI-Gruppe ${g.id} abgesetzt (300 m voraus)`);
+    }
     if (input.pressed('externalView')) this.viewMode = this.viewMode === 'cockpit' ? 'external' : 'cockpit';
     const external = this.viewMode === 'external';
     if (input.pressed('debugWireframe')) {
@@ -381,6 +416,8 @@ export class MissionState extends State {
     }
     this.entities.update(dt);
     this.combat.update(dt);
+    this.ai.update(dt);
+    this.script.update(dt);
     this.hits.update(dt);
     this.worldLink.update(dt);
     this.systems.update(dt);
@@ -398,6 +435,12 @@ export class MissionState extends State {
     const fdt = this.paused ? 0 : this.frameDt;
     const external = this.viewMode === 'external';
     this.entities.render(a, fdt, this.freeCam || external);
+    this.aiDebug.setVisible(game.input.debugMode);
+    this.aiDebug.update();
+    const objective = this.script.text;
+    this.objectiveEl.hidden = !objective;
+    if (objective && this.objectiveEl.textContent !== objective) this.objectiveEl.textContent = objective;
+    this.objectiveEl.classList.toggle('done', !!this.script.finished);
 
     if (this.freeCam) {
       this.combat.render(fdt, { eye: this.combat.eye, aimDir: this.combat.aimDir });
@@ -483,7 +526,11 @@ export class MissionState extends State {
   }
 
   debugInfo() {
-    return [...missionDebugLines(this), ...this.worldLink.debugLine(), ...this.combat.debugLines(), this.hits.debugLine()];
+    const wrecks = this.combat.units.wreckLines();
+    return [
+      ...missionDebugLines(this), ...this.worldLink.debugLine(), ...this.combat.debugLines(), this.hits.debugLine(),
+      ...this.ai.debugLines(), this.script.debugLine(), ...(wrecks.length ? ['Wracks:', ...wrecks.map((w) => `  ${w}`)] : []),
+    ].filter((l) => l !== null);
   }
 }
 

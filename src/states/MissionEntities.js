@@ -2,16 +2,27 @@ import { EventBus } from '../core/EventBus.js';
 import { WalkerMotion, lerpPose } from '../sim/WalkerMotion.js';
 import { DummyDriver } from '../sim/DummyDriver.js';
 import { WalkerModel } from '../render/walker/WalkerModel.js';
-import { getWalker } from '../data/walkers.js';
+import { WALKERS } from '../data/walkers.js';
+import { ENEMIES } from '../data/enemies.js';
 
 /**
  * Walkers in the mission besides the cockpit: the player's own model (seen
- * in the outside view and the debug camera) and spawned units from
- * mission.spawns. Spawned units are driven by DummyDriver until the AI
- * step; they get their own event bus so their footsteps don't play in the
- * player's cockpit.
+ * in the outside view and the debug camera), spawned units from
+ * mission.spawns (DummyDriver) and AI units (ai/AIDirector adds them at
+ * mission start and at runtime: reinforcements, waves). Units get their own
+ * event bus so their footsteps don't play in the player's cockpit.
+ *
+ * A unit with `controller` (AI) is steered by it: the controller sets the
+ * throttle and returns the turn input like a player would.
  */
 const IDLE = { throttleRate: 0, throttleAbs: null, turn: 0 };
+
+/** Walker data by id: human walkers and Synthesis units. */
+export function findWalker(id) {
+  const w = WALKERS[id] ?? ENEMIES[id];
+  if (!w) throw new Error(`Unknown walker "${id}"`);
+  return w;
+}
 
 export class MissionEntities {
   constructor({ scene, sampler, feel, mission, player }) {
@@ -22,15 +33,32 @@ export class MissionEntities {
     this.player.model.addTo(scene);
     this.player.renderPose = { ...player.motion.pose };
     this.units = [];
-    const quietBus = new EventBus();
+    this.quietBus = new EventBus();
+    this.onAdd = null; // (unit) — combat and world hook in at runtime spawns
+    this.serial = 0;
     for (const spawn of mission.spawns ?? []) {
-      const walker = getWalker(spawn.unit);
-      const motion = new WalkerMotion(walker, sampler, feel, quietBus);
-      motion.place(spawn.at[0], spawn.at[1], spawn.heading ?? 0);
-      const model = new WalkerModel(walker, sampler, feel);
-      model.addTo(scene);
-      this.units.push({ id: spawn.id, walker, motion, model, driver: new DummyDriver(spawn.behavior), renderPose: { ...motion.pose }, spawnEmitting: !!spawn.emitting });
+      this.addUnit({ id: spawn.id, type: spawn.unit, x: spawn.at[0], z: spawn.at[1], heading: spawn.heading ?? 0, behavior: spawn.behavior, emitting: spawn.emitting });
     }
+  }
+
+  /** Adds a walker to the mission (also while it runs); returns the unit. */
+  addUnit({ id = null, type, x, z, heading = 0, behavior = null, emitting = false }) {
+    const walker = findWalker(type);
+    const motion = new WalkerMotion(walker, this.sampler, this.feel, this.quietBus);
+    motion.place(x, z, heading);
+    const model = new WalkerModel(walker, this.sampler, this.feel);
+    model.addTo(this.scene);
+    const u = {
+      id: id ?? `${type}-${++this.serial}`,
+      walker, motion, model,
+      driver: new DummyDriver(behavior ?? { type: 'idle' }),
+      controller: null,
+      renderPose: { ...motion.pose },
+      spawnEmitting: !!emitting,
+    };
+    this.units.push(u);
+    this.onAdd?.(u);
+    return u;
   }
 
   get count() {
@@ -42,6 +70,8 @@ export class MissionEntities {
       if (u.immobile) {
         u.motion.throttle.value = 0;
         u.motion.update(dt, IDLE);
+      } else if (u.controller) {
+        u.motion.update(dt, u.controller.drive(dt));
       } else {
         u.motion.update(dt, u.driver.next(dt, u.motion));
       }

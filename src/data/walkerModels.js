@@ -15,6 +15,8 @@
  * torsoMounts   hardpoint sockets on the torso front
  * extras        decoration: box | beam | jet, attached to 'torso', 'pelvis' or 'sensors'
  */
+import { ENEMY_MODELS } from './enemyModels.js';
+
 const GLASS = '#1c2a2a';
 const JOINT = '#2a2c28';
 const METAL = '#7c8078';
@@ -149,7 +151,7 @@ export const WALKER_MODELS = {
 };
 
 export function getWalkerModel(id) {
-  const m = WALKER_MODELS[id];
+  const m = WALKER_MODELS[id] ?? ENEMY_MODELS[id];
   if (!m) throw new Error(`Unknown walker model "${id}"`);
   return m;
 }

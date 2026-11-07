@@ -80,14 +80,19 @@ export class CombatAudio {
     this.audio.play(name, { ...opts, pan: side * 0.45 });
   }
 
-  /** Continuous beam hum for one of the player's beam weapons. */
-  beam(slotId, on) {
+  /** Continuous beam hum for a beam weapon (point: an enemy's beam, quieter with distance). */
+  beam(slotId, on, point = null) {
     let v = this.beamLoops.get(slotId);
     if (!v && on) {
       v = this.audio.loop('beam');
       this.beamLoops.set(slotId, v);
     }
-    v?.setGain(on ? 1 : 0, on ? 0.02 : 0.08);
+    let gain = 1;
+    if (point) {
+      const dist = rel.subVectors(point, this.camera.position).length();
+      gain = Math.max(WORLD_AUDIO.minGain, 1 / (1 + dist / WORLD_AUDIO.ref)) * 0.8;
+    }
+    v?.setGain(on ? gain : 0, on ? 0.02 : 0.08);
   }
 
   dispose() {

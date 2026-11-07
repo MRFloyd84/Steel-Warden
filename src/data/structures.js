@@ -46,6 +46,23 @@ export const STRUCTURES = {
     ],
     collide: [{ box: [28, 31], at: [0, 0] }],
   },
+  // Walk-in hangar (mission start): open front (-Z), walls collide one by one
+  hangarBay: {
+    name: 'Walker-Hangar (offen)', faction: 'human', armor: 900, structure: 600, onDestroy: 'fire',
+    parts: [
+      { box: [34, 0.4, 36], at: [0, 0.2, 0], color: '#6e6b62' },
+      { box: [34, 23, 1.6], at: [0, 11.5, 17.2], color: STEEL },
+      { box: [1.6, 23, 36], at: [-16.2, 11.5, 0], color: STEEL },
+      { box: [1.6, 23, 36], at: [16.2, 11.5, 0], color: STEEL },
+      { box: [35, 1.6, 37], at: [0, 23.8, 0], color: DARK },
+      { box: [34, 3, 1.6], at: [0, 21.5, -17.2], color: WARN },
+      ...[-9, 0, 9].map((x) => ({ box: [1.2, 0.3, 10], at: [x, 22.8, 2], color: '#fff2c0', glow: true })),
+      { box: [3, 20, 3], at: [-12.5, 10, 12], color: '#545249' },
+      { box: [3, 20, 3], at: [12.5, 10, 12], color: '#545249' },
+      ...[-10, 10].map((x) => ({ box: [6, 0.3, 0.3], at: [x, 0.45, -14], color: WARN })),
+    ],
+    collide: [{ box: [1.6, 36], at: [-16.2, 0] }, { box: [1.6, 36], at: [16.2, 0] }, { box: [34, 1.6], at: [0, 17.2] }, { box: [3, 3], at: [-12.5, 12] }, { box: [3, 3], at: [12.5, 12] }],
+  },
   generator: {
     name: 'Generator', faction: 'human', armor: 180, structure: 120, onDestroy: 'explosion',
     parts: [

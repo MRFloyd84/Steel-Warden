@@ -25,8 +25,9 @@ const dir = new THREE.Vector3();
  *    canopy and smoke, arm → its weapons red on the weapon monitor
  *  - critical (reactor shielding): red emergency light, horn, master
  *    warning, radio call
- * Plus the enemy lock warning (F9 debug: the nearest enemy locks on and
- * fires a guided missile) and debug hits (F8 / Shift+F8).
+ * Plus the enemy lock warning — real from A3 (an AI walker locking on, a
+ * guided missile homing on us), F9 debug: the nearest enemy locks on and
+ * fires a guided missile — and debug hits (F8 / Shift+F8).
  */
 export class CockpitHits {
   constructor({ game, combat, systems, cockpit, view, radio, config }) {
@@ -46,6 +47,11 @@ export class CockpitHits {
     this.enemy = null; // { source, t, phase: 'lock' | 'missile', serial }
     this.lockVoice = null;
     this.incomingVoice = null;
+    this.incoming = null;
+    this.locker = null;
+    this.realWarn = null;
+    this.lastLockRadio = -Infinity;
+    this.lastIncomingRadio = -Infinity;
     combat.onPlayerHit = (hit) => this.onHit(hit);
     combat.threatSource = () => this.threat;
   }
@@ -145,21 +151,49 @@ export class CockpitHits {
 
   updateEnemy(dt) {
     const e = this.enemy;
-    this.systems.missileWarning = null;
-    if (!e) return;
-    e.t += dt;
-    if (e.phase === 'lock') {
-      this.systems.missileWarning = 'lock';
-      if (e.source.wreck) {
-        this.enemy = null;
-        return;
-      }
-      if (e.t >= this.cfg.enemyLock.lockTime) this.launchEnemyMissile(e);
-    } else {
-      const p = this.combat.projectiles.bySerial(e.serial);
-      if (p) this.systems.missileWarning = 'missile';
+    let warn = null;
+    if (e) {
+      e.t += dt;
+      if (e.phase === 'lock') {
+        warn = 'lock';
+        if (e.source.wreck) this.enemy = null;
+        else if (e.t >= this.cfg.enemyLock.lockTime) this.launchEnemyMissile(e);
+      } else if (this.combat.projectiles.bySerial(e.serial)) warn = 'missile';
       else this.enemy = null;
     }
+    // Real threats (A3): an AI walker holds a lock on us, a guided missile is on its way
+    this.incoming = this.findIncoming();
+    this.locker = this.combat.ai?.lockingPlayer?.unit ?? null;
+    if (this.incoming) warn = 'missile';
+    else if (this.locker && !warn) warn = 'lock';
+    if (!e) {
+      if (warn === 'lock' && this.realWarn !== 'lock' && this.time - this.lastLockRadio > 8) {
+        this.lastLockRadio = this.time;
+        this.radio(RADIO.enemyLock);
+      }
+      if (warn === 'missile' && this.realWarn !== 'missile' && this.time - this.lastIncomingRadio > 6) {
+        this.lastIncomingRadio = this.time;
+        this.radio(RADIO.incoming);
+      }
+    }
+    this.realWarn = warn;
+    this.systems.missileWarning = warn;
+  }
+
+  /** Nearest guided enemy missile homing on the player, or null. */
+  findIncoming() {
+    let best = null;
+    let bestD = Infinity;
+    const me = this.player.motion;
+    for (const p of this.combat.projectiles.pool) {
+      if (!p.active || !p.def.missile || p.owner === this.player || p.target !== this.player || p.lost || p.mode === 'dumb') continue;
+      const d = Math.hypot(p.pos.x - me.x, p.pos.z - me.z);
+      if (d < bestD) {
+        bestD = d;
+        best = p;
+      }
+    }
+    return best;
   }
 
   launchEnemyMissile(e) {
@@ -186,10 +220,13 @@ export class CockpitHits {
   /** Bearing of the threat for the radar wedge (world dx/dz from the player), or null. */
   get threat() {
     const e = this.enemy;
-    if (!e) return null;
+    const me = this.player.motion.pose;
+    if (!e) {
+      const pos = this.incoming?.pos ?? this.locker?.motion.pose ?? null;
+      return pos ? { dx: pos.x - me.x, dz: pos.z - me.z, kind: this.incoming ? 'missile' : 'lock' } : null;
+    }
     const p = e.phase === 'missile' ? this.combat.projectiles.bySerial(e.serial) : null;
     const pos = p ? p.pos : e.source.motion.pose;
-    const me = this.player.motion.pose;
     return { dx: pos.x - me.x, dz: pos.z - me.z, kind: e.phase };
   }
 

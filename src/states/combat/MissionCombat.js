@@ -12,6 +12,7 @@ import { MissileControl, angleTo } from './MissileControl.js';
 import { TargetTracking } from './TargetTracking.js';
 
 const AIM_DISTANCE = 800;
+const NOISE = { S: 600, M: 750, L: 900 }; // m — how far other units hear a shot
 const DEG = Math.PI / 180;
 const RADIO = {
   blocked: { from: 'TECHNIK', text: 'Waffen gesichert oder ohne Reaktorleistung — Feuerfreigabe prüfen.' },
@@ -74,12 +75,20 @@ export class MissionCombat {
     this.eye = new THREE.Vector3();
     this.aimUnit = null;
     this.triggers = { chain: false, secondary: false, all: false };
-    this.beamDraw = new Map(); // slot id → { from, to } this step
+    this.beamDraw = new Map(); // slot id (or unit:slot) → { from, to } this step
+    this.enemyBeams = new Map(); // unit:slot → on (beam sound at the shooter)
+    this.enemyBeamPos = new Map();
     this.lastBlockedRadio = -Infinity;
     this.lockAnnounced = false;
     this.time = 0;
     this.stats = { shots: 0, hits: 0 };
     if (systems.flags.shieldsReady) this.player.damage.fillShields();
+    this.onNoise = null; // (pos, radius, source) — the AI hears shots and explosions
+    this.units.onNoise = (pos, r, src) => this.onNoise?.(pos, r, src);
+    this.units.onPlayerBlast = (res, center) => {
+      const side = hitSide(this.player.motion.pose.yaw, v3.subVectors(this.player.motion.pose, center).setY(0).normalize());
+      this.onPlayerHit?.({ side, component: 'torso', res, show: true });
+    };
     this.offs.push(
       game.bus.on('combat:armLost', ({ unit }) => unit === 'player' && radio(RADIO.armLost)),
       game.bus.on('combat:wreck', ({ unit, kind }) => unit === 'player' && kind === 'legs' && radio(RADIO.legsLost)),
@@ -212,6 +221,8 @@ export class MissionCombat {
     const preset = ENERGY_PRESETS[this.controls.has('energyPreset') ? this.controls.positionLabel('energyPreset') : 'AUSGL'] ?? ENERGY_PRESETS.AUSGL;
     const power = sys.s.reactor.power;
     this.units.update(dt, { enabled: sys.flags.shieldsReady, rate: power * (preset.shields / 0.34) });
+    // Until the radar (A4): the player emits while the SENSOREN switch is on
+    if (this.controls.has('sensors')) this.player.emitting = this.controls.value('sensors') === 1;
 
     this.beamDraw.clear();
     this.missiles.updateModes();
@@ -245,42 +256,75 @@ export class MissionCombat {
     return slot.hp.location === 'armL' || slot.id.startsWith('L') ? -1 : 1;
   }
 
+  /** Player weapon fires one shot toward the crosshair aim point. */
   fire(slot, shotIndex) {
     const d = slot.def;
     const origin = this.player.mounts.muzzleWorld(slot.id, v1);
-    v2.subVectors(this.aimPoint, origin).normalize();
-    spreadDir(v2, d.spread);
-    let proj;
-    if (d.missile) {
-      const params = this.missiles.spawnParams(slot, this.eye, this.aimDir);
-      proj = this.projectiles.spawn({ def: d, owner: this.player, origin, dir: v2, ...params });
-      this.missiles.launched(slot, proj);
-    } else {
-      proj = this.projectiles.spawn({ def: d, owner: this.player, origin, dir: v2, aimPoint: this.aimPoint.clone() });
-    }
-    this.stats.shots++;
-    if (shotIndex === 0 || d.kind === 'missile') {
-      this.fx.muzzleFlash(origin, v2, d.visual.color, d.size === 'L');
-      if (shotIndex === 0 || d.burstGap) this.sound.own(d.sound, this.sideOf(slot));
-      if (d.missile && shotIndex === 0) this.sound.own('weapon.missileLaunch', this.sideOf(slot), { gain: d.size === 'L' ? 1.2 : 0.7 });
-    }
+    const dir = v2.subVectors(this.aimPoint, origin).normalize();
+    spreadDir(dir, d.spread);
+    const extra = d.missile ? this.missiles.spawnParams(slot, this.eye, this.aimDir) : { aimPoint: this.aimPoint.clone() };
+    const proj = this.launch(this.player, slot, shotIndex, origin, dir, extra);
+    if (d.missile) this.missiles.launched(slot, proj);
   }
 
-  /** LUX-40: continuous ray from the muzzle toward the aim point, damage over time. */
+  /**
+   * AI unit (or gun) fires one shot: from its muzzle toward its aim point.
+   * shot: { target, mode } for missiles, { speed } for ballistic shells
+   * (from the controller), origin/dir optional (guns pass their own).
+   */
+  fireFrom(owner, slot, shotIndex, aimPoint, shot = {}) {
+    const d = slot.def;
+    const origin = shot.origin ?? owner.mounts.muzzleWorld(slot.id, v1);
+    const dir = shot.dir ? v2.copy(shot.dir) : v2.subVectors(aimPoint, origin).normalize();
+    spreadDir(dir, d.spread);
+    if (d.missile) {
+      // Missiles leave the pod slightly upward
+      dir.y += 0.08;
+      dir.normalize();
+    }
+    return this.launch(owner, slot, shotIndex, origin, dir, d.missile ? { target: shot.target ?? null, mode: shot.mode ?? 'dumb' } : { aimPoint: aimPoint.clone(), speed: shot.speed ?? null });
+  }
+
+  /** Spawns the projectile, flash, sound and the noise other units hear. */
+  launch(owner, slot, shotIndex, origin, dir, extra) {
+    const d = slot.def;
+    const proj = this.projectiles.spawn({ def: d, owner, origin, dir, ...extra });
+    const own = owner === this.player;
+    if (own) this.stats.shots++;
+    if (shotIndex === 0 || d.kind === 'missile') {
+      this.fx.muzzleFlash(origin, dir, d.visual.color, d.size === 'L');
+      if (shotIndex === 0 || d.burstGap) {
+        if (own) this.sound.own(d.sound, this.sideOf(slot));
+        else this.sound.at(d.sound, origin);
+      }
+      if (d.missile && shotIndex === 0) {
+        if (own) this.sound.own('weapon.missileLaunch', this.sideOf(slot), { gain: d.size === 'L' ? 1.2 : 0.7 });
+        else this.sound.at('weapon.missileLaunch', origin, { gain: 0.9 });
+      }
+      if (shotIndex === 0) this.onNoise?.(origin, NOISE[d.size] ?? 700, owner);
+    }
+    return proj;
+  }
+
+  /** LUX-40: continuous ray from the muzzle toward the aim point, damage over time (player). */
   beamStep(slot, dt, on) {
     if (!on) return;
+    this.beamFrom(this.player, slot, this.player.mounts.muzzleWorld(slot.id, new THREE.Vector3()), this.aimPoint, dt);
+  }
+
+  /** A beam of any shooter this step: hits units of the other side, buildings or ground. */
+  beamFrom(owner, slot, from, aimPoint, dt) {
     const d = slot.def;
-    const from = this.player.mounts.muzzleWorld(slot.id, new THREE.Vector3());
-    const dir = v2.subVectors(this.aimPoint, from).normalize();
+    const dir = v2.subVectors(aimPoint, from).normalize();
     const end = v3.copy(from).addScaledVector(dir, d.range);
     let best = null;
     for (const u of this.units.all) {
-      if (u === this.player) continue;
+      if (u === owner || u.side === owner.side) continue;
       const hit = u.volumes.intersectSegment(from, end);
       if (hit && (!best || hit.t < best.hit.t)) best = { unit: u, hit };
     }
     let groundD = raycastTerrain(this.world.sampler, from, dir, d.range);
-    const obs = this.world.objects.segment(from, end);
+    const obs = this.world.objects.segment(from, end, { ignore: owner.structure ?? null });
     let to;
     if (obs && (!best || obs.t < best.hit.t) && (groundD === null || obs.t * d.range <= groundD)) {
       to = obs.point;
@@ -296,7 +340,11 @@ export class MissionCombat {
     } else {
       to = end.clone();
     }
-    this.beamDraw.set(slot.id, { from, to, color: d.visual.color });
+    this.beamDraw.set(owner === this.player ? slot.id : `${owner.id}:${slot.id}`, { from, to, color: d.visual.color });
+    if (owner !== this.player && !slot.beamNoise) {
+      slot.beamNoise = true;
+      this.onNoise?.(from, NOISE[d.size] ?? 700, owner);
+    }
   }
 
   onProjectileHit({ proj, unit, hit, point, ground, obstacle }) {
@@ -313,7 +361,8 @@ export class MissionCombat {
       this.fx.blast(point, d.blastRadius ? d.blastRadius * 0.4 : d.size === 'L' ? 3 : 1.4, d.visual.impactFx === 'emp' ? 'emp' : d.visual.impactFx === 'plasma' ? 'plasma' : 'blast');
       if (d.kind === 'missile') this.sound.at('impact.blast', point, { gain: d.size === 'L' ? 1.4 : 0.6 });
     }
-    if (d.blastRadius) this.splash(point, d, unit);
+    if (d.blastRadius) this.splash(point, d, unit, proj.owner);
+    if (d.kind === 'missile' || d.blastRadius) this.onNoise?.(point, 900, proj.owner);
   }
 
   /** A projectile or beam (scale = dt share) hits a building or rock. */
@@ -357,18 +406,21 @@ export class MissionCombat {
   }
 
   /** SPEER: blast damage on walkers near the impact (bypasses shields only partly). */
-  splash(point, d, direct) {
+  splash(point, d, direct, owner) {
     for (const st of this.world.objects.near(point.x, point.z, d.blastRadius + 20)) {
       const dist = Math.hypot(st.x - point.x, st.z - point.z) - st.radius * 0.5;
       if (dist < d.blastRadius) this.world.objects.damage(st, d.damage * 0.5 * (1 - Math.max(0, dist) / d.blastRadius));
     }
     for (const u of this.units.all) {
-      if (u === direct || u.isPlayer || u.wreck?.kind === 'reactor') continue;
+      if (u === direct || u.side === owner?.side || u.wreck?.kind === 'reactor') continue;
       const dist = u.volumes.center(v2).distanceTo(point);
       if (dist > d.blastRadius) continue;
       const k = 1 - dist / d.blastRadius;
       const component = point.y < u.motion.pose.y - u.walker.cockpit.eyeHeight * 0.5 ? 'legs' : 'torso';
-      this.units.apply(u, u.damage.applyRaw(component, d.damage * 0.5 * k * d.vsArmor));
+      const amount = d.damage * 0.5 * k * d.vsArmor;
+      const changes = u.damage.applyRaw(component, amount);
+      this.units.apply(u, changes);
+      if (u.isPlayer) this.onPlayerHit?.({ side: hitSide(u.motion.pose.yaw, v3.subVectors(u.motion.pose, point).setY(0).normalize()), component, res: { shieldHit: false, armorHit: true, armorDamage: amount, changes }, show: true });
     }
   }
 
@@ -379,7 +431,7 @@ export class MissionCombat {
 
   /** One hit (scale = dt share for beams, or the semi-active bonus) through the damage pipeline, with effects. */
   hitUnit(unit, hit, d, dir, scale) {
-    this.stats.hits += scale >= 1 ? 1 : 0;
+    if (!unit.isPlayer) this.stats.hits += scale >= 1 ? 1 : 0;
     if (unit.wreck?.kind === 'reactor') {
       if (scale >= 1 || Math.random() < scale * 10) this.fx.armorHit(hit.point, hit.normal, null, null, null, 0.3);
       return;
@@ -441,9 +493,11 @@ export class MissionCombat {
     }
 
     this.player.mounts.aimArms(this.aimPoint);
+    for (const u of this.units.all) if (!u.isPlayer && u.aimPoint && u.wreck?.kind !== 'reactor') u.mounts.aimArms(u.aimPoint);
     this.fx.update(dt); // first age the effects, then add this frame's beams and bolts
     const cam = this.game.renderer.camera.position;
     for (const [id, b] of this.beamDraw) this.fx.beam(id, b.from, b.to, b.color, cam);
+    for (const [key, on] of this.enemyBeams) this.sound.beam(key, on, this.enemyBeamPos.get(key));
     for (const s of this.weapons.slots) if (s.def.kind === 'beam') this.sound.beam(s.id, s.beamOn);
     this.fx.drawProjectiles(this.projectiles, cam);
     this.sound.missiles(this.projectiles, dt);

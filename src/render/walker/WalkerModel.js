@@ -33,15 +33,31 @@ export class WalkerModel {
       parent.add(m);
       return m;
     };
+    // Self-lit veins (Synthesis): own material per model so a wreck can fade them out
+    this.glowMaterial = new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false });
+    this.glowMeshes = [];
+    const glowMesh = (geo, component, parent) => {
+      if (!geo) return;
+      const m = new THREE.Mesh(geo, this.glowMaterial);
+      m.userData.component = component;
+      m.userData.noHit = true;
+      m.userData.fx = true; // keeps its material when the wreck is recoloured
+      parent.add(m);
+      this.glowMeshes.push(m);
+    };
     mesh(geometries.pelvis, 'legs', this.root);
     mesh(geometries.torso, 'torso', this.torso);
     mesh(geometries.sensors, 'sensors', this.torso);
+    glowMesh(geometries.torsoGlow, 'torso', this.torso);
+    glowMesh(geometries.sensorsGlow, 'sensors', this.torso);
+    glowMesh(geometries.pelvisGlow, 'legs', this.root);
     this.parts = { torso: this.torso };
     for (const [key, side] of [['armL', -1], ['armR', 1]]) {
       const g = new THREE.Group();
       const s = this.plan.arms.shoulder;
       g.position.set(s[0] * side, s[1], s[2]);
       mesh(geometries[key], key, g);
+      glowMesh(geometries[`${key}Glow`], key, g);
       this.torso.add(g);
       this.parts[key] = g;
     }
@@ -114,9 +130,17 @@ export class WalkerModel {
       leg.foot.position.copy(leg.ankle);
       leg.foot.rotation.set(0, pose.legYaw, 0);
     }
+    // Hit volumes and muzzles read world matrices in the simulation step, before the next render
+    this.legGroup.updateMatrixWorld(true);
+  }
+
+  /** Wreck: the veins go dark over `time` seconds (k = 0..1 of the way). */
+  setGlow(k) {
+    this.glowMaterial.color.setScalar(Math.max(0.04, k));
   }
 
   dispose() {
+    this.glowMaterial.dispose();
     this.root.removeFromParent();
     this.legGroup.removeFromParent();
     for (const g of Object.values(this.geometries)) {
@@ -153,7 +177,9 @@ export class WalkerGait {
         f.pos.copy(this.rest);
         f.placed = true;
       }
-      const cycle = (((pose.stepPhase / Math.PI - i) % 2) + 2) % 2;
+      let cycle = (((pose.stepPhase / Math.PI - i) % 2) + 2) % 2;
+      // Insect rhythm: the foot waits, snaps forward, waits again
+      if (L.gait === 'jerky' && cycle < 1) cycle = Math.min(1, Math.max(0, (cycle - 0.25) / 0.5)) * 0.9999;
       const swinging = cycle < 1 && motion > 0.03;
       if (swinging) {
         if (!f.swinging) {

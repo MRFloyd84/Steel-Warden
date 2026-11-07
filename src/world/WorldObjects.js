@@ -28,6 +28,21 @@ function blueprint(type) {
   return blueprintCache.get(type);
 }
 
+/** Blueprint geometry split into a fixed base and a turning head zone (cached per stage). */
+function splitBlueprint(bp, stage, zone) {
+  bp.split ??= {};
+  const key = `${stage}:${zone}`;
+  if (!bp.split[key]) {
+    const opts = stage === 'damaged' ? { tint: DAMAGED_TINT, tilt: 0.18 } : {};
+    const parts = bp.def.parts;
+    bp.split[key] = {
+      base: buildParts(parts.filter((p) => (p.zone ?? 'main') !== zone), opts),
+      head: buildParts(parts.filter((p) => p.zone === zone), opts),
+    };
+  }
+  return bp.split[key];
+}
+
 /**
  * All buildings of a mission: placed from mission sites and from the
  * theater's placement rules (generated per terrain chunk as the walker
@@ -127,6 +142,13 @@ export class WorldObjects {
     return st;
   }
 
+  /** Lets the parts of a blueprint zone turn as a gun head (Gunner AI). */
+  makeTurning(st, zone) {
+    st.headZone = zone;
+    st.headYaw = 0;
+    this.setView(st, st.stage);
+  }
+
   index(st) {
     const r = st.radius + 4;
     for (let cz = Math.floor((st.z - r) / CELL); cz <= Math.floor((st.z + r) / CELL); cz++) {
@@ -141,8 +163,23 @@ export class WorldObjects {
   setView(st, stage) {
     for (const child of [...st.object.children]) st.object.remove(child);
     const bp = st.bp;
+    st.head = null;
     if (stage === 'rubble') {
       st.object.add(new THREE.Mesh(bp.rubble, litMaterial));
+      return;
+    }
+    if (st.headZone) {
+      // Gun turret: the parts of the head zone turn (st.head.rotation.y)
+      const split = splitBlueprint(bp, stage, st.headZone);
+      for (const set of [split.base]) {
+        if (set.geometry) st.object.add(new THREE.Mesh(set.geometry, litMaterial));
+        if (set.glowGeometry) st.object.add(new THREE.Mesh(set.glowGeometry, glowMaterial));
+      }
+      st.head = new THREE.Group();
+      st.head.rotation.y = st.headYaw ?? 0;
+      if (split.head.geometry) st.head.add(new THREE.Mesh(split.head.geometry, litMaterial));
+      if (split.head.glowGeometry) st.head.add(new THREE.Mesh(split.head.glowGeometry, glowMaterial));
+      st.object.add(st.head);
       return;
     }
     const set = stage === 'damaged' ? bp.damaged : bp.intact;
@@ -237,7 +274,7 @@ export class WorldObjects {
    * nearest { t, point, normal, structure | null, scatter | null, zone } or null.
    * sightOnly: only things that block sight (for lock/LOS).
    */
-  segment(p0, p1, { sightOnly = false } = {}) {
+  segment(p0, p1, { sightOnly = false, ignore = null } = {}) {
     let best = null;
     const len = p0.distanceTo(p1);
     if (len < 1e-6) return null;
@@ -245,7 +282,7 @@ export class WorldObjects {
     const mz = (p0.z + p1.z) / 2;
     const reach = len / 2 + 40;
     for (const s of this.nearSegment(p0, p1, reach, mx, mz)) {
-      if (s.stage === 'rubble') continue;
+      if (s.stage === 'rubble' || s === ignore) continue;
       if (sightOnly && !s.blocksSight) continue;
       a.copy(p0).applyMatrix4(s.inverse);
       b.copy(p1).applyMatrix4(s.inverse);
@@ -297,8 +334,8 @@ export class WorldObjects {
   }
 
   /** Is the sight line between two points blocked by a building or big rock? */
-  blocked(p0, p1) {
-    return !!this.segment(p0, p1, { sightOnly: true });
+  blocked(p0, p1, ignore = null) {
+    return !!this.segment(p0, p1, { sightOnly: true, ignore });
   }
 
   // ---- damage ----

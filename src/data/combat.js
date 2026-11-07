@@ -54,7 +54,8 @@ export const COMBAT = {
     hiddenGrace: 1.5, // a locked target out of sight is dropped after this many seconds
   },
 
-  explosion: { radius: 16, damage: 60 }, // reactor explosion, damages nearby walkers
+  explosion: { radius: 14, radiusPerTon: 0.3, damage: 30, damagePerTon: 1.1 }, // reactor explosion: radius/damage + per ton of the exploding walker
+  synthGlowFade: 25, // s until the veins of a Synthesis wreck are dark
   salvage: { reactor: 0.1, legs: 1.0, weaponMount: 1.0 },
 };
 

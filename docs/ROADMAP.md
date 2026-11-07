@@ -66,12 +66,26 @@ Funk, Radar, Kampf, Übung) zusammen.
      (vorbereitet für die 7 Wingmen-Befehle), Tastenhilfe, README-Generator `tools/gen-controls.mjs`.
      Feld `secondaryChain` je Walker (rechte Maustaste); im Hangar einstellbar, sobald es ihn gibt.
      Offen: Sprungdüsen (Leertaste ist belegt, KESTREL hat Daten, Physik fehlt), Radar R/Shift+R ab A4.
-3. **Synthese-Gegner** (Grundkonzept Phase 5):
-   - Trefferzonen Beine / Waffenträger / Torso (Reaktor).
-   - Zerstörungsart: Beine → bewegungsunfähig, volles Material, Waffen bergbar. Waffenträger
-     → Waffe fällt als Bergungsobjekt. Reaktor → Explosion, ca. 10 % Material.
-   - KI: Patrouille, Angriff, Rückzug, Verstärkung rufen (Verzögerung je Mission),
-     Reaktion auf aktives Radar.
+3. **Synthese-Gegner und KI ✅** (Grundkonzept Phase 5, Plan in `docs/A3-PLAN.md`):
+   - ✅ Späher, Jäger, Brecher, Belagerer als Synthese-Walker (kristallin, asymmetrisch,
+     schwebende Panzersegmente, Leuchtadern, Insektengang), 6 Synthese-Waffen inkl.
+     ballistischem Mörser; Drohne als Datenplatzhalter. Abwehrstachel und Geschützturm mit KI.
+   - ✅ Felder `ai { profile, preferredRange, aggression, morale, flankChance, sight, … }` und
+     `salvage { scrap, weaponDropChance }`.
+   - ✅ Wahrnehmung: Kegel, Sichtlinie, Licht/Wetter, Ortung strahlender Ziele (vorerst
+     Schalter SENSOREN), Lärm, Gruppennetz mit Verzögerung, verblassendes Gedächtnis.
+   - ✅ Zustandsmaschine Ruhe/Patrouille → Untersuchen → Angriff ⇄ Flankieren/Deckung →
+     Rückzug, Verstärkung rufen, Suchen; Vorhalt/Streuung/Reaktion je Schwierigkeit,
+     Fokusfeuer, echte Aufschaltung, kniend weiterkämpfen.
+   - ✅ Navigationsraster mit A*, Glättung, Budget; Steuerung über Schub und Drehen.
+   - ✅ Verstärkung (Rand oder Landefähre, Verzögerung je Mission), Wellen, Formation, Rollen.
+   - ✅ 5 Schwierigkeitsgrade im Menü. Wracks mit Zerstörungsart und Bergungswert,
+     Reaktorexplosion mit Flächenschaden und Trümmern, verblassende Adern.
+   - ✅ KI-Debugansicht, Einfrieren, Gruppe absetzen. Testmissionen Duell, Hinterhalt,
+     Stellung, Welle und Meilenstein „Erster Einsatz“ mit einfacher Erfolgsprüfung.
+   - Offen: Flugmodell für Drohnen; Reaktion auf aktives/passives Radar statt SENSOREN-Schalter
+     (A4); Bergung der Wracks und Waffen (C); Wingmen als Verbündete (B); Bauwerke als
+     Deckung nur über Gebäude, nicht über Geländekanten.
 4. **Radar und Tarnung**:
    - Schalter aktiv/passiv im Cockpit.
    - Aktiv: große, einstellbare Reichweite, macht sichtbar.

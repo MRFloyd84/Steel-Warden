@@ -18,13 +18,13 @@ export class HitVolumes {
   constructor(model) {
     this.model = model;
     this.volumes = [];
-    const add = (obj) => obj.traverse((o) => {
+    const add = (obj, limb) => obj.traverse((o) => {
       if (!o.isMesh || !o.userData.component || o.userData.noHit) return;
       o.geometry.computeBoundingBox();
-      this.volumes.push({ mesh: o, box: o.geometry.boundingBox.clone(), component: o.userData.component });
+      this.volumes.push({ mesh: o, box: o.geometry.boundingBox.clone(), component: o.userData.component, limb });
     });
-    add(model.root);
-    add(model.legGroup);
+    add(model.root, false);
+    add(model.legGroup, true);
     this.radius = model.walker.cockpit.eyeHeight * 0.85;
   }
 
@@ -73,16 +73,26 @@ export class HitVolumes {
     return best;
   }
 
-  /** World-space centre of a component (mean of its volumes' centres; aiming, homing, blasts). */
+  /**
+   * World-space aim point of a component (aiming, homing, blasts): the centre
+   * of its biggest volume — a point that lies on the part. (The mean of all
+   * volumes would fall between two legs, and shots would pass through the gap.)
+   */
   componentCenter(component, out) {
-    let n = 0;
-    out.set(0, 0, 0);
+    let best = null;
+    let bestSize = -1;
+    // Legs: the leg segments themselves, not the hip block hidden under the torso
+    const limbsOnly = component === 'legs' && this.volumes.some((v) => v.limb && v.component === 'legs');
     for (const v of this.volumes) {
-      if (v.component !== component || !v.mesh.parent) continue;
-      out.add(v.box.getCenter(c2).applyMatrix4(v.mesh.matrixWorld));
-      n++;
+      if (v.component !== component || !v.mesh.parent || (limbsOnly && !v.limb)) continue;
+      v.box.getSize(c2);
+      const size = c2.x * c2.y * c2.z;
+      if (size > bestSize) {
+        bestSize = size;
+        best = v;
+      }
     }
-    if (n) return out.divideScalar(n);
+    if (best) return best.box.getCenter(out).applyMatrix4(best.mesh.matrixWorld);
     const any = this.volumes[0];
     return any ? any.box.getCenter(out).applyMatrix4(any.mesh.matrixWorld) : this.center(out);
   }

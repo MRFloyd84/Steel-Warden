@@ -115,6 +115,7 @@ export class WeaponSystem {
    * ctx: { canFire, power (0..1 reactor), weaponShare (energy split),
    *        chain (bool, active chain), secondary (bool, second chain), all (bool),
    *        groups [4 bools] (unused by the player since chains are chosen with 1–4),
+   *        holdReason(slot) → '' or why a ready weapon waits, beamHold(slot) → true holds a beam (AI),
    *        fire(slot, shotIndex), beam(slot, dt, on) }
    */
   update(dt, ctx) {
@@ -174,7 +175,7 @@ export class WeaponSystem {
       const triggered = wanted.has(s) && ctx.canFire && !s.disabled;
 
       if (d.kind === 'beam') {
-        const can = triggered && s.beamCool <= 0 && this.capacitor > 0;
+        const can = triggered && s.beamCool <= 0 && this.capacitor > 0 && !ctx.beamHold?.(s);
         if (can) {
           s.beamOn = true;
           s.beamT += dt;

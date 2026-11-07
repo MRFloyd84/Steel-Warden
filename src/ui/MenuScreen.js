@@ -4,6 +4,8 @@ import { getTheater } from '../data/theaters.js';
 import { ACTIONS } from '../input/actions.js';
 import { tokenLabel } from '../input/keyLabels.js';
 import { WALKERS, WALKER_ORDER, CLASS_LABELS } from '../data/walkers.js';
+import { DIFFICULTY, DIFFICULTY_ORDER } from '../data/difficulty.js';
+import { Storage } from '../core/Storage.js';
 
 const TIME_LABELS = { day: 'Tag', dusk: 'Dämmerung', night: 'Nacht' };
 
@@ -42,6 +44,9 @@ export class MenuScreen extends Overlay {
                 return `<option value="${esc(id)}">${esc(w.name)} — ${esc(CLASS_LABELS[w.class])}, ${w.tonnage} t, ${esc(w.role)}</option>`;
               }).join('')}</select>
             </label>
+            <label class="walker-pick">Schwierigkeit
+              <select data-role="difficulty">${DIFFICULTY_ORDER.map((id) => `<option value="${id}">${esc(DIFFICULTY[id].name)}</option>`).join('')}</select>
+            </label>
             <button class="btn primary" data-role="start">Einsatz starten</button>
           </section>
           <section>
@@ -50,13 +55,18 @@ export class MenuScreen extends Overlay {
             <button class="btn" data-role="controlsBtn">Steuerung anpassen</button>
           </section>
         </div>
-        <footer class="menu-footer">Erprobung · Waffen und Schaden</footer>
+        <footer class="menu-footer">Erprobung · Synthese-Gegner und KI</footer>
       </div>`;
 
     this.items = [...this.root.querySelectorAll('.mission-item')];
     this.walkerSelect = this.root.querySelector('[data-role="walker"]');
     this.walkerSelect.value = 'bastion';
     this.walkerSelect.addEventListener('keydown', (e) => e.stopPropagation());
+    this.difficultySelect = this.root.querySelector('[data-role="difficulty"]');
+    const stored = Storage.load('difficulty', 'normal');
+    this.difficultySelect.value = DIFFICULTY[stored] ? stored : 'normal';
+    this.difficultySelect.addEventListener('keydown', (e) => e.stopPropagation());
+    this.difficultySelect.addEventListener('change', () => Storage.save('difficulty', this.difficultySelect.value));
     this.briefing = this.root.querySelector('[data-role="briefing"]');
     this.items.forEach((el) => {
       el.addEventListener('click', () => this.select(Number(el.dataset.index)));
@@ -88,6 +98,7 @@ export class MenuScreen extends Overlay {
   }
 
   start() {
+    Storage.save('difficulty', this.difficultySelect.value);
     this.onStart(MISSIONS[this.selected].id, this.walkerSelect.value);
   }
 }

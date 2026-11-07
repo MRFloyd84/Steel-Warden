@@ -8,7 +8,7 @@ const MAX_SCORCH = 96;
 const c = (hex) => new THREE.Color(hex);
 const COLORS = {
   spark: c('#ffd27a'), sparkHot: c('#fff2c0'), smoke: c('#3a3834'), smokeLight: c('#8a867c'),
-  debris: c('#1c1c1a'), fire: c('#ff7a24'), shield: c('#6fc4ff'), plasma: c('#9ad0ff'), flash: c('#fff0c8'),
+  debris: c('#1c1c1a'), fire: c('#ff7a24'), shield: c('#6fc4ff'), plasma: c('#9ad0ff'), flash: c('#fff0c8'), crystal: c('#5ef2e6'), crystalViolet: c('#a07cff'),
 };
 const tmp = new THREE.Vector3();
 const tmp2 = new THREE.Vector3();
@@ -246,6 +246,14 @@ export class CombatFx {
     this.flashLight(point, 400, 0.6);
   }
 
+  /** Synthesis crystal splinters: glowing shards that fly and fall (scale ≈ blast size). */
+  shards(point, count, scale = 1) {
+    for (let i = 0; i < count; i++) {
+      const c = Math.random() < 0.6 ? COLORS.crystal : COLORS.crystalViolet;
+      this.sparks.spawn({ pos: point, vel: tmp.set(rand(8 * scale), 4 + Math.random() * 10 * scale, rand(8 * scale)), color: c, size: 0.35 + Math.random() * 0.5, life: 1.2 + Math.random() * 1.3, gravity: 16, drag: 0.4 });
+    }
+  }
+
   flashLight(point, intensity, time) {
     if (intensity <= this.light.intensity && this.lightT > 0) return;
     this.light.position.copy(point);
@@ -259,7 +267,7 @@ export class CombatFx {
   // ---- parts and wrecks ----
 
   /** Detaches a part (e.g. an arm) and lets it fall to the ground with its weapons. */
-  dropPart(obj, sampler, onRest) {
+  dropPart(obj, sampler, onRest, vel = null) {
     obj.updateWorldMatrix(true, false);
     const wm = obj.matrixWorld.clone();
     this.scene.attach(obj);
@@ -267,8 +275,8 @@ export class CombatFx {
     obj.matrix.decompose(obj.position, obj.quaternion, obj.scale);
     this.falling.push({
       obj, sampler, onRest,
-      vel: new THREE.Vector3(rand(3), 2, rand(3)),
-      spin: new THREE.Vector3(rand(2), rand(1), rand(2)),
+      vel: vel ? vel.clone() : new THREE.Vector3(rand(3), 2, rand(3)),
+      spin: vel ? new THREE.Vector3(rand(6), rand(3), rand(6)) : new THREE.Vector3(rand(2), rand(1), rand(2)),
     });
   }
 

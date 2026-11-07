@@ -17,6 +17,9 @@ Schnellstart-Parameter (Dev und Build):
 - `?mission=test-ice` – Menü überspringen (IDs siehe `src/data/missions.js`)
 - `?debug` – Debug-Modus an (Overlay und Debug-Tasten)
 - `?weather=sandstorm` – Wetter erzwingen (`clear`, `snowstorm`, `sandstorm`, `ashfall`, `groundFog`, `rain`)
+- `?difficulty=elite` – Schwierigkeit erzwingen (`beginner`, `green`, `normal`, `veteran`, `elite`);
+  sonst gilt die Wahl im Hauptmenü
+- `?start=hot` – ohne Startprozedur, `?walker=goliath` – Walker wählen
 
 ## Stand
 
@@ -78,6 +81,18 @@ Schnellstart-Parameter (Dev und Build):
   Debug-Modus, keine Browser-Kollisionen, Funkmenü, Tastenhilfe je Kontext mit echter
   Tastaturbeschriftung, Belegungsoberfläche mit Gamepad/HOTAS-Profilen, README-Tabellen
   werden aus dem Register erzeugt.
+
+- **Phase A3 (Synthese-Gegner und KI):** vier Synthese-Walker (Späher SPLITTER, Jäger SICHEL,
+  Brecher MONOLITH, Belagerer OBELISK) in kantig-kristalliner Formensprache mit schwebenden
+  Panzersegmenten, Leuchtadern und ruckartigem Insektengang, eigene Waffen (Splitterwerfer,
+  Impulsprisma, Kristalllanze, Kristallhammer, Schwarmraketen, Schwerkraftmörser), Drohne als
+  Datenplatzhalter. Abwehrstachel und Geschützturm in Feindeshand mit Geschütz-KI. KI mit
+  Wahrnehmung (Sichtkegel, Sichtlinie, Licht und Wetter, Ortung strahlender Ziele, Lärm,
+  Gedächtnis, Gruppennetz), Zustandsmaschine (Ruhe/Patrouille, Untersuchen, Angriff,
+  Flankieren, Deckung, Rückzug, Verstärkung rufen, Suchen), Navigationsraster mit A*,
+  echter Aufschaltung und Lenkraketen, Verstärkung per Landefähre oder vom Rand, Wellen.
+  5 Schwierigkeitsgrade, Wracks mit Bergungswert, Reaktorexplosion mit Flächenschaden,
+  KI-Debugansicht. Fünf Testmissionen inklusive Meilenstein „Erster Einsatz“.
 
 Fahrplan für die nächsten Phasen inklusive Stützpunkt, Bergung, Funk, Radar und Missionen:
 `docs/ROADMAP.md`.
@@ -225,6 +240,8 @@ _Erzeugt aus `src/input/actions.js` mit `node tools/gen-controls.mjs` — nicht 
 | Debug: schwerer Treffer (Seiten der Reihe nach) | `Shift+F8` | – | Debug |
 | Debug: feindliche Aufschaltung | `F9` | – | Debug |
 | Debug: Ziel strahlt an/aus | `Shift+F9` | – | Debug |
+| Debug: Gegner einfrieren | `Shift+F2` / `Num ×` | – | Debug |
+| Debug: KI-Gruppe vor mir absetzen | `Einfg` / `Num +` | – | Debug |
 | Freiflug: vorwärts | `W` / `↑` | – | Freiflug |
 | Freiflug: zurück | `S` / `↓` | – | Freiflug |
 | Freiflug: links | `A` / `←` | – | Freiflug |
@@ -268,6 +285,7 @@ schwerer Schaden: Sensoren → Radar verrauscht, Torso → Risse in der Scheibe 
 Cockpit, Arm → dessen Waffen rot auf dem Waffenmonitor. Fällt die Reaktorabschirmung unter die
 Hälfte: rotes Notlicht, Hupe, WARNUNG blinkt, Funkspruch. Feindliche Aufschaltung: schnelles
 Piepen, RAKETE blinkt, roter Keil auf dem Radar; Rakete im Anflug: Dauerton, RAKETE leuchtet.
+Seit A3 lösen das echte Gegner aus (MONOLITH mit Schwarmraketen), `F9` bleibt als Debug-Probe.
 
 Feuern geht nur mit WAFFEN SCHARF und laufendem Reaktor; sonst klickt es, VORSICHT blinkt und
 die Technik meldet sich. Waffen, Schaden, Hitze und Energie: `src/data/weapons.js`,
@@ -381,6 +399,96 @@ holografischer Zaun. Funkwarnung bei Annäherung und beim Verlassen, sonst noch 
    mit Deichen, Schilf), Tessar (Sandsturm, Schluchten, Felsbogen) und die Kernwelt (Adern,
    Synthese-Nest). Einsatzgebiet mit Zaun in Kalvik, Brenn-Süd und Morrow.
 
+## Gegner und KI (A3)
+
+**Synthese-Einheiten** (`src/data/enemies.js`, Modelle in `src/data/enemyModels.js`). Gleiche
+Gelenkstruktur wie die Walker der Menschen, gleiche Schadenspipeline und Trefferzonen:
+
+| Einheit | Rolle | t | km/h | Bewaffnung | Verhalten |
+|---|---|---|---|---|---|
+| SPLITTER | Späher | 22 | 94 | 2× Splitterwerfer | flankiert gern, ruft beim ersten Kontakt Verstärkung, zieht sich früh zurück |
+| SICHEL | Jäger | 45 | 61 | Kristalllanze (Strahl), 2× Impulsprisma | Standard-Angreifer, hält ~300 m |
+| MONOLITH | Brecher | 78 | 36 | 2× Kristallhammer, 2× Schwarmraketen (aktiv, mit Aufschaltung) | langsam, hält ~420 m, flankiert nie |
+| OBELISK | Belagerer | 70 | 32 | Schwerkraftmörser (ballistisch), Impulsprisma | bleibt hinten, schießt nur auf Ziele, die ein anderer sieht |
+| SCHWARM | Drohne | 3 | – | – | nur Daten, Flugmodell folgt |
+
+Gebäude-Geschütze: **Abwehrstachel** (Synthese, Impulsprisma, rundum) und **Geschützturm**
+(Menschen, AK-20, drehender Turmkopf) — sie schießen in Salven, sobald eine Mission sie unter
+`forces.guns` der Synthese zuordnet.
+
+**Wahrnehmung:** Sichtkegel um den Torso (bis 70 m rundum), Reichweite × Tageslicht (Nacht
+0,45, Dämmerung 0,75; eingeschalteter Suchscheinwerfer zählt nachts wie Tag) × Wetter (Nebel)
+× Schwierigkeit, Sichtlinie gegen Gelände, Bauwerke und große Felsen, je Einheit alle 0,4 s
+gestaffelt. Bis das Radar kommt (A4), **strahlt der eigene Walker, solange der Schalter
+SENSOREN an ist** — die Synthese ortet ihn dann auf 1400–1600 m (Position bekannt, aber ohne
+Sicht kein Direktfeuer). Schüsse (600–900 m) und Explosionen (900–1200 m) melden Einheiten in
+Hörweite eine Position. Kontakte gehen mit 0,8 s Verzögerung ins Synthese-Netz der Gruppe,
+nach 25 s ohne neue Information verblasst die letzte bekannte Position.
+
+**Verhalten:** Ruhe/Patrouille (Keil hinter dem Anführer) → Untersuchen → Angriff
+(bevorzugte Distanz halten, in Bewegung bleiben, Torso zielt unabhängig von den Beinen) ⇄
+Flankieren (seitlich, nur auf Punkte mit Sicht auf das Ziel) / Deckung (bei leeren Schilden
+hinter ein Gebäude) → Rückzug (Schaden oder Moral nach einem Abschuss in der Gruppe) →
+Suchen. Zielen mit Vorhalt, Streuung und Reaktionszeit nach Schwierigkeit; ab Veteran
+Fokusfeuer auf das am stärksten beschädigte Ziel. Schwarmraketen schalten den Spieler
+wirklich auf — es gelten die Warnungen aus A2b (Piepen, RAKETE, roter Keil auf dem Radar).
+Ohne Beine kämpft eine Einheit kniend weiter. Bewegung über dieselben Eingaben wie beim
+Spieler (Schub, Drehen) auf einem 12-m-Navigationsraster (Steigung, Wasser, Lava, dünnes
+Eis für schwere Walker, Bauwerke) mit A*, Pfadglättung, gedrosselter Neuplanung, Abstand
+zueinander und Befreiung, wenn eine Einheit festhängt.
+
+**Schwierigkeitsgrade** (Hauptmenü, gespeichert; `src/data/difficulty.js`):
+
+| | Reaktion | Streuung | Vorhalt | Flanke / Deckung / Fokus | Verstärkung | Anzahl | Sicht | Aufschaltung |
+|---|---|---|---|---|---|---|---|---|
+| Anfänger | 1,4 s | 4,5° | 20 % | – / – / – | ×1,8 | ×0,6 | ×0,7 | ×1,6 |
+| Grün | 1,0 s | 3,2° | 45 % | ✓ / – / – | ×1,4 | ×0,8 | ×0,85 | ×1,3 |
+| Normal | 0,7 s | 2,2° | 70 % | ✓ / ✓ / – | ×1,0 | ×1,0 | ×1,0 | ×1,0 |
+| Veteran | 0,45 s | 1,4° | 85 % | ✓ / ✓ / ✓ | ×0,8 | ×1,2 | ×1,1 | ×0,85 |
+| Elite | 0,3 s | 0,8° | 100 % | ✓ / ✓ / ✓ | ×0,6 | ×1,4 | ×1,2 | ×0,7 |
+
+**Wracks:** Beine zerstört → die Einheit sackt auf die Knie, bleibt ein intaktes Wrack (100 %
+Bergung) und schießt kniend weiter; Waffen eines abgeschossenen Arms bleiben je nach
+`weaponDropChance` als Marker liegen. Reaktor → große Explosion (Radius und Schaden wachsen mit
+der Tonnage, trifft auch den eigenen Walker mit Kopfstoß), die Arme fliegen als Trümmer weg,
+ausgebranntes Wrack mit 10 %. Bei Synthese-Wracks verblassen die Adern über 25 s, Kristallsplitter
+rieseln. Das Debug-Overlay listet alle Wracks mit Zerstörungsart und Bergungswert in Schrott.
+
+**Debug** (Debug-Modus `^`): über jeder Einheit Zustand und Ziel, gelbe Sichtkegel (rot, wenn
+sie aufschaltet), grüne Pfade und Ziele, rotes Kreuz an der letzten bekannten Spielerposition,
+orange Kreise der Geschütze. `Shift+F2` (oder `Num ×`) friert alle Gegner ein, `Einfg` (oder
+`Num +`) setzt eine jagende KI-Gruppe (Späher + Jäger) 300 m vor dem Walker ab. Das Overlay
+zeigt je Einheit Zustand, Ziel, Entfernung und Torso, dazu KI-Takt, Pfade, Verstärkung und Wellen.
+
+**Testanleitung A3** (Missionen im Menü unten; `?mission=…` springt direkt hinein):
+
+1. *Duell* (`test-duel`): ein Jäger 700 m voraus kennt deine Position. Je Schwierigkeitsgrad
+   einmal spielen (Menü → Schwierigkeit oder `&difficulty=…`): Anfänger schießt spät und weit
+   daneben und kommt frontal, Normal flankiert manchmal und trifft gut, Elite hält kaum still
+   und trifft fast jede Salve. Im Debug-Modus sieht man Kegel, Zustand und Pfad.
+2. *Hinterhalt* (`test-ambush`): SENSOREN aus (Schalter), die Schlucht bis zum Knick (KNICK)
+   entlang und dort warten. Die Patrouille kommt aus dem Ostarm um die Ecke; der Späher meldet
+   sich (Funk: „Späher ruft Verstärkung“), 40 s später kommt ein weiterer Jäger. Mit SENSOREN
+   an wird man schon auf rund 1500 m geortet und die Patrouille kommt suchen.
+3. *Stellung* (`test-stellung`): Raffinerie 700 m voraus, zwei Abwehrstachel,
+   zwei Geschütztürme (drehen den Kopf) und ein MONOLITH. Seine Schwarmraketen schalten auf —
+   Piepen und Keil, dann RAKETE. Hinter Gebäuden Deckung suchen, die Türme einzeln ausschalten.
+4. *Welle* (`test-waves`, GOLIATH): drei Landefähren-Wellen, jeweils 10 s nach der vorigen;
+   Welle 3 bringt einen OBELISK, dessen Mörsergranaten in hohem Bogen kommen, solange ein
+   anderer Synthese-Walker dich sieht.
+5. *Beine abschießen vs. Reaktor treffen:* im Duell mit der Zielkapsel (`T`, `Tab` bis BEINE,
+   Kette 1) die Beine zerstören → der Jäger kniet, schießt aber weiter, Overlay: „Beine ·
+   Bergung 100 % = 180 Schrott“, die Adern verblassen. Zweiter Versuch auf den Torso: große
+   Explosion, Arme fliegen weg, in unter ~25 m Abstand gibt es einen Kopfstoß und
+   Torsoschaden, Overlay: „Reaktor · Bergung 10 % = 18 Schrott“.
+6. *Verstärkung auslösen:* im Hinterhalt oder im Ersten Einsatz vom Späher sehen lassen
+   (Overlay: „Verstärkung coming … s“), oder im Debug-Modus `Einfg` für eine Gruppe sofort.
+7. *Erster Einsatz* (`first-sortie`, Meilenstein): Kaltstart im offenen Hangar, Startprozedur,
+   durchs Tor raus, ALPHA anlaufen, die Patrouille bei BRAVO stellen (der Späher ruft eine
+   Landefähre mit einem MONOLITH), dann zur EXTRAKTION. Die Auftragszeile oben zeigt den
+   Schritt, der Navmonitor den aktiven Navpunkt. Extraktion erreicht → „Einsatz erfüllt“,
+   Walker zerstört → „Einsatz gescheitert“.
+
 ## Startprozedur
 
 Reihenfolge (Checkliste im Spiel): Batterie → Hilfsaggregat START halten → KÜHLPUMPEN (ein Schalter, Pumpe 2 läuft automatisch nach) →
@@ -435,5 +543,8 @@ eingebettet, damit der Offline-Build per `file://` funktioniert. Klang und Misch
 - `src/data/weather.js` – Wetter: Nebel, Partikel, Scheibe, Wind, Wirkung auf Kamera und Aufschaltung
 - `config.js` → `scatter` (Sichtweiten, Instanzen), `area` (Zaun)
 - `src/data/lighting.js` – Tageszeiten
-- `src/data/missions.js` – Einsätze
-- `src/data/inputBindings.js` – Tastenbelegung; Overrides per localStorage-Key `steelwarden:bindings`
+- `src/data/missions.js` – Einsätze; `forces` (Gruppen, Patrouillen, Geschütze, Verstärkung,
+  Wellen, siehe `src/ai/AIDirector.js`) und `script` (Aufträge, siehe `src/states/MissionScript.js`)
+- `src/data/enemies.js` – Synthese-Einheiten (Walker-Format plus `ai`, `salvage`, `faction`),
+  Gebäude-Geschütze `GUNS`; `src/data/enemyModels.js` – ihre Baupläne
+- `src/data/difficulty.js` – die fünf Schwierigkeitsgrade

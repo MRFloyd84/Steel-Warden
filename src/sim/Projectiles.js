@@ -15,6 +15,9 @@ const segEnd = new THREE.Vector3();
  * (semi-active illumination).
  *
  * Hits are reported through onHit({ proj, unit|null, hit|null, point, ground, obstacle? }).
+ * Projectiles never hit units of their owner's side (owner.side); a gun on a
+ * building (owner.structure) doesn't hit its own building. def.ballistic
+ * shells fall with gravity (spawn speed may be set per shot: mortar charge).
  */
 export class Projectiles {
   constructor({ sampler, units, onHit, onEnd = null, illuminated = () => false, obstacles = null, emitters = null, gravity = 1 }) {
@@ -55,7 +58,7 @@ export class Projectiles {
    * Missiles: mode ('dumb' | 'active' | 'semiActive' | 'antiRadar' | 'optical'),
    * target unit, component to home on, damageFactor (semi-active bonus).
    */
-  spawn({ def, owner, origin, dir, target = null, mode = 'dumb', component = null, damageFactor = 1, aimPoint = null }) {
+  spawn({ def, owner, origin, dir, target = null, mode = 'dumb', component = null, damageFactor = 1, aimPoint = null, speed = null }) {
     const p = this.pool.find((x) => !x.active);
     if (!p) return null;
     p.active = true;
@@ -72,13 +75,14 @@ export class Projectiles {
     p.pos.copy(origin);
     p.prev.copy(origin);
     const m = def.missile;
-    p.speed = m ? m.launchSpeed : def.projectileSpeed;
+    p.speed = speed ?? (m ? m.launchSpeed : def.projectileSpeed);
     p.burnLeft = m ? m.burnTime : 0;
     p.searchT = 0;
     p.vel.copy(dir).multiplyScalar(p.speed);
     p.aim.copy(aimPoint ?? tmp.copy(origin).addScaledVector(dir, def.range));
     p.age = 0;
-    p.life = m ? m.burnTime + 14 : (def.range / Math.max(1, def.projectileSpeed)) * 1.25;
+    // Ballistic shells (mortar) fly a high arc: life = longest possible flight
+    p.life = m ? m.burnTime + 14 : def.ballistic ? (2 * p.speed) / (9.81 * this.gravity) + 2 : (def.range / Math.max(1, def.projectileSpeed)) * 1.25;
     this.count++;
     return p;
   }
@@ -99,6 +103,7 @@ export class Projectiles {
         continue;
       }
       if (p.def.missile) stepMissile(p, dt, this.guideCtx);
+      else if (p.def.ballistic) p.vel.y -= 9.81 * this.gravity * dt;
       p.prev.copy(p.pos);
       p.pos.addScaledVector(p.vel, dt);
       this.collide(p, units);
@@ -115,13 +120,14 @@ export class Projectiles {
       tGround = above0 > 0 ? above0 / (above0 - above1) : 0;
     }
     let best = null;
+    const side = p.owner?.side;
     for (const u of units) {
-      if (u === p.owner) continue;
+      if (u === p.owner || (side && u.side === side)) continue; // no friendly fire
       const hit = u.volumes.intersectSegment(p.prev, p.pos);
       if (hit && (!best || hit.t < best.hit.t)) best = { unit: u, hit };
     }
     // Buildings and rocks
-    const obs = this.obstacles?.segment(p.prev, p.pos);
+    const obs = this.obstacles?.segment(p.prev, p.pos, { ignore: p.owner?.structure ?? null });
     if (obs && (!best || obs.t < best.hit.t) && (tGround === null || obs.t <= tGround)) {
       this.onHit({ proj: p, unit: null, hit: null, point: obs.point, ground: false, obstacle: obs });
       this.kill(p, 'hit');
