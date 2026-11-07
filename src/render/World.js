@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { setMaterialPalette } from './DetailTextures.js';
 import { getTheater } from '../data/theaters.js';
 import { getLighting } from '../data/lighting.js';
 import { TerrainSampler } from './terrain/TerrainSampler.js';
@@ -33,6 +34,8 @@ export class World {
     this.mission = mission;
     this.theater = withMissionOverrides(getTheater(mission.theater), mission);
     this.scene = new THREE.Scene();
+    // External models take their colours from this theater's palette per material group
+    setMaterialPalette(this.theater.materials);
 
     const start = mission.playerStart;
     this.sampler = createSampler(mission, terrainConfig, this.theater);

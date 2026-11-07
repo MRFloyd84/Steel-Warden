@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "check-credits": "node tools/check_credits.mjs"
   },
   "dependencies": {
     "three": "^0.187.0"

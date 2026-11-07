@@ -1,6 +1,6 @@
 # STEEL WARDEN – Fahrplan
 
-Stand: nach Teil 2 (Menüsystem), davor Startphase-Fix, A3 (Synthese-Gegner und KI), Teil 2 (Karten-Erweiterung) und A2b. Dieses Dokument führt das Grundkonzept,
+Stand: nach Detailtexturen und externen Umgebungsmodellen, davor Teil 2 (Menüsystem), Startphase-Fix, A3 (Synthese-Gegner und KI), Teil 2 (Karten-Erweiterung) und A2b. Dieses Dokument führt das Grundkonzept,
 die Cockpit-Erweiterung, das Missionsdokument und die Ergänzungen (Stützpunkt, Bergung,
 Funk, Radar, Kampf, Übung) zusammen.
 
@@ -96,6 +96,12 @@ Funk, Radar, Kampf, Übung) zusammen.
      Übungsoptionen, Ladebildschirm, Optionen mit sofortiger Wirkung, Pausenmenü,
      Nachbesprechung (wird in Phase B ausgebaut). Offen: Kampagne (C), Hangar-Bewaffnung (C),
      Musik (Regler vorhanden, noch keine Stücke).
+   - ✅ **Detailtexturen und externe Umgebungsmodelle:** Graustufen-Detailtexturen (128 px,
+     CC0) je Bodenart im Geländeshader (Mischung nach Bodenmaske und Hangneigung, zweite Lage
+     gegen Kachelmuster, Drehung je Chunk) und je Materialgruppe auf Objekten; Farbe bleibt aus der
+     Palette. 32 CC0-Modelle (Kenney, Quaternius) als Bauwerke und Streuobjekte mit verworfenen
+     Materialien, Platzhalter bei fehlenden Dateien, Credits-Prüfung. Offen: Einheiten-Modelle
+     (Tripo-GLBs, Rückfrage), Normal-/Rauheitskarten bewusst nicht.
 4. **Radar und Tarnung**:
    - Schalter aktiv/passiv im Cockpit.
    - Aktiv: große, einstellbare Reichweite, macht sichtbar.

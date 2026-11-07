@@ -14,3 +14,38 @@ Alle übrigen Klänge (Schalterklicks, Drehregler-Rasten, Taster) werden zur Lau
 prozedural erzeugt (`src/audio/ClickSynth.js`).
 
 Ergänzt: `Mechanical_machine_m_2` (von Rene) als Antriebsmotor-Schleife `motor_loop`.
+
+## Umgebungsmodelle (`assets/props/`)
+
+Alle Modelle sind CC0 1.0 (Public Domain, https://creativecommons.org/publicdomain/zero/1.0/).
+Eingelesen mit `tools/import_props.py`; beim Laden werden Materialien und Texturen verworfen
+(Flat-Shading, Farbe aus der Theater-Palette je Materialgruppe). Welche Datei welcher Prop-ID
+gehört, steht in `src/data/props.js`; `node tools/check_credits.mjs` prüft, dass jede Datei
+dort eingetragen ist und jedes Paket hier steht.
+
+| Paket (`assets/props/…`) | Name | Autor | Lizenz | Link |
+|---|---|---|---|---|
+| `kenney-industrial` | City Kit Industrial 2.0 | Kenney (www.kenney.nl) | CC0 1.0 | https://kenney.nl/assets/city-kit-industrial |
+| `kenney-space` | Space Kit 2.0 | Kenney (www.kenney.nl) | CC0 1.0 | https://kenney.nl/assets/space-kit |
+| `quaternius-scifi` | Ultimate Modular Sci-Fi (Feb 2021) | Quaternius | CC0 1.0 | https://quaternius.com/packs/ultimatemodularscifi.html |
+
+Quaternius-Modelle lagen als OBJ/MTL vor und wurden ohne geometrische Änderung nach GLB
+umgeschrieben; `kenney-industrial/colormap.png` ist auf 128 px verkleinert und dient nur zum
+Ablesen der Materialgruppen.
+
+## Detailtexturen (`assets/textures/`)
+
+Graustufen, auf 128 px verkleinert und auf gleichen Mittelwert/Kontrast normiert
+(`tools/import_textures.py`). Quelle je Datei: `src/data/textures.js`.
+
+| Quelle | Name | Autor | Lizenz | Link |
+|---|---|---|---|---|
+| `sbs` | Base Materials 256x256 | Screaming Brain Studios | CC0 1.0 | https://screamingbrainstudios.itch.io/ |
+| `generated` | STEEL WARDEN (prozedural, tools/import_textures.py) | Rene / STEEL WARDEN | CC0 1.0 | — |
+
+Aus SBS: ground-gravel, ground-dirt, ground-mud, ground-rock, ground-snow, ground-ice,
+ground-dust, mat-concrete, mat-plaster, mat-wood, mat-stone. Prozedural erzeugt:
+ground-sand, ground-lava, ground-crystal, mat-metal, mat-tank, mat-crystal.
+
+Nicht eingebunden: die zwölf mitgelieferten Tripo-GLBs (Walker, Synth-Einheiten, Drohne,
+Stachelturm) — das sind Einheiten, keine Umgebungsmodelle; Lizenz und Einsatz noch offen.

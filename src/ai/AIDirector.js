@@ -7,6 +7,7 @@ import { Gunner } from './Gunner.js';
 import { GUNS } from '../data/enemies.js';
 import { STRUCTURES } from '../data/structures.js';
 import { buildParts } from '../render/world/PartBuilder.js';
+import { patchObjectMaterial } from '../render/DetailTextures.js';
 
 const PATHS_PER_STEP = 3;
 const RADIO = {
@@ -16,7 +17,7 @@ const RADIO = {
   wave: (n, total) => ({ from: 'LEITSTELLE', text: `Welle ${n} von ${total} im Anflug!` }),
   waveClear: (n) => ({ from: 'LEITSTELLE', text: `Welle ${n} vernichtet.` }),
 };
-const litMaterial = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+const litMaterial = patchObjectMaterial(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }));
 const glowMaterial = new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false });
 let landerGeo = null;
 const tmp = new THREE.Vector3();

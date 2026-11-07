@@ -260,6 +260,74 @@ export const STRUCTURES = {
     ],
     collide: [{ box: [10, 10], at: [-17, 0] }, { box: [10, 10], at: [17, 0] }],
   },
+
+  // ---- External models (data/props.js), alone or mixed with procedural parts.
+  // collide 'auto': footprint boxes from the props (and from procedural parts taller than 1.2 m).
+  factoryA: { name: 'Fabrikhalle', faction: 'human', armor: 520, structure: 400, onDestroy: 'fire', parts: [{ prop: 'factory-a', at: [0, 0, 0] }], collide: 'auto' },
+  factoryC: { name: 'Fabrik mit Schloten', faction: 'human', armor: 520, structure: 400, onDestroy: 'fire', parts: [{ prop: 'factory-c', at: [0, 0, 0] }], collide: 'auto' },
+  factoryF: { name: 'Werkhalle', faction: 'human', armor: 480, structure: 380, onDestroy: 'fire', parts: [{ prop: 'factory-f', at: [0, 0, 0] }], collide: 'auto' },
+  storeShed: { name: 'Lagerschuppen', faction: 'human', armor: 300, structure: 240, onDestroy: 'fire', parts: [{ prop: 'shed-k', at: [0, 0, 0] }], collide: 'auto' },
+  workshop: { name: 'Werkstatt', faction: 'human', armor: 340, structure: 260, onDestroy: 'smoke', parts: [{ prop: 'workshop-p', at: [0, 0, 0] }], collide: 'auto' },
+  coolingStack: { name: 'Kühlturm', faction: 'human', armor: 380, structure: 260, onDestroy: 'smoke', parts: [{ prop: 'chimney-large', at: [0, 0, 0] }], collide: 'auto' },
+  chimneyPair: {
+    name: 'Schornsteine', faction: 'human', armor: 300, structure: 200, onDestroy: 'smoke', mat: 'concrete',
+    parts: [
+      { box: [16, 2, 9], at: [0, 1, 0], color: CONCRETE },
+      { prop: 'chimney-medium', at: [-4, 2, 0] },
+      { prop: 'chimney-medium', at: [4, 2, 0], scale: 0.85 },
+    ],
+    collide: 'auto',
+  },
+  storageTank: { name: 'Lagertank', faction: 'human', armor: 420, structure: 320, onDestroy: 'explosion', parts: [{ prop: 'tank-large', at: [0, 0, 0] }], collide: 'auto' },
+  pressureTanks: {
+    name: 'Drucktanks', faction: 'human', armor: 260, structure: 180, onDestroy: 'explosion', mat: 'concrete',
+    parts: [
+      { box: [20, 0.8, 16], at: [0, 0.4, 0], color: CONCRETE },
+      { prop: 'tank-small', at: [-3, 0.8, -3.5] },
+      { prop: 'tank-small', at: [3, 0.8, 3.5], rot: [0, 180, 0] },
+      { box: [0.6, 3, 16], at: [-9.5, 2.3, 0], color: WARN, mat: 'metal' },
+    ],
+    collide: 'auto',
+  },
+  containerStack: {
+    name: 'Containerstapel', faction: 'human', armor: 240, structure: 160, onDestroy: 'smoke',
+    parts: [
+      { prop: 'container-a', at: [0, 0, -2.8], rot: [0, 90, 0] },
+      { prop: 'container-b', at: [0, 0, 2.8], rot: [0, 90, 0] },
+      { prop: 'container-c', at: [0.6, 5, 0], rot: [0, 96, 0] },
+    ],
+    collide: 'auto',
+  },
+  waterTower: { name: 'Wasserturm', faction: 'human', armor: 260, structure: 160, onDestroy: 'smoke', parts: [{ prop: 'water-tower', at: [0, 0, 0] }], collide: 'auto' },
+  solarField: { name: 'Solarfeld', faction: 'human', armor: 90, structure: 60, blocksSight: false, parts: [{ prop: 'solar-field', at: [-8, 0, 0] }, { prop: 'solar-field', at: [8, 0, 0] }], collide: 'auto' },
+  windTurbine: { name: 'Windrad', faction: 'human', armor: 200, structure: 140, onDestroy: 'smoke', blocksSight: false, parts: [{ prop: 'wind-turbine', at: [0, 0, 0] }], collide: 'auto' },
+  hangarLong: { name: 'Langhangar', faction: 'human', armor: 600, structure: 500, onDestroy: 'fire', parts: [{ prop: 'hangar-long', at: [0, 0, 0] }], collide: 'auto' },
+  domeHangar: { name: 'Kuppelhangar', faction: 'human', armor: 560, structure: 460, onDestroy: 'fire', parts: [{ prop: 'hangar-dome', at: [0, 0, 0] }], collide: 'auto' },
+  generatorBlock: {
+    name: 'Generatorblock', faction: 'human', armor: 300, structure: 200, onDestroy: 'explosion', mat: 'concrete',
+    parts: [
+      { box: [16, 0.6, 18], at: [0, 0.3, 0], color: CONCRETE },
+      { prop: 'generator', at: [0, 0.6, 0] },
+      { prop: 'barrels', at: [6, 0.6, -6] },
+    ],
+    collide: 'auto',
+  },
+  satDish: { name: 'Parabolantenne', faction: 'human', armor: 240, structure: 150, onDestroy: 'smoke', emitting: true, parts: [{ prop: 'sat-dish', at: [0, 0, 0] }], collide: 'auto' },
+  supportFrame: { name: 'Stahlgerüst', faction: 'human', armor: 260, structure: 180, blocksSight: false, parts: [{ prop: 'frame', at: [0, 0, 0] }, { prop: 'supports', at: [0, 10, 0], scale: 1 }], collide: 'auto' },
+  cargoCraft: { name: 'Frachtfähre (gelandet)', faction: 'human', armor: 480, structure: 360, onDestroy: 'explosion', parts: [{ prop: 'cargo-craft', at: [0, 0, 0] }], collide: 'auto' },
+  cargoYard: {
+    name: 'Frachtlager', faction: 'human', armor: 200, structure: 140, onDestroy: 'smoke', mat: 'concrete',
+    parts: [
+      { box: [18, 0.4, 14], at: [0, 0.2, 0], color: CONCRETE },
+      { prop: 'cargo-pod', at: [-4, 0.4, -3] },
+      { prop: 'cargo-pod', at: [-4, 0.4, 2.5], rot: [0, 6, 0] },
+      { prop: 'crate-long', at: [4.5, 0.4, -3.5], rot: [0, 90, 0] },
+      { prop: 'crate', at: [5, 0.4, 2] },
+      { prop: 'crate', at: [5.3, 2.8, 2.2], rot: [0, 30, 0] },
+      { prop: 'vessel', at: [8, 0.4, 5.5] },
+    ],
+    collide: 'auto',
+  },
 };
 
 /**
@@ -267,17 +335,25 @@ export const STRUCTURES = {
  * parts as above. Far LOD is generated automatically (one tinted box/cone).
  */
 export const SCATTER_MODELS = {
-  rock: { radius: 1.6, parts: [{ box: [3, 2.2, 2.6], at: [0, 0.8, 0], rot: [8, 20, 12], color: '#6c6658' }, { box: [1.8, 1.4, 1.6], at: [1.2, 0.5, 0.6], rot: [-10, 50, 4], color: '#5f594d' }] },
-  boulder: { radius: 3.2, parts: [{ box: [6, 4.4, 5.4], at: [0, 1.8, 0], rot: [6, 30, -8], color: '#6a6457' }, { box: [3.6, 2.8, 3.2], at: [-2.2, 1.0, 1.4], rot: [12, 10, 6], color: '#5c5649' }] },
-  iceBlock: { radius: 2.2, parts: [{ box: [4, 3.2, 3.4], at: [0, 1.2, 0], rot: [10, 25, 6], color: '#c9e4f2' }, { box: [2.2, 4, 2], at: [1.5, 1.6, -0.6], rot: [-6, 60, 10], color: '#b4d6ea' }] },
-  basalt: { radius: 2.2, parts: [{ cyl: [1.3, 9, 6], at: [0, 4.5, 0], color: '#2c2826' }, { cyl: [1.2, 6, 6], at: [2.1, 3, 0.6], color: '#332e2b' }, { cyl: [1.1, 11, 6], at: [-1, 5.5, 1.9], color: '#282422' }] },
-  wreck: { radius: 3, parts: [{ box: [7, 2.4, 3.6], at: [0, 1, 0], rot: [0, 10, 14], color: '#4a3d30' }, { box: [2.6, 3.6, 2.6], at: [-2.2, 2.2, 0.4], rot: [20, 0, 30], color: '#3b3229' }, { cyl: [0.3, 5, 5], at: [2, 2.2, 0], rot: [0, 0, 70], color: '#2a2622' }] },
-  container: { radius: 3, parts: [{ box: [6, 2.6, 2.4], at: [0, 1.3, 0], color: '#8a4630' }, { box: [6, 2.6, 2.4], at: [0.4, 3.9, 0.2], rot: [0, 8, 0], color: '#3e6a7a' }] },
-  pipes: { radius: 0, parts: [{ cyl: [0.5, 12, 6], at: [0, 0.5, 0], rot: [0, 0, 90], color: '#6a5f52' }, { cyl: [0.5, 12, 6], at: [0, 0.5, 1.2], rot: [0, 0, 90], color: '#5d5347' }, { cyl: [0.5, 12, 6], at: [0, 1.4, 0.6], rot: [0, 0, 90], color: '#73685a' }] },
+  rock: { mat: 'rock', radius: 1.6, parts: [{ box: [3, 2.2, 2.6], at: [0, 0.8, 0], rot: [8, 20, 12], color: '#6c6658' }, { box: [1.8, 1.4, 1.6], at: [1.2, 0.5, 0.6], rot: [-10, 50, 4], color: '#5f594d' }] },
+  boulder: { mat: 'rock', radius: 3.2, parts: [{ box: [6, 4.4, 5.4], at: [0, 1.8, 0], rot: [6, 30, -8], color: '#6a6457' }, { box: [3.6, 2.8, 3.2], at: [-2.2, 1.0, 1.4], rot: [12, 10, 6], color: '#5c5649' }] },
+  iceBlock: { mat: 'ice', radius: 2.2, parts: [{ box: [4, 3.2, 3.4], at: [0, 1.2, 0], rot: [10, 25, 6], color: '#c9e4f2' }, { box: [2.2, 4, 2], at: [1.5, 1.6, -0.6], rot: [-6, 60, 10], color: '#b4d6ea' }] },
+  basalt: { mat: 'rock', radius: 2.2, parts: [{ cyl: [1.3, 9, 6], at: [0, 4.5, 0], color: '#2c2826' }, { cyl: [1.2, 6, 6], at: [2.1, 3, 0.6], color: '#332e2b' }, { cyl: [1.1, 11, 6], at: [-1, 5.5, 1.9], color: '#282422' }] },
+  wreck: { mat: 'metal', radius: 3, parts: [{ box: [7, 2.4, 3.6], at: [0, 1, 0], rot: [0, 10, 14], color: '#4a3d30' }, { box: [2.6, 3.6, 2.6], at: [-2.2, 2.2, 0.4], rot: [20, 0, 30], color: '#3b3229' }, { cyl: [0.3, 5, 5], at: [2, 2.2, 0], rot: [0, 0, 70], color: '#2a2622' }] },
+  container: { mat: 'tank', radius: 3, parts: [{ box: [6, 2.6, 2.4], at: [0, 1.3, 0], color: '#8a4630' }, { box: [6, 2.6, 2.4], at: [0.4, 3.9, 0.2], rot: [0, 8, 0], color: '#3e6a7a' }] },
+  pipes: { mat: 'metal', radius: 0, parts: [{ cyl: [0.5, 12, 6], at: [0, 0.5, 0], rot: [0, 0, 90], color: '#6a5f52' }, { cyl: [0.5, 12, 6], at: [0, 0.5, 1.2], rot: [0, 0, 90], color: '#5d5347' }, { cyl: [0.5, 12, 6], at: [0, 1.4, 0.6], rot: [0, 0, 90], color: '#73685a' }] },
   crystal: { radius: 1.5, parts: [{ cone: [1.1, 6, 4], at: [0, 3, 0], rot: [10, 0, 6], color: CRYSTAL, glow: true }, { cone: [0.7, 4, 4], at: [1, 2, 0.5], rot: [-14, 30, -20], color: '#8f6ef0', glow: true }] },
-  reeds: { radius: 0, parts: [0, 1, 2, 3, 4].map((i) => ({ box: [0.15, 2.4 + (i % 3) * 0.5, 0.15], at: [(i - 2) * 0.4, 1.2, ((i * 7) % 5 - 2) * 0.3], rot: [((i * 11) % 7 - 3) * 4, 0, ((i * 5) % 7 - 3) * 4], color: '#6f7a3a' })) },
-  drift: { radius: 0, parts: [{ box: [8, 1.2, 3.5], at: [0, 0.4, 0], rot: [0, 0, 4], color: '#eef3f7' }] },
-  mesaRock: { radius: 4, parts: [{ cyl: [4.5, 14, 6], at: [0, 7, 0], color: '#9a5e3e', rtop: 3.6 }, { cyl: [3.8, 2, 6], at: [0, 15, 0], color: '#a8694a' }] },
+  reeds: { mat: 'wood', radius: 0, parts: [0, 1, 2, 3, 4].map((i) => ({ box: [0.15, 2.4 + (i % 3) * 0.5, 0.15], at: [(i - 2) * 0.4, 1.2, ((i * 7) % 5 - 2) * 0.3], rot: [((i * 11) % 7 - 3) * 4, 0, ((i * 5) % 7 - 3) * 4], color: '#6f7a3a' })) },
+  drift: { mat: 'ice', radius: 0, parts: [{ box: [8, 1.2, 3.5], at: [0, 0.4, 0], rot: [0, 0, 4], color: '#eef3f7' }] },
+  mesaRock: { mat: 'rock', radius: 4, parts: [{ cyl: [4.5, 14, 6], at: [0, 7, 0], color: '#9a5e3e', rtop: 3.6 }, { cyl: [3.8, 2, 6], at: [0, 15, 0], color: '#a8694a' }] },
+  // External models (data/props.js), drawn instanced like the others
+  crystalRock: { radius: 3.4, mat: 'crystal', parts: [{ prop: 'rock-crystals-a', at: [0, -0.3, 0] }] },
+  crystalRockB: { radius: 3.4, mat: 'crystal', parts: [{ prop: 'rock-crystals-b', at: [0, -0.3, 0] }] },
+  bigRock: { radius: 3.4, parts: [{ prop: 'rock-large-a', at: [0, -0.4, 0] }] },
+  bigRockB: { radius: 3.4, parts: [{ prop: 'rock-large-b', at: [0, -0.4, 0] }] },
+  stones: { radius: 0, parts: [{ prop: 'rocks-small', at: [0, -0.1, 0] }] },
+  barrels: { radius: 1.2, parts: [{ prop: 'barrels', at: [0, 0, 0] }] },
+  crates: { radius: 2.2, parts: [{ prop: 'crate', at: [-1.4, 0, 0] }, { prop: 'crate-long', at: [1.8, 0, 0.4], rot: [0, 80, 0] }] },
 };
 
 /**
@@ -295,6 +371,8 @@ export const SITES = {
       { s: 'radarTower', at: [-46, -34] },
       { s: 'relay', at: [44, -36] },
       { s: 'landingPad', at: [0, 58] },
+      { s: 'containerStack', at: [-58, 46], rot: 15 },
+      { s: 'waterTower', at: [58, 44] },
     ],
   },
   // Drop zone (mission startup.location 'dropZone')
@@ -325,6 +403,8 @@ export const SITES = {
       { s: 'depot', at: [-6, 36], rot: 180 },
       { s: 'turret', at: [36, -34], rot: 160 },
       { s: 'turret', at: [-38, -30], rot: 200 },
+      { s: 'storageTank', at: [-40, 32] },
+      { s: 'pressureTanks', at: [40, 44], rot: 90 },
     ],
   },
   synthNest: {
@@ -347,6 +427,7 @@ export const SITES = {
       { s: 'radarTower', at: [26, 24] },
       { s: 'relay', at: [30, -20] },
       { s: 'bunker', at: [-26, -28], rot: -30 },
+      { s: 'cargoYard', at: [34, 2], rot: 90 },
     ],
   },
   archGate: {

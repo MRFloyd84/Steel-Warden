@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import { SCATTER_MODELS } from '../../data/structures.js';
 import { buildParts, buildProxy } from './PartBuilder.js';
+import { patchObjectMaterial } from '../DetailTextures.js';
 
-const litMaterial = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+const litMaterial = patchObjectMaterial(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }));
 const glowMaterial = new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false });
 const m4 = new THREE.Matrix4();
 const q = new THREE.Quaternion();
@@ -15,7 +16,7 @@ export function scatterHeights() {
   const out = {};
   for (const [id, m] of Object.entries(SCATTER_MODELS)) {
     const box = new THREE.Box3();
-    for (const b of buildParts(m.parts).boxes) box.union(b.box.clone().applyMatrix4(b.matrix));
+    for (const b of buildParts(m.parts, { mat: m.mat }).boxes) box.union(b.box.clone().applyMatrix4(b.matrix));
     out[id] = box.max.y;
   }
   return out;
@@ -38,7 +39,7 @@ export class ScatterRenderer {
     this.sets = new Map();
     for (const id of models) {
       const def = SCATTER_MODELS[id];
-      const built = buildParts(def.parts);
+      const built = buildParts(def.parts, { mat: def.mat });
       const mk = (geometry, material) => {
         if (!geometry) return null;
         const mesh = new THREE.InstancedMesh(geometry, material, capacity);

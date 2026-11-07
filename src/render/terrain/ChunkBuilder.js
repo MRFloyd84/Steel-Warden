@@ -4,7 +4,13 @@ import { hash2 } from '../../util/noise.js';
 /**
  * Builds flat-shaded, per-face coloured chunk geometry. Non-indexed so every
  * triangle gets its own normal and colour — the classic untextured look.
+ *
+ * Detail textures (render/DetailTextures.js): every grid point carries the
+ * weights of the ground types that get their own texture — surfA = soft,
+ * shore, lava; surfB = ice, road (hard = the rest, rock comes from the slope in
+ * the shader). The GPU interpolates them across the face: soft transitions.
  */
+const W = 5; // weights per grid point
 export class ChunkBuilder {
   constructor(sampler, theater, config, seed) {
     this.sampler = sampler;
@@ -38,6 +44,14 @@ export class ChunkBuilder {
       }
     }
 
+    // Ground-type weights per grid point (same classification as simulation and colour)
+    const weights = new Float32Array(n * n * W);
+    if (this.useFeatures) {
+      for (let j = 0; j < n; j++) {
+        for (let i = 0; i < n; i++) this.weightsAt(ox + i * step, oz + j * step, heights[j * n + i], weights, (j * n + i) * W);
+      }
+    }
+
     const triCount = segments * segments * 2 + segments * 16;
     const out = new GeometryWriter(triCount);
     const H = (i, j) => heights[j * n + i];
@@ -53,7 +67,9 @@ export class ChunkBuilder {
         const h01 = H(i, j + 1);
         const h11 = H(i + 1, j + 1);
         // Diagonal 00-11 — must match TerrainSampler.heightAt().
+        out.weights(weights, (j * n + i) * W, ((j + 1) * n + i) * W, ((j + 1) * n + i + 1) * W);
         this.face(out, x0, h00, z0, x0, h01, z1, x1, h11, z1, ox, oz);
+        out.weights(weights, (j * n + i) * W, ((j + 1) * n + i + 1) * W, (j * n + i + 1) * W);
         this.face(out, x0, h00, z0, x1, h11, z1, x1, h10, z0, ox, oz);
       }
     }
@@ -76,6 +92,25 @@ export class ChunkBuilder {
     const wz = oz + (az + bz + cz) / 3;
     const color = this.colorFor(avgH, ny, wx, wz);
     out.tri(ax, ay, az, bx, by, bz, cx, cy, cz, nx, ny, nz, color);
+  }
+
+  /** Texture weights at a grid point: soft, shore, lava, ice, road. */
+  weightsAt(x, z, h, out, o) {
+    const info = this.sampler.infoAt(x, z);
+    const f = info.fluid;
+    if (f && f.kind === 'water' && h < f.level + 1.5) {
+      out[o + 1] = 1; // shore and river bed
+      return;
+    }
+    if (info.tint === 'road') {
+      out[o + 4] = 1;
+      return;
+    }
+    const surf = this.sampler.classify(info, x, z, h);
+    if (surf === 'soft') out[o] = 1;
+    else if (surf === 'lava') out[o + 2] = 1;
+    else if (surf === 'hot') out[o + 2] = 0.65;
+    else if (surf === 'thinIce') out[o + 3] = 1;
   }
 
   colorFor(height, normalY, wx, wz) {
@@ -128,7 +163,15 @@ class GeometryWriter {
     this.pos = new Float32Array(triCount * 9);
     this.nor = new Float32Array(triCount * 9);
     this.col = new Float32Array(triCount * 9);
+    this.sa = new Float32Array(triCount * 9);
+    this.sb = new Float32Array(triCount * 6);
     this.o = 0;
+    this.w = null; // weights of the next triangle's three corners (skirts: none)
+  }
+
+  /** Corner weights (offsets into the grid weights) for the next tri(). */
+  weights(arr, a, b, c) {
+    this.w = [arr, a, b, c];
   }
 
   tri(ax, ay, az, bx, by, bz, cx, cy, cz, nx, ny, nz, color) {
@@ -140,6 +183,18 @@ class GeometryWriter {
     for (let k = 0; k < 9; k += 3) {
       nor[o + k] = nx; nor[o + k + 1] = ny; nor[o + k + 2] = nz;
       col[o + k] = color.r; col[o + k + 1] = color.g; col[o + k + 2] = color.b;
+    }
+    if (this.w) {
+      const [arr, ...corners] = this.w;
+      const ob = (o / 9) * 6;
+      corners.forEach((src, k) => {
+        this.sa[o + k * 3] = arr[src];
+        this.sa[o + k * 3 + 1] = arr[src + 1];
+        this.sa[o + k * 3 + 2] = arr[src + 2];
+        this.sb[ob + k * 2] = arr[src + 3];
+        this.sb[ob + k * 2 + 1] = arr[src + 4];
+      });
+      this.w = null;
     }
     this.o = o + 9;
   }
@@ -158,6 +213,8 @@ class GeometryWriter {
     g.setAttribute('position', new THREE.BufferAttribute(this.pos.subarray(0, this.o), 3));
     g.setAttribute('normal', new THREE.BufferAttribute(this.nor.subarray(0, this.o), 3));
     g.setAttribute('color', new THREE.BufferAttribute(this.col.subarray(0, this.o), 3));
+    g.setAttribute('surfA', new THREE.BufferAttribute(this.sa.subarray(0, this.o), 3));
+    g.setAttribute('surfB', new THREE.BufferAttribute(this.sb.subarray(0, (this.o / 9) * 6), 2));
     g.computeBoundingSphere();
     return g;
   }

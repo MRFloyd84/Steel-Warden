@@ -28,6 +28,8 @@ export default defineConfig({
     __BUILD_DATE__: JSON.stringify(new Date().toISOString().slice(0, 10)),
   },
   plugins: [classicScriptForFileProtocol()],
+  // Environment models (assets/props) are embedded as data URLs (?inline)
+  assetsInclude: ['**/*.glb'],
   build: {
     outDir: 'dist',
     target: 'es2020',

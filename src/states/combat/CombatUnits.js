@@ -5,11 +5,12 @@ import { WeaponMounts } from '../../render/walker/WeaponModels.js';
 import { WeaponSystem } from '../../sim/WeaponSystem.js';
 import { getWalkerModel } from '../../data/walkerModels.js';
 import { COMBAT } from '../../data/combat.js';
+import { patchObjectMaterial } from '../../render/DetailTextures.js';
 
 const DESTROYED = COMBAT.stages.length - 1;
 const MEDIUM = 2;
 const HEAVY = 3;
-const wreckMaterial = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, color: '#3c3833' });
+const wreckMaterial = patchObjectMaterial(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, color: '#3c3833' }), { group: 'metal' });
 const tmp = new THREE.Vector3();
 
 /**

@@ -3,6 +3,7 @@ import { getWalkerModel } from '../../data/walkerModels.js';
 import { buildWalkerParts } from './WalkerBuilder.js';
 import { solveTwoBone, orientSegment } from '../../util/ik.js';
 import { CONFIG } from '../../data/config.js';
+import { patchObjectMaterial } from '../DetailTextures.js';
 
 let shadowMaterial = null;
 /** Soft round contact shadow (Optionen → Grafik → Schatten). */
@@ -21,7 +22,9 @@ function contactShadowMaterial() {
   return shadowMaterial;
 }
 
-const material = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+// Detail texture: metal plates for human walkers, crystal facets for the Synthesis
+const material = patchObjectMaterial(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }), { group: 'metal' });
+const crystalMaterial = patchObjectMaterial(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }), { group: 'crystal' });
 
 /**
  * A walker in the world, posed every frame from its (interpolated) motion
@@ -46,7 +49,7 @@ export class WalkerModel {
 
     const mesh = (geo, component, parent) => {
       if (!geo) return null;
-      const m = new THREE.Mesh(geo, material);
+      const m = new THREE.Mesh(geo, walker.faction === 'synth' ? crystalMaterial : material);
       m.userData.component = component;
       parent.add(m);
       return m;

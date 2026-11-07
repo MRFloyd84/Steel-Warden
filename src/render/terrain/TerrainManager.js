@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { ChunkBuilder } from './ChunkBuilder.js';
 import { FluidBuilder } from './FluidBuilder.js';
+import { patchTerrainMaterial } from '../DetailTextures.js';
 
 /**
  * Streams terrain chunks around a focus point. Chunks get a LOD by ring
@@ -12,6 +13,7 @@ export class TerrainManager {
     this.config = config;
     this.builder = new ChunkBuilder(sampler, theater, config, seed);
     this.material = new THREE.MeshLambertMaterial({ vertexColors: true });
+    this.detail = patchTerrainMaterial(this.material, theater, config.chunkSize);
     this.group = new THREE.Group();
     this.group.name = 'terrain';
     scene.add(this.group);

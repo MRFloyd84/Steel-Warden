@@ -2,11 +2,13 @@ import * as THREE from 'three';
 import { STRUCTURES, SITES, getStructure } from '../data/structures.js';
 import { buildParts, buildRubble } from '../render/world/PartBuilder.js';
 import { hash2 } from '../util/noise.js';
+import { patchObjectMaterial } from '../render/DetailTextures.js';
+import { PROPS } from '../data/props.js';
 
 const CELL = 64;
 const DEG = Math.PI / 180;
 const DAMAGED_TINT = new THREE.Color(0.55, 0.52, 0.48);
-const litMaterial = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+const litMaterial = patchObjectMaterial(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }));
 const glowMaterial = new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false });
 const a = new THREE.Vector3();
 const b = new THREE.Vector3();
@@ -17,8 +19,8 @@ const blueprintCache = new Map();
 function blueprint(type) {
   if (!blueprintCache.has(type)) {
     const def = getStructure(type);
-    const intact = buildParts(def.parts);
-    const damaged = buildParts(def.parts, { tint: DAMAGED_TINT, tilt: 0.18 });
+    const intact = buildParts(def.parts, { mat: def.mat });
+    const damaged = buildParts(def.parts, { tint: DAMAGED_TINT, tilt: 0.18, mat: def.mat });
     const box = new THREE.Box3();
     for (const p of intact.boxes) box.union(p.box.clone().applyMatrix4(p.matrix));
     const size = box.getSize(new THREE.Vector3());
@@ -28,12 +30,36 @@ function blueprint(type) {
   return blueprintCache.get(type);
 }
 
+/**
+ * collide: 'auto' — footprint boxes from the parts: external models by their
+ * bounds (or the prop's own collide [w, d], none for collide: false), procedural
+ * parts only when taller than 1.2 m (pads and markings stay walkable).
+ */
+function autoCollide(def) {
+  const shapes = [];
+  for (const p of def.parts) {
+    if (p.glow) continue;
+    const pd = p.prop ? PROPS[p.prop] : null;
+    if (pd?.collide === false) continue;
+    const { boxes } = buildParts([p]);
+    for (const b of boxes) {
+      const world = b.box.clone().applyMatrix4(b.matrix);
+      const size = world.getSize(new THREE.Vector3());
+      const c = world.getCenter(new THREE.Vector3());
+      if (!p.prop && size.y < 1.2) continue;
+      const fp = Array.isArray(pd?.collide) ? pd.collide : [size.x * 0.92, size.z * 0.92];
+      shapes.push({ box: fp, at: [c.x, c.z] });
+    }
+  }
+  return shapes;
+}
+
 /** Blueprint geometry split into a fixed base and a turning head zone (cached per stage). */
 function splitBlueprint(bp, stage, zones) {
   bp.split ??= {};
   const key = `${stage}:${zones.join(',')}`;
   if (!bp.split[key]) {
-    const opts = stage === 'damaged' ? { tint: DAMAGED_TINT, tilt: 0.18 } : {};
+    const opts = stage === 'damaged' ? { tint: DAMAGED_TINT, tilt: 0.18, mat: bp.def.mat } : { mat: bp.def.mat };
     const parts = bp.def.parts;
     bp.split[key] = {
       base: buildParts(parts.filter((p) => !zones.includes(p.zone)), opts),
@@ -123,7 +149,8 @@ export class WorldObjects {
     // World-space collision shapes
     const c = Math.cos(rot);
     const s = Math.sin(rot);
-    st.collide = (def.collide ?? []).map((sh) => ({
+    bp.collide ??= def.collide === 'auto' ? autoCollide(def) : (def.collide ?? []);
+    st.collide = bp.collide.map((sh) => ({
       ...sh,
       x: x + sh.at[0] * c + sh.at[1] * s,
       z: z - sh.at[0] * s + sh.at[1] * c,
@@ -259,15 +286,16 @@ export class WorldObjects {
           z = roads.offZ + (Math.floor((z - roads.offZ) / g) + 0.5) * g + (r(5) - 0.5) * g * 0.25;
           rot = Math.floor(r(3) * 4) * Math.PI / 2;
         }
-        if (!this.canPlace(rule, x, z)) continue;
         const types = Array.isArray(rule.type) ? rule.type : [rule.type];
-        this.add(types[Math.floor(r(6) * types.length)], x, z, rot);
+        const type = types[Math.floor(r(6) * types.length)];
+        if (!this.canPlace(rule, x, z, type)) continue;
+        this.add(type, x, z, rot);
       }
     });
   }
 
-  canPlace(rule, x, z) {
-    const bp = blueprint(Array.isArray(rule.type) ? rule.type[0] : rule.type);
+  canPlace(rule, x, z, type = Array.isArray(rule.type) ? rule.type[0] : rule.type) {
+    const bp = blueprint(type);
     for (const k of this.keepClear) if (Math.hypot(x - k.x, z - k.z) < k.r + bp.radius) return false;
     for (const s of this.near(x, z, bp.radius + 30)) if (Math.hypot(x - s.x, z - s.z) < s.radius + bp.radius + 8) return false;
     if (this.sampler.slopeAt(x, z) < (rule.minFlat ?? 0.9)) return false;

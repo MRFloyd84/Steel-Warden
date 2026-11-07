@@ -1,4 +1,5 @@
 import { CONFIG } from './config.js';
+import { setDetailFilter, setDetailEnabled, setDetailScale } from '../render/DetailTextures.js';
 
 /**
  * Options (menu Optionen → Spiel · Grafik · Audio; Steuerung is the
@@ -73,6 +74,21 @@ export const OPTIONS = [
     choices: [{ value: 0.4, label: 'sparsam' }, { value: 1, label: 'voll' }],
     help: 'Partikelmenge bei Treffern, Explosionen, Rauch und Wetter.',
     apply: (g, v) => { CONFIG.render.effects = v; },
+  },
+  {
+    id: 'detailTextures', page: 'graphics', label: 'Detailtexturen', type: 'choice', default: 1,
+    choices: [{ value: 0, label: 'aus' }, { value: 0.6, label: 'schwach' }, { value: 1, label: 'normal' }, { value: 1.5, label: 'stark' }],
+    help: 'Graustufen-Struktur auf Boden, Gebäuden und Walkern; die Farbe bleibt die der Palette.',
+    apply: (g, v) => {
+      setDetailEnabled(v > 0);
+      setDetailScale(v);
+    },
+  },
+  {
+    id: 'texFilter', page: 'graphics', label: 'Texturfilter', type: 'choice', default: 'nearest',
+    choices: [{ value: 'nearest', label: 'pixelig' }, { value: 'linear', label: 'gefiltert' }],
+    help: 'Pixelig: harte Texel wie beim Software-Rendering. Gefiltert: weich wie die ersten 3D-Karten. Mipmaps immer an.',
+    apply: (g, v) => setDetailFilter(v),
   },
   {
     id: 'crt', page: 'graphics', label: 'Scanlines / CRT', type: 'slider', default: 0.5, min: 0, max: 1, step: 0.1, format: pct,

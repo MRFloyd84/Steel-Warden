@@ -37,6 +37,8 @@ import { HelpPanel } from '../ui/HelpPanel.js';
 import { RadioMenu } from '../ui/RadioMenu.js';
 import { damp } from '../util/math.js';
 import { AIDirector } from '../ai/AIDirector.js';
+import { DETAIL, detailDebugLine } from '../render/DetailTextures.js';
+import { PropLibrary } from '../world/PropLibrary.js';
 import { AIDebugView } from '../render/AIDebugView.js';
 import { MissionScript } from './MissionScript.js';
 import { getDifficulty, DIFFICULTY } from '../data/difficulty.js';
@@ -430,6 +432,14 @@ export class MissionState extends State {
     }
 
     if (input.pressed('debugFreeCam')) this.toggleFreeCam();
+    if (input.pressed('debugTextures')) {
+      DETAIL.on.value = DETAIL.on.value ? 0 : 1;
+      this.hints.flash(DETAIL.on.value ? 'Detailtexturen an' : 'Detailtexturen aus');
+    }
+    if (input.pressed('debugSurfaceMask')) {
+      DETAIL.mask.value = DETAIL.mask.value ? 0 : 1;
+      this.hints.flash(DETAIL.mask.value ? 'Bodenart-Maske: grau hart · braun weich · dunkel Fels · blau Ufer · rot Lava · türkis Eis · gelb Straße' : 'Bodenart-Maske aus');
+    }
     if (input.pressed('aiFreeze')) {
       this.ai.frozen = !this.ai.frozen;
       this.hints.flash(this.ai.frozen ? 'Gegner eingefroren' : 'Gegner aktiv');
@@ -656,8 +666,17 @@ export class MissionState extends State {
     return [
       ...missionDebugLines(this), ...this.worldLink.debugLine(), ...this.combat.debugLines(), this.hits.debugLine(),
       ...this.ai.debugLines(), this.script.debugLine(), ...(wrecks.length ? ['Wracks:', ...wrecks.map((w) => `  ${w}`)] : []),
+      detailDebugLine(), ...propDebugLines(),
     ].filter((l) => l !== null);
   }
+}
+
+/** Props: count, missing files, the heaviest types by triangles (debug overlay). */
+function propDebugLines() {
+  const tris = PropLibrary.triangles();
+  const lines = [`Props ${PropLibrary.loaded}/${tris.length} geladen · Dreiecke: ${tris.slice(0, 6).map(([id, n]) => `${id} ${n}`).join(', ')}${tris.length > 6 ? ' …' : ''}`];
+  if (PropLibrary.missing.length) lines.push(`PROPS FEHLEN (Platzhalter): ${PropLibrary.missing.join('; ')}`);
+  return lines;
 }
 
 function clampUnit(v) {

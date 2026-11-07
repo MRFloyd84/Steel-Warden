@@ -104,6 +104,9 @@ Schnellstart-Parameter (Dev und Build):
   Übersichtskarte, Einsatzvorbereitung mit Walker-Vorschau und Übungsoptionen, Ladebildschirm,
   Optionen (Spiel, Grafik, Audio, Steuerung), Pausenmenü, Nachbesprechung; vollständig mit
   Tastatur, Maus und Gamepad bedienbar.
+- **Detailtexturen und Umgebungsmodelle:** Low-Res-Graustufentexturen je Bodenart und
+  Materialgruppe (Helligkeit, Farbe bleibt Palette), Filter „Pixelig“/„Gefiltert“, 32 externe
+  CC0-Modelle (Kenney, Quaternius) als Bauwerke und Streuobjekte, Credits-Prüfung.
 
 Fahrplan für die nächsten Phasen inklusive Stützpunkt, Bergung, Funk, Radar und Missionen:
 `docs/ROADMAP.md`.
@@ -257,6 +260,8 @@ _Erzeugt aus `src/input/actions.js` mit `node tools/gen-controls.mjs` — nicht 
 | Debug: Ziel strahlt an/aus | `Shift+F9` | – | Debug |
 | Debug: Gegner einfrieren | `Shift+F2` / `Num ×` | – | Debug |
 | Debug: KI-Gruppe vor mir absetzen | `Einfg` / `Num +` | – | Debug |
+| Debug: Detailtexturen an/aus | `Pos1` | – | Debug |
+| Debug: Bodenart-Maske als Farbe | `Ende` | – | Debug |
 | Freiflug: vorwärts | `W` / `↑` | – | Freiflug |
 | Freiflug: zurück | `S` / `↓` | – | Freiflug |
 | Freiflug: links | `A` / `←` | – | Freiflug |
@@ -477,7 +482,8 @@ Im Einsatz: Pausenmenü · Nachbesprechung
   gespeichert.
 - **Laden:** Missionsname, Schauplatz, Balken für Gelände, Modelle und Audio, wechselnde Hinweise.
 - **Optionen:** Spiel (Startprozedur, Zufallsereignisse, Tastenhilfe, Funktexte, Einheiten),
-  Grafik (Sichtweite, Objektdichte, Schatten, Effekte, Scanlines, Auflösungsskala, FPS),
+  Grafik (Sichtweite, Objektdichte, Schatten, Effekte, Scanlines, Auflösungsskala, FPS,
+  Detailtexturen, Texturfilter),
   Audio (Gesamt, Effekte, Cockpit/Maschine, Funk, Musik), Steuerung (Belegungsbildschirm).
   Wirkt sofort, gespeichert in `localStorage`, „Standard wiederherstellen“ je Seite.
   Sichtweite und Objektdichte gelten ab dem nächsten Einsatz.
@@ -626,6 +632,58 @@ feste Schleifenpunkte (`loopPoints` in `src/data/sounds.js`) ohne Knacken.
    Zünden geht erst, nachdem die Zündkappe einmal geschlossen und wieder geöffnet wurde.
    Dann ZÜND, Hauptbus REAKT, BETR — das Klemmbrett zeigt solange die Neustart-Liste.
 
+## Detailtexturen und Umgebungsmodelle
+
+**Detailtexturen** (`assets/textures/`, Graustufen-PNG 128 px, im Bundle eingebettet; Liste mit
+Kachelgröße und Quelle in `src/data/textures.js`). Sie verändern nur die Helligkeit — die Farbe
+kommt weiter aus der Palette des Schauplatzes.
+
+- *Gelände:* sieben Lagen — hart, weich, Fels, Ufer, Lava, Eis, Straße. Weich/Ufer/Lava/Eis/Straße
+  kommen aus der Bodenmaske (je Ecke ins Gitter geschrieben), Fels aus der Hangneigung (dreiplanar,
+  damit Steilhänge nicht verzerren). Welche Textur je Lage und wie stark: `theaters.js` → `detail`.
+  Gegen sichtbare Kacheln: zweite Lage im 2,7-fachen Maßstab und leicht gedreht, die erste Lage je
+  Chunk um bis zu ±10° gedreht; ab 450 m blendet das Detail aus.
+- *Objekte:* Materialgruppen Metall, Beton, Holz, Tank, Kristall, Fels, Eis, Akzent, Dunkel
+  (`MATERIAL_GROUPS`), dreiplanar im Objektraum. Prozedurale Teile bekommen ihre Gruppe aus `mat`
+  am Teil bzw. Bauplan, sonst aus dem Farbton. Walker: Metall, Synthese: Kristall.
+- *Optionen → Grafik:* „Detailtexturen“ aus/schwach/normal/stark, „Texturfilter“ Pixelig
+  (Nearest) oder Gefiltert (bilinear); Mipmaps sind immer an.
+- *Neu einlesen:* `python3 tools/import_textures.py --sbs "<…>/Base Materials 256x256"`
+  (Graustufen, ≤ 128 px, Mittelwert/Kontrast normiert; Metall, Tank, Kristall, Sand, Lava werden
+  erzeugt).
+
+**Externe Umgebungsmodelle** (`assets/props/<paket>/`, GLB, eingebettet; `src/data/props.js`:
+Datei, Maßstab, Drehung, Bodenversatz, Kollision, Trefferzonen, Panzerung, Trümmer). Beim Laden
+werden Materialien und Texturen verworfen: Flat-Shading, je Vertex nur Helligkeit plus
+Materialgruppe, Farbe aus `theaters.js` → `materials`. Bauwerke in `structures.js` mischen externe
+(`prop: 'factory-a'`) und prozedurale Teile; gleiche Teile werden instanziert, Kollision
+`collide: 'auto'` aus den Teilen. Fehlt eine Datei oder lädt sie nicht, steht an ihrer Stelle ein
+magenta gestreifter Kasten in der angegebenen Größe, und die Konsole sowie das Debug-Overlay
+nennen sie. Neu einlesen: `python3 tools/import_props.py --kenney-industrial <dir> --kenney-space <dir> --quaternius <dir>`.
+
+**Credits:** `CREDITS.md` nennt je Paket Name, Autor, Lizenz und Link. `npm run check-credits`
+(`tools/check_credits.mjs`) prüft, dass jede Datei in `assets/props` und `assets/textures` in
+`props.js`/`textures.js` eingetragen ist, jede eingetragene Datei existiert und jedes Paket in
+`CREDITS.md` steht.
+
+**Debug** (nur im Debug-Modus `^`): `Pos1` Detailtexturen an/aus, `Ende` Bodenart-Maske als Farben
+(grau hart, braun weich, dunkel Fels, blau Ufer, rot Lava, türkis Eis, gelb Straße). Das Overlay
+zeigt Texturen (an/aus, Filter, geladen) und Props (geladen, Dreiecke je Typ, fehlende Dateien).
+
+**Testanleitung:**
+
+1. *Requisiten* (Menü Einsatzwahl → System, `?mission=test-props&debug`): drei Reihen mit allen
+   20 Modell-Bauwerken. Overlay: „Props 32/32 geladen“, keine fehlenden Dateien. Gegen ein Gebäude
+   laufen (hält auf), eins zerschießen (beschädigt → Trümmer).
+2. *Bodenproben* (`?mission=test-ground&debug`): `Pos1` mehrmals — die Streifen bekommen Körnung
+   bzw. werden glatt. `Ende` zeigt die Maske: Wasserrand blau, Lava rot, Eis türkis, weich braun.
+3. *Fels an Steilhängen:* Selene-7 oder Tessar, `Ende` — Kraterwände und Schluchtränder dunkel.
+4. *Filter:* Optionen → Grafik → Texturfilter zwischen Pixelig und Gefiltert wechseln, nah am Boden
+   stehen: pixelige Körner vs. weich gefiltert; wirkt sofort.
+5. *Schauplätze mit Modellen:* Brenn-Süd (Fabriken, Containerhof, Fässer, Kisten), Selene-7
+   (Kuppelhangar, Schüssel, Generator, Fähre, Felsbrocken), Kernwelt (Kristallfelsen),
+   Kalvik (Windrad, Schüssel, Langhangar), Morrow (Windrad, Wasserturm) — Lage je Seed, eher selten.
+
 ## Sounds
 
 Rohdateien in `assets/sounds-raw/`, Aufbereitung mit `python3 tools/prepare_sounds.py`
@@ -662,3 +720,6 @@ eingebettet, damit der Offline-Build per `file://` funktioniert. Klang und Misch
 - `src/data/enemies.js` – Synthese-Einheiten (Walker-Format plus `ai`, `salvage`, `faction`),
   Gebäude-Geschütze `GUNS`; `src/data/enemyModels.js` – ihre Baupläne
 - `src/data/difficulty.js` – die fünf Schwierigkeitsgrade
+- `src/data/textures.js` – Detailtexturen (Datei, Kachelgröße, Quelle), Lagen, Materialgruppen
+- `src/data/props.js` – externe Modelle (Paket, Datei, Maßstab, Kollision, Panzerung), Farbregeln
+  der Materialgruppen; Prüfung mit `npm run check-credits`

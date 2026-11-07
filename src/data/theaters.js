@@ -27,6 +27,9 @@
 export const THEATERS = {
   ice: {
     name: 'Eiswüste Kalvik',
+    // Detail textures (data/textures.js) and palette for external models per material group
+    detail: { strength: 0.26, hard: 'ground-snow', soft: 'ground-snow', shore: 'ground-ice', ice: 'ground-ice' },
+    materials: { metal: '#7a8088', concrete: '#9aa3a8', tank: '#5c6670', accent: '#c0a040', rock: '#7d8a94', dark: '#3c4248' },
     terrain: {
       scale: 420, octaves: 5, amplitude: 38,
       ridgeAmplitude: 95, ridgeMaskLow: 0.45, ridgeMaskHigh: 0.75,
@@ -57,11 +60,14 @@ export const THEATERS = {
       { model: 'drift', density: 120, slope: [0.9, 1], scale: [0.8, 2], surfaces: ['soft', 'hard'] },
       { model: 'boulder', density: 12, slope: [0.7, 1], scale: [0.8, 1.6], minDist: 30 },
     ],
+    structureRules: [{ type: ['windTurbine', 'satDish', 'hangarLong'], chance: 0.05 }],
     weather: 'snowstorm',
   },
 
   volcano: {
     name: 'Vulkanplateau Ashmar',
+    detail: { strength: 0.34, hard: 'ground-gravel', soft: 'ground-dust', shore: 'ground-mud' },
+    materials: { metal: '#5a5450', concrete: '#6e6a62', tank: '#4e4a40', rock: '#3a3431', accent: '#c06a2a', dark: '#2a2624' },
     terrain: {
       scale: 360, octaves: 5, amplitude: 30,
       ridgeAmplitude: 70, ridgeMaskLow: 0.4, ridgeMaskHigh: 0.7,
@@ -93,12 +99,15 @@ export const THEATERS = {
     scatter: [
       { model: 'basalt', density: 45, slope: [0.6, 1], scale: [0.7, 1.8], minDist: 12, cluster: 2, clusterRadius: 40 },
       { model: 'rock', density: 60, slope: [0.7, 1], scale: [0.7, 1.8] },
+      { model: 'stones', density: 30, slope: [0.8, 1], scale: [0.8, 1.4] },
     ],
     weather: 'ashfall',
   },
 
   industrial: {
     name: 'Industriezone Brenn-Süd',
+    detail: { strength: 0.3, hard: 'ground-dirt', soft: 'ground-mud', shore: 'ground-mud', road: 'mat-concrete' },
+    materials: { metal: '#6f6d64', concrete: '#8b877a', tank: '#5d6249', accent: '#b8962e', dark: '#3a3c3d' },
     terrain: {
       scale: 520, octaves: 4, amplitude: 14,
       ridgeAmplitude: 28, ridgeMaskLow: 0.55, ridgeMaskHigh: 0.8,
@@ -128,9 +137,13 @@ export const THEATERS = {
       { model: 'container', density: 30, slope: [0.92, 1], scale: [1, 1], minDist: 12, cluster: 2, clusterRadius: 25 },
       { model: 'pipes', density: 18, slope: [0.92, 1], scale: [0.8, 1.4] },
       { model: 'wreck', density: 10, slope: [0.85, 1], scale: [0.8, 1.3] },
+      { model: 'barrels', density: 14, slope: [0.92, 1], scale: [0.9, 1.2], cluster: 3, clusterRadius: 12 },
+      { model: 'crates', density: 10, slope: [0.92, 1], scale: [0.9, 1.1] },
     ],
     structureRules: [
-      { type: 'hall', chance: 0.55, align: 'blocks' },
+      { type: 'hall', chance: 0.4, align: 'blocks' },
+      { type: ['factoryA', 'factoryC', 'factoryF', 'storeShed', 'workshop'], chance: 0.35, align: 'blocks' },
+      { type: ['containerStack', 'storageTank', 'pressureTanks', 'waterTower', 'chimneyPair', 'coolingStack', 'solarField'], chance: 0.3 },
       { type: ['coolingTower', 'crane', 'pipeline'], chance: 0.35, align: 'blocks' },
     ],
     weather: 'rain',
@@ -138,6 +151,8 @@ export const THEATERS = {
 
   moon: {
     name: 'Mondbasis Selene-7',
+    detail: { strength: 0.36, hard: 'ground-dust', soft: 'ground-dust' },
+    materials: { metal: '#8a8c90', concrete: '#a8a8aa', tank: '#6c7080', rock: '#7a7a7e', accent: '#d0a030', dark: '#3e4044' },
     terrain: {
       scale: 600, octaves: 4, amplitude: 12,
       ridgeAmplitude: 45, ridgeMaskLow: 0.5, ridgeMaskHigh: 0.85,
@@ -168,13 +183,18 @@ export const THEATERS = {
     scatter: [
       { model: 'rock', density: 110, slope: [0.65, 1], scale: [0.5, 1.6], cluster: 4, clusterRadius: 35 },
       { model: 'boulder', density: 16, slope: [0.7, 1], scale: [0.6, 1.5], minDist: 25 },
+      { model: 'bigRock', density: 10, slope: [0.75, 1], scale: [0.7, 1.6], minDist: 30 },
+      { model: 'stones', density: 40, slope: [0.8, 1], scale: [0.8, 1.5] },
     ],
+    structureRules: [{ type: ['domeHangar', 'satDish', 'generatorBlock', 'supportFrame', 'cargoCraft'], chance: 0.07 }],
     weather: 'clear',
     gravity: 0.17,
   },
 
   delta: {
     name: 'Flussdelta Morrow',
+    detail: { strength: 0.3, hard: 'ground-dirt', soft: 'ground-mud', shore: 'ground-mud' },
+    materials: { metal: '#5f6258', concrete: '#7f7d70', tank: '#4f5a44', rock: '#5e5c50', accent: '#b0902e', dark: '#33352f' },
     terrain: {
       scale: 700, octaves: 4, amplitude: 6,
       ridgeAmplitude: 0, ridgeMaskLow: 0.5, ridgeMaskHigh: 0.8,
@@ -205,12 +225,14 @@ export const THEATERS = {
       { model: 'wreck', density: 6, slope: [0.85, 1], scale: [0.8, 1.2] },
       { model: 'rock', density: 15, slope: [0.8, 1], scale: [0.6, 1.2] },
     ],
-    structureRules: [{ type: 'relay', chance: 0.06 }],
+    structureRules: [{ type: 'relay', chance: 0.06 }, { type: ['windTurbine', 'waterTower'], chance: 0.05 }],
     weather: 'groundFog',
   },
 
   canyon: {
     name: 'Canyonwüste Tessar',
+    detail: { strength: 0.32, hard: 'ground-sand', soft: 'ground-sand' },
+    materials: { metal: '#7a6a5a', concrete: '#b08a66', tank: '#6a5a40', rock: '#9a5e3e', accent: '#c89a40', dark: '#3e3028' },
     terrain: {
       scale: 480, octaves: 4, amplitude: 16,
       ridgeAmplitude: 30, ridgeMaskLow: 0.55, ridgeMaskHigh: 0.85,
@@ -238,6 +260,7 @@ export const THEATERS = {
     surface: { base: 'hard', soft: { scale: 110, threshold: 0.3 } },
     scatter: [
       { model: 'mesaRock', density: 10, slope: [0.8, 1], scale: [0.8, 2], minDist: 40 },
+      { model: 'bigRockB', density: 12, slope: [0.7, 1], scale: [0.8, 1.8], minDist: 30 },
       { model: 'rock', density: 70, slope: [0.6, 1], scale: [0.6, 1.8], cluster: 3, clusterRadius: 40 },
       { model: 'boulder', density: 14, slope: [0.7, 1], scale: [0.7, 1.4], minDist: 30 },
     ],
@@ -247,6 +270,8 @@ export const THEATERS = {
 
   synth: {
     name: 'Synthese-Kernwelt',
+    detail: { strength: 0.3, hard: 'ground-crystal', soft: 'ground-dust' },
+    materials: { metal: '#3a3450', concrete: '#4a4560', tank: '#3a3048', crystal: '#6b55a0', rock: '#2c2840', accent: '#5ef2e6', dark: '#1c1828' },
     terrain: {
       scale: 300, octaves: 2, amplitude: 10,
       ridgeAmplitude: 40, ridgeMaskLow: 0.5, ridgeMaskHigh: 0.7,
@@ -277,6 +302,8 @@ export const THEATERS = {
     surface: { base: 'hard', soft: { scale: 80, threshold: 0.45 } },
     scatter: [
       { model: 'crystal', density: 90, slope: [0.75, 1], scale: [0.7, 2.4], cluster: 3, clusterRadius: 30 },
+      { model: 'crystalRock', density: 16, slope: [0.75, 1], scale: [0.8, 1.8], minDist: 20 },
+      { model: 'crystalRockB', density: 12, slope: [0.75, 1], scale: [0.8, 1.6], minDist: 20 },
     ],
     structureRules: [{ type: ['pylon', 'spike', 'sensorNode'], chance: 0.12 }],
     weather: 'clear',

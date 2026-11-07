@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { colored, merge } from '../cockpit/geometry.js';
+import { patchObjectMaterial } from '../DetailTextures.js';
 
-const material = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+const material = patchObjectMaterial(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }), { group: 'metal' });
 const DEG = Math.PI / 180;
 const DARK = '#25271f';
 const METAL = '#6f736a';
