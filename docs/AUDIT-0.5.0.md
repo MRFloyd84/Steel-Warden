@@ -160,3 +160,5 @@ Geändert: `src/sim/MachineCondition.js` (neu), `HitVolumes.js` (`updateBounds`)
 Tests: `npm test` (Node, 26 Fälle in `tests/`). Im Browser liefen außerdem der Automatikstart per
 Shift+S, Sensoren und Aufschaltung, Reaktorzerstörung, die Raketen-Suite, Steuerung, Gefecht,
 Wracks, Startphase, Alarmstart und Menüablauf.
+
+Nachtrag Phase 2: P9 (Antriebsanteil) und P10 (Gyro) sind umgesetzt, siehe `docs/MOTION-0.5.0.md`.

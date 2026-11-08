@@ -117,6 +117,12 @@ Schnellstart-Parameter (Dev und Build):
   aufschalten geht nur noch mit Sensoren; der Störeffekt der PZ-9 wirkt; die Trefferzonen der großen
   Modelle werden vollständig geprüft. Bericht: `docs/AUDIT-0.5.0.md`, Tests: `npm test`.
 
+- **0.5.0 Phase 2 (Bewegung und Systemintegration):** ENERGIE-Schalter mit vierter Stellung
+  ANTRIEB wirkt auf Tempo und Beschleunigung (SCHILD/WAFFE ×0,855, ANTRIEB ×1,15). Der Gyro
+  stabilisiert Torso, Gang, Zielen im Gehen und Rückstoß. Die Masse jedes Walkers prägt
+  Federn, Drehträgheit und Bremsen; beschädigte Beine lassen den Walker hinken. Schwere
+  Waffen haben Rückstoß. Bericht: `docs/MOTION-0.5.0.md`.
+
 Fahrplan für die nächsten Phasen inklusive Stützpunkt, Bergung, Funk, Radar und Missionen:
 `docs/ROADMAP.md`.
 
@@ -776,6 +782,38 @@ Steuerung) laufen mit Puppeteer außerhalb des Projekts.
 4. Störeffekt: Den hat nur der PZ-9 Partikelwerfer, und den führt seit der Waffenumstellung kein
    Walker ab Werk (wieder möglich mit dem Hangar, Phase C). Geprüft wird er deshalb im Node-Test
    (`tests/machineCondition.test.mjs`).
+
+## Bewegung, Energie und Gyro (0.5.0 Phase 2)
+
+- **ENERGIE-Drehschalter** (rechte Konsole): SCHILD, AUSGL, WAFFE, neu ANTRIEB. Der
+  Antriebsanteil ergibt den Faktor für Höchsttempo und Beschleunigung (AUSGL ×1, SCHILD und WAFFE
+  ×0,855, ANTRIEB ×1,15). Schilde und Waffen bekommen ihre Anteile wie bisher. Ein Walker mit
+  zerstörtem Reaktor, zerstörten Beinen oder angezogener Beinsperre bleibt stehen, egal mit wie
+  viel Energie.
+- **Gyro:** ausgerichtet (Taste GYRO in der Startprozedur) ist der Torso ruhig. Ohne Gyro (nicht
+  ausgerichtet, ausgefallen, ohne Strom) rollt er stärker, schwingt nach Bremsen länger, und die
+  Waffen streuen im Gehen bis doppelt so stark. Tempo und Waffen bleiben voll nutzbar.
+- **Masse:** leichte Walker drehen sofort ein und federn schnell, schwere drehen träge an
+  (KOLOSS ≈ 1,2 s bis zur vollen Drehrate) und schwingen länger.
+- **Beine:** ab Schaden MITTEL hinkt der Walker, ab SCHWER zusätzlich Tempo ×0,6 (wie bisher).
+- **Rückstoß:** schwere Waffen heben den Torso an (SR-3 auf GOLIATH ≈ 0,7°, ohne Gyro ≈ 1,2°).
+- Debug-Zeile „Zustand“ (Overlay `^`): Antrieb mit Energiefaktor, Gyro, Hinken.
+- Kennwerte: `src/data/config.js` → `feel` (Masse, Unruhe, Hinken, Rückstoß),
+  `src/data/systems.js` → `ENERGY_PRESETS`, `DRIVE_ENERGY`, `src/data/combat.js` → `condition`.
+- Messung: `node tests/motionMetrics.mjs [AUSGL|SCHILD|ANTRIEB][+gyroOff][+legsMedium|+legsHeavy]`.
+
+**Testanleitung (Phase 2):**
+
+1. Paradeplatz, Debug `^`: ENERGIE im freien Blick (`V`) auf ANTRIEB → Zeile „Zustand“ zeigt
+   Antrieb 115, der Walker wird schneller; SCHILD → 85.
+2. Startprozedur ohne GYRO-Schritt (Handstart, Gyro auslassen) und dann laufen: der Torso rollt
+   spürbar mehr, Treffer im Gehen streuen; im Stand trifft man wie gewohnt.
+3. GOLIATH (`?walker=goliath`): SR-3 abfeuern — der Torso ruckt kurz nach oben.
+4. KESTREL und KOLOSS nacheinander mit `A`/`D` drehen: KESTREL dreht fast sofort (≈ 0,4 s), KOLOSS setzt
+   sich träge in Drehung und läuft etwas nach. Shift+C bringt die Beine weiterhin exakt unter
+   den Torso.
+5. Duell, Beine beschießen (Zielkapsel `Tab` → BEINE): ab MITTEL hinkt der eigene oder gegnerische
+   Walker sichtbar.
 
 ## Datenpflege
 

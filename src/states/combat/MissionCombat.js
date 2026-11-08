@@ -5,7 +5,8 @@ import { Projectiles } from '../../sim/Projectiles.js';
 import { Targeting } from '../../sim/Targeting.js';
 import { hitSide } from '../../sim/DamageModel.js';
 import { raycastTerrain } from '../../sim/HitVolumes.js';
-import { ENERGY_PRESETS } from '../../data/systems.js';
+import { energySplitOf } from '../../data/systems.js';
+import { spreadFactor, recoilImpulse } from '../../sim/MachineCondition.js';
 import { COMBAT } from '../../data/combat.js';
 import { CombatUnits } from './CombatUnits.js';
 import { MissileControl, angleTo } from './MissileControl.js';
@@ -235,9 +236,11 @@ export class MissionCombat {
   update(dt) {
     this.time += dt;
     const sys = this.systems;
-    const preset = ENERGY_PRESETS[this.controls.has('energyPreset') ? this.controls.positionLabel('energyPreset') : 'AUSGL'] ?? ENERGY_PRESETS.AUSGL;
+    // Energy split: shields and weapons here, the drive share in MachineCondition (each share once)
+    const preset = energySplitOf(this.controls);
     // Reactor output, weapons and shields from the machine condition (a destroyed reactor stops all three)
     const cond = this.player.condition.evaluate();
+    this.cond = cond; // for spread and recoil of the shots fired in this step
     const power = cond.reactorOutput;
     this.units.update(dt, { enabled: cond.shieldsOnline, rate: power * (preset.shields / 0.34) });
     // Until the radar (A4): the player emits while the SENSOREN switch is on
@@ -281,10 +284,21 @@ export class MissionCombat {
     const d = slot.def;
     const origin = this.player.mounts.muzzleWorld(slot.id, v1, true);
     const dir = v2.subVectors(this.aimPoint, origin).normalize();
-    spreadDir(dir, d.spread);
+    spreadDir(dir, d.spread * this.spreadFactor());
     const extra = d.missile ? this.missiles.spawnParams(slot, this.eye, this.aimDir) : { aimPoint: this.aimPoint.clone() };
     const proj = this.launch(this.player, slot, shotIndex, origin, dir, extra);
     if (d.missile) this.missiles.launched(slot, proj);
+    if (shotIndex === 0) this.player.motion.recoil(this.recoilImpulse(d));
+  }
+
+  /** Spread multiplier while walking (MachineCondition.spreadFactor). */
+  spreadFactor() {
+    return spreadFactor(this.player.motion.motionAmount, this.cond?.weaponStabilization ?? 1);
+  }
+
+  /** Torso pitch impulse of one shot (MachineCondition.recoilImpulse). */
+  recoilImpulse(d) {
+    return recoilImpulse(d, this.player.walker.tonnage, this.cond?.weaponStabilization ?? 1);
   }
 
   /**

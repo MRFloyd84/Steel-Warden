@@ -206,7 +206,10 @@ export class CombatUnits {
   applyLimits(unit) {
     const lim = unit.motion.limits;
     const c = unit.condition.evaluate();
-    lim.speedFactor = c.drivePower;
+    lim.speedFactor = c.drivePower; // reactor × legs × energy split, once
+    lim.accelFactor = c.driveAccel;
+    lim.stability = c.movementStability;
+    lim.limp = c.limp;
     if (!c.canMove) lim.canMove = false;
     if (!c.canTwist) lim.canTwist = false;
     if (unit.immobile) lim.stance = 0;

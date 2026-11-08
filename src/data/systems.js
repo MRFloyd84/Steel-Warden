@@ -133,7 +133,27 @@ export const ENERGY_PRESETS = {
   SCHILD: { shields: 0.5, weapons: 0.25, drive: 0.25 },
   AUSGL: { shields: 0.34, weapons: 0.33, drive: 0.33 },
   WAFFE: { shields: 0.25, weapons: 0.5, drive: 0.25 },
+  ANTRIEB: { shields: 0.25, weapons: 0.25, drive: 0.5 },
 };
+
+/**
+ * Drive share of the ENERGIE knob → drive factor (speed and acceleration). AUSGL is the
+ * reference (1); the factor follows the share with `sensitivity` and is clamped.
+ * SCHILD / WAFFE (0.25) → 0.855, ANTRIEB (0.5) → 1.15 (overdrive limit).
+ */
+export const DRIVE_ENERGY = { reference: 0.33, sensitivity: 0.6, min: 0.75, max: 1.15 };
+
+/** The energy split set on the cockpit (single source for weapons, shields and drive). */
+export function energySplitOf(controls) {
+  const label = controls?.has('energyPreset') ? controls.positionLabel('energyPreset') : 'AUSGL';
+  return ENERGY_PRESETS[label] ?? ENERGY_PRESETS.AUSGL;
+}
+
+export function driveEnergyFactor(split) {
+  const k = DRIVE_ENERGY;
+  const f = 1 + k.sensitivity * (split.drive / k.reference - 1);
+  return Math.min(k.max, Math.max(k.min, f));
+}
 
 /** Radio lines (sender, text) for system events. */
 export const RADIO = {

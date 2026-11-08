@@ -11,6 +11,11 @@ import { clamp, damp, DEG } from '../util/math.js';
  *
  * Angles: yaw in radians, positive = left (Three.js convention),
  * yaw 0 faces -Z ("north").
+ *
+ * Mass (walker tonnage) shapes the feel on top of the walker's own rates: torso springs
+ * (heavier = slower, longer swing), leg turn lag, braking. The machine condition comes in
+ * through `limits` (CombatUnits.applyLimits): speedFactor (drive power incl. energy split
+ * and legs), accelFactor (energy split), stability (legs, hydraulics, gyro) and limp.
  */
 export class WalkerMotion {
   constructor(walker, sampler, feel, bus) {
@@ -41,8 +46,18 @@ export class WalkerMotion {
     this.stride = feel.strideBase + walker.tonnage * feel.stridePerTon;
     this.bobAmp = feel.bobBase + walker.tonnage * feel.bobPerTon;
     this.swayAmp = walker.tonnage * feel.swayPerTon * DEG;
-    this.pitchSpring = new Spring(feel.pitchSpring);
-    this.rollSpring = new Spring(feel.pitchSpring);
+    // Torso springs scaled by mass, same damping ratio: k × s, c × √s with s = massRef / tonnage
+    const [sMin, sMax] = feel.springMassRange ?? [1, 1];
+    const s = clamp((feel.massRef ?? walker.tonnage) / walker.tonnage, sMin, sMax);
+    const spring = { stiffness: feel.pitchSpring.stiffness * s, damping: feel.pitchSpring.damping * Math.sqrt(s) };
+    this.springDamping = spring.damping;
+    this.pitchSpring = new Spring(spring);
+    this.rollSpring = new Spring(spring);
+    // Legs reach their turn rate with a lag that grows with mass; braking carries more momentum
+    this.turnLag = (feel.turnLagBase ?? 0) + walker.tonnage * (feel.turnLagPerTon ?? 0);
+    this.turnState = 0;
+    this.brakeFactor = (feel.brakeFactor ?? 1) * ((feel.massRef ?? walker.tonnage) / walker.tonnage) ** (feel.brakeMassExp ?? 0);
+    this.limpSide = 1;
     this.headY = new Spring(feel.headSpring);
     this.headZ = new Spring(feel.headSpring);
 
@@ -57,7 +72,7 @@ export class WalkerMotion {
     this.collided = false;
 
     // Set by WalkerSystems every step: what the machinery currently allows.
-    this.limits = { throttleLocked: false, canMove: true, canTwist: true, speedFactor: 1, stance: 1 };
+    this.limits = { throttleLocked: false, canMove: true, canTwist: true, speedFactor: 1, stance: 1, accelFactor: 1, stability: 1, limp: 0 };
     this.standUpHeight = 0;
     this.slumpPitch = 0;
 
@@ -76,6 +91,7 @@ export class WalkerMotion {
     this.z = z;
     this.legYaw = heading;
     this.speed = 0;
+    this.turnState = 0;
     this.twist = this.twistTarget = 0;
     this.pitch = this.pitchTarget = 0;
     this.writePose(this.pose);
@@ -100,6 +116,7 @@ export class WalkerMotion {
 
   centerTorso() {
     this.aligning = false;
+    this.alignCarry = false;
     this.twistTarget = 0;
     this.pitchTarget = 0;
   }
@@ -114,20 +131,38 @@ export class WalkerMotion {
     if (lim.throttleLocked) this.throttle.value = 0;
     else this.throttle.update(dt, input.throttleRate, input.throttleAbs);
     let turn = lim.canMove ? input.turn : 0;
-    if (turn) this.aligning = false; // manual turning takes over
-    else if (this.aligning) {
-      if (Math.abs(this.twist) < 0.5 * DEG) this.aligning = false;
-      else turn = -Math.sign(this.twist); // legs turn toward the torso
+    const speedFrac0 = Math.abs(this.speed) / w.maxSpeed;
+    const rateNow = w.turnRate * DEG * (1 + (f.turnAtSpeed - 1) * speedFrac0);
+    if (turn) {
+      this.aligning = false; // manual turning takes over
+      this.alignCarry = false;
+    } else if (this.aligning) {
+      // Legs turn toward the torso. They lag with their mass: once the twist left is what they
+      // still turn while slowing down (turnState × rate × lag), the command stops and they coast in.
+      const coast = Math.abs(this.turnState) * rateNow * this.turnLag;
+      if (Math.abs(this.twist) <= Math.max(coast, 0.3 * DEG)) {
+        this.aligning = false;
+        this.alignCarry = this.turnState !== 0;
+      } else turn = -Math.sign(this.twist);
     }
-    this.turnInput = turn;
+    // Turn command → actual leg turning with the mass lag (first order, exact for the step)
+    this.turnState += (turn - this.turnState) * (this.turnLag > 0 ? 1 - Math.exp(-dt / this.turnLag) : 1);
+    if (Math.abs(this.turnState) < 1e-4 && !turn) this.turnState = 0;
+    this.turnInput = this.turnState;
     const yawBefore = this.legYaw;
 
     // Leg heading
     const speedFrac = Math.abs(this.speed) / w.maxSpeed;
     const turnRate = w.turnRate * DEG * (1 + (f.turnAtSpeed - 1) * speedFrac);
-    this.legYaw -= turn * turnRate * dt;
-    if (this.aligning) {
-      // Keep the torso's world heading: twist shrinks by what the legs turned
+    this.legYaw -= this.turnState * turnRate * dt;
+    if (this.alignCarry && Math.abs(this.turnState) < 0.02) {
+      // coasted out: a rest (e.g. the walker was still slowing down, so the legs turned faster
+      // than predicted) is taken out with another short turn
+      this.alignCarry = this.turnState !== 0 && Math.abs(this.twist) <= 0.5 * DEG;
+      if (Math.abs(this.twist) > 0.5 * DEG) this.aligning = true;
+    }
+    if (this.aligning || this.alignCarry) {
+      // Keep the torso's world heading: twist shrinks by what the legs turned (also while they coast out)
       const turned = this.legYaw - yawBefore;
       this.twist -= turned;
       this.twistTarget -= turned;
@@ -148,7 +183,7 @@ export class WalkerMotion {
 
     const prevSpeed = this.speed;
     const speedingUp = Math.abs(target) > Math.abs(this.speed) && Math.sign(target) !== -Math.sign(this.speed);
-    const rate = w.acceleration * (speedingUp ? 1 : f.brakeFactor);
+    const rate = w.acceleration * (lim.accelFactor ?? 1) * (speedingUp ? 1 : this.brakeFactor);
     const diff = target - this.speed;
     this.speed += clamp(diff, -rate * dt, rate * dt);
     this.accel = (this.speed - prevSpeed) / dt;
@@ -187,9 +222,14 @@ export class WalkerMotion {
 
     this.updateGait(dt);
 
-    // Weight: braking pitches the torso forward and it rocks back; turning leans
+    // Weight: braking pitches the torso forward and it rocks back; turning leans.
+    // Low stability (legs, hydraulics, gyro) damps the torso less: it wobbles longer.
+    const unrest = 1 - clamp(lim.stability ?? 1, 0, 1);
+    const damping = this.springDamping * (1 - (f.unrestDamping ?? 0) * unrest);
+    this.pitchSpring.c = damping;
+    this.rollSpring.c = damping;
     this.pitchSpring.step(dt, this.accel * f.brakePitch);
-    this.rollSpring.step(dt, turn * speedFrac * f.turnRoll);
+    this.rollSpring.step(dt, this.turnState * speedFrac * f.turnRoll);
     this.headY.step(dt);
     this.headZ.step(dt);
     this.headZ.kick(-this.accel * 0.004);
@@ -232,7 +272,13 @@ export class WalkerMotion {
     if (steps !== this.stepCount) {
       this.stepCount = steps;
       const strength = this.motionAmount;
-      this.headY.kick(-this.w.tonnage * this.feel.footfallKick * strength);
+      const unrest = 1 - clamp(this.limits.stability ?? 1, 0, 1);
+      const limp = this.limits.limp ?? 0;
+      // Damaged legs: every other step lands hard and throws the torso sideways
+      this.limpSide = steps % 2 === 0 ? 1 : -1;
+      const hard = limp > 0 && this.limpSide > 0 ? 1 + limp : 1;
+      this.headY.kick(-this.w.tonnage * this.feel.footfallKick * strength * (1 + (this.feel.unrestKick ?? 0) * unrest) * hard);
+      if (limp > 0) this.rollSpring.kick(this.limpSide * limp * (this.feel.limpRoll ?? 0) * DEG * strength * 3);
       this.bus.emit('walker:footfall', {
         foot: steps % 2 === 0 ? 'left' : 'right',
         tonnage: this.w.tonnage,
@@ -251,7 +297,8 @@ export class WalkerMotion {
     p.y = ground + this.w.cockpit.eyeHeight - sag * this.standUpHeight + this.bobAmp * Math.abs(s) * this.motionAmount - this.sink;
     p.yaw = this.legYaw + this.twist;
     p.pitch = this.pitch + this.pitchSpring.value - sag * this.slumpPitch;
-    p.roll = this.swayAmp * s * this.motionAmount + this.rollSpring.value;
+    const unrest = 1 - clamp(this.limits.stability ?? 1, 0, 1);
+    p.roll = this.swayAmp * (1 + (this.feel.unrestSway ?? 0) * unrest) * s * this.motionAmount + this.rollSpring.value;
     p.aimPitch = this.pitch;
     p.legYaw = this.legYaw;
     p.sink = this.sink;
@@ -260,6 +307,17 @@ export class WalkerMotion {
     p.speed = this.speed;
     p.headY = this.headY.value;
     p.headZ = this.headZ.value;
+  }
+
+  /**
+   * Recoil of a fired weapon (fixed step): pitches the torso up and pushes the head back.
+   * @param impulse  rad/s on the torso pitch spring (MissionCombat computes it from weapon
+   *                 weight, type and fire rate, walker tonnage and the stabilisation)
+   */
+  recoil(impulse) {
+    if (!(impulse > 0)) return;
+    this.pitchSpring.kick(impulse);
+    this.headZ.kick(impulse * 0.6);
   }
 
   // ---- readouts for instruments and sound ----

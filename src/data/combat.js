@@ -45,11 +45,13 @@ export const COMBAT = {
     disruptSensor: 0.25, // sensor performance factor while a 'disrupt' hit (PZ-9) is in effect
   },
 
-  // Indicators of sim/MachineCondition.js without a consumer yet (phase 2 decides their effect)
+  // Coefficients of sim/MachineCondition.js (stability, stabilisation, limp; phase 2)
   condition: {
     stabilityGyroShare: 0.3, // movement stability: part that depends on the gyro
     stabilizationGyroShare: 0.5, // weapon stabilisation: part that depends on the gyro
     legsStability: [1, 0.95, 0.85, 0.6, 0], // movement stability factor per legs stage
+    limpFromStage: 2, // legs stage from which the walker limps (limp = 1 − legsStability)
+    moveSpread: 2.0, // player weapon spread × (1 + this × motion × (1 − weaponStabilization))
   },
 
   targeting: {

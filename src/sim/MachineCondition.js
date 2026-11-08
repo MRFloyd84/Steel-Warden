@@ -1,5 +1,6 @@
 import { COMBAT, stageIndex } from '../data/combat.js';
 import { CONFIG } from '../data/config.js';
+import { energySplitOf, driveEnergyFactor } from '../data/systems.js';
 
 const HEAVY = 3;
 const DESTROYED = COMBAT.stages.length - 1;
@@ -12,9 +13,14 @@ const clamp01 = (v) => (v > 1 ? 1 : v > 0 ? v : 0);
  * and one machinery simulation (WalkerSystems). Deterministic: no random numbers, no clock;
  * the only time is the damage model's own (disruption).
  *
- * Consumers (docs/AUDIT-0.5.0.md): motion limits (CombatUnits.applyLimits), weapons and
- * shields of the player (MissionCombat), target range and radar (sensorPerformance),
- * cockpit reactor stage and the critical alarm (CockpitHits).
+ * Consumers (docs/AUDIT-0.5.0.md, docs/MOTION-0.5.0.md): motion limits (CombatUnits.applyLimits:
+ * drive power, acceleration, stability, limp), weapons, shields, spread and recoil of the player
+ * (MissionCombat), target range and radar (sensorPerformance), cockpit reactor stage and the
+ * critical alarm (CockpitHits).
+ *
+ * Energy split (player): the ENERGIE knob is read once here for the drive (driveEnergy);
+ * MissionCombat reads the same split (energySplitOf) for weapons and shields — each share is
+ * used by exactly one consumer. AI units have no knob: driveEnergy 1, gyro aligned.
  *
  * @param state {
  *   damage      DamageModel
@@ -42,12 +48,15 @@ export function evaluateCondition({ damage, systems = null, wreck = null, immobi
   let canMoveSys = true;
   let canTwistSys = true;
   let legsReleased = true;
+  let driveEnergy = 1;
   if (systems) {
     const s = systems.s;
     const cfg = systems.cfg;
     power = clamp01(s.reactor.power / cfg.reactor.fullPower);
     hydraulic = clamp01(s.hydraulics.pressure / cfg.hydraulics.readyPressure);
-    gyro = clamp01(s.gyro.align);
+    // Gyro works while it is aligning or aligned and the bus carries power
+    gyro = (s.gyro.mode === 'aligned' || s.gyro.mode === 'aligning') && s.power.bus ? clamp01(s.gyro.align) : 0;
+    driveEnergy = driveEnergyFactor(energySplitOf(systems.c));
     sensorLevel = s.power.bus ? clamp01(s.sensors.level) : 0;
     systemsCanFire = systems.canFire;
     shieldsReady = !!systems.flags.shieldsReady;
@@ -64,6 +73,8 @@ export function evaluateCondition({ damage, systems = null, wreck = null, immobi
   const canMove = canMoveSys && !immobile && reactorAvailable > 0;
 
   const k = COMBAT.condition;
+  const legsStability = k.legsStability[legsStage] ?? 0;
+  const limp = !immobile && legsStage >= k.limpFromStage ? 1 - legsStability : 0;
   const sensorDamage = COMBAT.consequences.sensorRange[parts.sensors.stage] ?? 0;
   const sensorPerformance = sensorDamage * sensorLevel * (disrupted ? COMBAT.consequences.disruptSensor : 1) * reactorAvailable;
 
@@ -76,10 +87,15 @@ export function evaluateCondition({ damage, systems = null, wreck = null, immobi
     reactorStage,
     reactorAvailable,
     reactorOutput,
-    drivePower: canMove ? reactorOutput * legsSpeed : 0,
+    // Energy can raise the drive only on a walker that can move at all (reactor, legs, systems)
+    drivePower: canMove ? reactorOutput * legsSpeed * driveEnergy : 0,
+    driveEnergy,
+    driveAccel: canMove ? driveEnergy : 0,
     legsSpeed,
+    gyro,
+    limp,
     hydraulicPower: immobile ? 0 : hydraulic,
-    movementStability: immobile ? 0 : (k.legsStability[legsStage] ?? 0) * hydraulic * (1 - k.stabilityGyroShare + k.stabilityGyroShare * gyro),
+    movementStability: immobile ? 0 : legsStability * hydraulic * (1 - k.stabilityGyroShare + k.stabilityGyroShare * gyro),
     weaponStabilization: reactorAvailable * (1 - k.stabilizationGyroShare + k.stabilizationGyroShare * gyro),
     sensorPerformance,
     disrupted,
@@ -91,6 +107,24 @@ export function evaluateCondition({ damage, systems = null, wreck = null, immobi
     legsReleased,
     critical: reactorAvailable > 0 && reactorIntegrity <= CONFIG.hitFeedback.critical.torsoInternal,
   });
+}
+
+/**
+ * Weapon spread multiplier of the player while walking: 1 with full stabilisation (gyro
+ * aligned) or standing still, up to 1 + moveSpread at full stride without gyro.
+ */
+export function spreadFactor(motionAmount, weaponStabilization) {
+  return 1 + COMBAT.condition.moveSpread * clamp01(motionAmount) * (1 - clamp01(weaponStabilization));
+}
+
+/**
+ * Torso pitch impulse (rad/s) of one shot: weapon weight × type / walker tonnage, spread over
+ * the fire rate (rapid fire kicks less per shot), reduced by the stabilisation.
+ */
+export function recoilImpulse(def, tonnage, weaponStabilization) {
+  const f = CONFIG.feel;
+  const type = f.recoilType[def.type] ?? 0.35;
+  return ((f.recoil * def.weight * type) / tonnage / Math.max(1, def.fireRate)) * (1 - f.recoilGyroDamping * clamp01(weaponStabilization));
 }
 
 /** Condition of one combat unit (CombatUnits.prep); the player gets its WalkerSystems. */
@@ -116,7 +150,7 @@ export class MachineCondition {
   debugLine() {
     const c = this.evaluate();
     const p = (v) => `${Math.round(v * 100)}`;
-    return `Zustand: Reaktor ${p(c.reactorIntegrity)}% ${c.reactorAvailable ? 'verfügbar' : 'ZERSTÖRT'} Ausgang ${p(c.reactorOutput)}  Antrieb ${p(c.drivePower)}  Hydraulik ${p(c.hydraulicPower)}  `
+    return `Zustand: Reaktor ${p(c.reactorIntegrity)}% ${c.reactorAvailable ? 'verfügbar' : 'ZERSTÖRT'} Ausgang ${p(c.reactorOutput)}  Antrieb ${p(c.drivePower)} (Energie ×${c.driveEnergy.toFixed(2)})  Hydraulik ${p(c.hydraulicPower)}  Gyro ${p(c.gyro)}${c.limp ? `  Hinken ${p(c.limp)}` : ''}  `
       + `Stabil ${p(c.movementStability)}  Waffenstab ${p(c.weaponStabilization)}  Sensoren ${p(c.sensorPerformance)}${c.disrupted ? ' GESTÖRT' : ''}  `
       + `Waffen ${c.weaponsOnline ? 'an' : 'aus'} (${p(c.weaponAvailability)}%)  Schilde ${c.shieldsOnline ? 'an' : 'aus'}${c.critical ? '  KRITISCH' : ''}`;
   }

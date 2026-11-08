@@ -57,7 +57,7 @@ const LEFT_CONSOLE = [
 ];
 
 const RIGHT_CONSOLE = [
-  { id: 'energyPreset', type: 'rotary', panel: 'rightConsole', at: [0.3, 0.12], label: 'ENERGIE', positions: ['SCHILD', 'AUSGL', 'WAFFE'], initial: 1 },
+  { id: 'energyPreset', type: 'rotary', panel: 'rightConsole', at: [0.3, 0.12], label: 'ENERGIE', positions: ['SCHILD', 'AUSGL', 'WAFFE', 'ANTRIEB'], initial: 1 },
   { id: 'floodlight', type: 'toggle', panel: 'rightConsole', at: [0.74, 0.12], label: 'SCHEINWERFER', positions: ['AUS', 'EIN'] },
   // Missile guidance for all launchers (a launcher that can't do the mode fires unguided)
   { id: 'missileGuidance', type: 'rotary', panel: 'rightConsole', at: [0.3, 0.34], label: 'LENKUNG', positions: ['UNGEL', 'AKTIV', 'HALB', 'A-RAD', 'OPT'] },

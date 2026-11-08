@@ -84,6 +84,21 @@ export const CONFIG = {
     downhillBoost: 0.4,
     maxGrade: 1.1, // steeper than this blocks movement
     turnStepRadius: 2.5, // m — turning on the spot steps like walking this fast per rad/s
+    // Mass (walker tonnage, walkers.js) — 0.5.0 phase 2, docs/MOTION-0.5.0.md
+    massRef: 50, // t: a walker of this mass uses the base values above
+    springMassRange: [0.4, 2.5], // clamp of massRef / tonnage for the torso springs
+    turnLagBase: 0.06, // s: the legs reach their turn rate with this time constant …
+    turnLagPerTon: 0.0045, // … plus this per tonne (KESTREL ≈ 0.17 s, KOLOSS ≈ 0.51 s)
+    brakeMassExp: 0.2, // braking × (massRef / tonnage)^exp: heavy walkers carry their momentum longer
+    // Stability (MachineCondition.movementStability: legs, hydraulics, gyro) — 1 = calm
+    unrestSway: 1.0, // roll sway × (1 + this × (1 − stability))
+    unrestKick: 0.8, // footfall head kick × (1 + this × (1 − stability))
+    unrestDamping: 0.45, // torso spring damping × (1 − this × (1 − stability)): wobbles longer
+    limpRoll: 2.2, // degrees of lean toward the damaged side per step at full limp
+    // Recoil of the player's weapons: pitch impulse = recoil × weight × type / tonnage / max(1, fireRate)
+    recoil: 2.0,
+    recoilType: { ballistic: 1, energy: 0.35, missile: 0.25, universal: 0.35 },
+    recoilGyroDamping: 0.6, // share of the recoil the stabilisation (gyro) takes out
   },
 
   // Torso-mounted searchlight (SCHEINWERFER switch).
