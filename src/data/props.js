@@ -27,6 +27,10 @@ export const PROP_PACKS = {
     name: 'Space Kit 2.0', author: 'Kenney (www.kenney.nl)', license: 'CC0 1.0',
     url: 'https://kenney.nl/assets/space-kit',
   },
+  'tripo-synth': {
+    name: 'STEEL WARDEN Tripo-Modelle (Synthese)', author: 'Rene, erzeugt mit Tripo AI', license: 'Tripo-Nutzungsbedingungen (siehe CREDITS.md)',
+    url: 'https://www.tripo3d.ai',
+  },
   'quaternius-scifi': {
     name: 'Ultimate Modular Sci-Fi (Feb 2021)', author: 'Quaternius', license: 'CC0 1.0',
     url: 'https://quaternius.com/packs/ultimatemodularscifi.html',
@@ -77,6 +81,8 @@ export const PROPS = {
   'crate-long': Q('crate-long', 3.5, { size: [4.3, 2.7, 2.7] }),
   'cargo-pod': Q('container-full', 5, { size: [6, 2.9, 3.8] }),
   'vessel': Q('vessel-tall', 6, { size: [1.7, 6.1, 1.7] }),
+  // Tripo (tools/import_walkers.py, already in metres with baked vertex colours)
+  'spike-tower': { pack: 'tripo-synth', file: 'spike-tower.glb', scale: 1, armor: 140, structure: 90, size: [9, 14, 9], collide: [5, 5] },
 };
 
 /**
@@ -87,6 +93,7 @@ export const GROUP_RULES = [
   { group: 'dark', test: ({ v }) => v < 0.25 },
   { group: 'accent', test: ({ h, s }) => s > 0.45 && h >= 20 && h < 60 },
   { group: 'wood', test: ({ h, s, v }) => s > 0.3 && h < 35 && v < 0.75 },
+  { group: 'crystal', test: ({ h, s }) => s > 0.3 && h >= 230 && h < 330 },
   { group: 'tank', test: ({ s }) => s > 0.35 },
   { group: 'concrete', test: ({ s, v }) => s < 0.2 && v > 0.62 },
   { group: 'metal', test: () => true },

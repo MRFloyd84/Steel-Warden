@@ -166,7 +166,7 @@ export const ENEMIES = {
  *   burst     [s firing, s pause]; spread: factor on the difficulty's aim error
  */
 export const GUNS = {
-  spike: { weapon: 'syn-impuls', muzzles: [[0, 13.5, -1.2]], sight: { range: 900 }, turnRate: 360, head: null, reaction: 0.4, burst: [3, 2], spread: 1.2 },
+  spike: { weapon: 'syn-impuls', muzzles: [[0, 13.6, 0]], sight: { range: 900 }, turnRate: 360, head: null, reaction: 0.4, burst: [3, 2], spread: 1.2 },
   turret: { weapon: 'ak-20', muzzles: [[-1.1, 5, -8.6], [1.1, 5, -8.6]], sight: { range: 800 }, turnRate: 50, head: 'gun', reaction: 0.6, burst: [1.2, 2.2], spread: 2 },
 };
 

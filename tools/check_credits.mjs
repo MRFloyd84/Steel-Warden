@@ -12,6 +12,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PROPS, PROP_PACKS } from '../src/data/props.js';
 import { TEXTURES, TEXTURE_SOURCES } from '../src/data/textures.js';
+import { WALKER_MESHES, WALKER_MESH_SOURCE } from '../src/data/walkerMeshes.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const credits = readFileSync(join(root, 'CREDITS.md'), 'utf8');
@@ -40,6 +41,11 @@ for (const [id, t] of Object.entries(TEXTURES)) {
 }
 for (const f of existsSync(texDir) ? readdirSync(texDir) : []) if (!TEXTURES[f.replace(/\.png$/, '')]) problems.push(`assets/textures/${f}: in textures.js nicht eingetragen`);
 
+// Walker models
+const walkDir = join(root, 'assets/walkers');
+for (const id of Object.keys(WALKER_MESHES)) if (!existsSync(join(walkDir, `${id}.glb`))) problems.push(`Walker-Modell ${id}: Datei fehlt (${id}.glb)`);
+for (const f of existsSync(walkDir) ? readdirSync(walkDir) : []) if (!WALKER_MESHES[f.replace(/\.glb$/, '')]) problems.push(`assets/walkers/${f}: in walkerMeshes.js nicht eingetragen`);
+
 // Credits entries
 const need = (what, entry) => {
   for (const key of ['name', 'author', 'license', 'url']) {
@@ -48,8 +54,9 @@ const need = (what, entry) => {
 };
 for (const [k, p] of Object.entries(PROP_PACKS)) need(`Paket ${k}`, p);
 for (const [k, s] of Object.entries(TEXTURE_SOURCES)) need(`Texturquelle ${k}`, s);
+need('Walker-Modelle', WALKER_MESH_SOURCE);
 
-const nFiles = used.size + Object.keys(TEXTURES).length;
+const nFiles = used.size + Object.keys(TEXTURES).length + Object.keys(WALKER_MESHES).length;
 if (problems.length) {
   console.log(`✗ ${problems.length} Problem(e):\n  ${problems.join('\n  ')}`);
   process.exit(1);

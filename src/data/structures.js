@@ -243,11 +243,12 @@ export const STRUCTURES = {
   },
   spike: {
     name: 'Abwehrstachel', faction: 'synth', armor: 140, structure: 90, onDestroy: 'explosion',
+    // Tripo model (assets/props/tripo-synth); the glowing tip marks the muzzle (GUNS.spike)
     parts: [
-      { cone: [2.2, 12, 4], at: [0, 6, 0], rot: [8, 0, 0], color: SYN },
-      { cone: [0.8, 4, 4], at: [0, 12.5, -0.9], rot: [8, 0, 0], color: CRYSTAL, glow: true },
+      { prop: 'spike-tower', at: [0, 0, 0] },
+      { cone: [0.45, 1.6, 4], at: [0, 13.3, 0], color: CRYSTAL, glow: true },
     ],
-    collide: [{ circle: 2.4, at: [0, 0] }],
+    collide: [{ circle: 3.2, at: [0, 0] }],
   },
   // ---- natural, indestructible ----
   arch: {

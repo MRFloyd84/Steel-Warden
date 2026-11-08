@@ -107,6 +107,9 @@ Schnellstart-Parameter (Dev und Build):
 - **Detailtexturen und Umgebungsmodelle:** Low-Res-Graustufentexturen je Bodenart und
   Materialgruppe (Helligkeit, Farbe bleibt Palette), Filter „Pixelig“/„Gefiltert“, 32 externe
   CC0-Modelle (Kenney, Quaternius) als Bauwerke und Streuobjekte, Credits-Prüfung.
+- **Walker-Modelle aus Tripo:** alle sechs Walker sowie SPLITTER, SICHEL und MONOLITH als
+  detaillierte Modelle (starre Segmente auf dem eigenen Rig), Abwehrstachel als Modell;
+  Umschalter detailliert/klassisch.
 
 Fahrplan für die nächsten Phasen inklusive Stützpunkt, Bergung, Funk, Radar und Missionen:
 `docs/ROADMAP.md`.
@@ -483,7 +486,7 @@ Im Einsatz: Pausenmenü · Nachbesprechung
 - **Laden:** Missionsname, Schauplatz, Balken für Gelände, Modelle und Audio, wechselnde Hinweise.
 - **Optionen:** Spiel (Startprozedur, Zufallsereignisse, Tastenhilfe, Funktexte, Einheiten),
   Grafik (Sichtweite, Objektdichte, Schatten, Effekte, Scanlines, Auflösungsskala, FPS,
-  Detailtexturen, Texturfilter),
+  Detailtexturen, Texturfilter, Walker-Modelle),
   Audio (Gesamt, Effekte, Cockpit/Maschine, Funk, Musik), Steuerung (Belegungsbildschirm).
   Wirkt sofort, gespeichert in `localStorage`, „Standard wiederherstellen“ je Seite.
   Sichtweite und Objektdichte gelten ab dem nächsten Einsatz.
@@ -684,6 +687,38 @@ zeigt Texturen (an/aus, Filter, geladen) und Props (geladen, Dreiecke je Typ, fe
    (Kuppelhangar, Schüssel, Generator, Fähre, Felsbrocken), Kernwelt (Kristallfelsen),
    Kalvik (Windrad, Schüssel, Langhangar), Morrow (Windrad, Wasserturm) — Lage je Seed, eher selten.
 
+## Walker-Modelle (Tripo)
+
+Die sechs Walker und drei Synthese-Maschinen (SPLITTER, SICHEL, MONOLITH) nutzen detaillierte
+Modelle aus `assets/walkers/<geometrie>.glb`, der Abwehrstachel `assets/props/tripo-synth/`.
+Sie sind in starre Segmente zerlegt (Becken, Torso, Sensoren, Arme, Ober-/Unterschenkel, Füße)
+und hängen am Rig des Spiels: Beine per IK auf dem Boden, Torso dreht über dem Becken, Arme
+zielen, Trefferzonen und abgeschossene Arme wie bisher. Beinlängen, Hüfthöhe, Kniestellung,
+Torso-Drehpunkt und Schultern kommen aus dem Modell; die Waffen-Hardpoints werden aus dem
+prozeduralen Plan in die Modellteile übertragen. OBELISK und die Drohne behalten den
+prozeduralen Bauplan.
+
+- *Optionen → Grafik → Walker-Modelle:* detailliert (Standard) oder klassisch (die alten
+  Baupläne), wirkt ab dem nächsten Einsatz.
+- *Neu einlesen:* `pip install numpy scipy pillow fast-simplification`, dann
+  `python3 tools/import_walkers.py --src <Ordner mit den tripo_convert_*.glb>` (Zuordnung,
+  Höhe und Dreiecksbudget in `MODELS`, Korrekturen der Segmentierung in `FIXES`).
+- *Debug-Overlay:* „Walker-Modelle detailliert · 9 geladen“ mit Dreiecken je Modell; ein
+  fehlerhaftes Modell wird genannt und fällt auf den Bauplan zurück.
+
+**Testanleitung:**
+
+1. *Paradeplatz Brenn-Süd* (Einsatzwahl → System): alle sechs Walker laufen; im Debug-Modus
+   (`^`) mit `Shift+F4` frei fliegen. Füße bleiben beim Gehen stehen, KESTREL knickt die Knie
+   nach hinten, die Arme hängen an den Schultern.
+2. *Synthese-Parade:* SPLITTER, SICHEL, MONOLITH (Modelle, violette Kristalle leuchten),
+   OBELISK (Bauplan) und der Abwehrstachel.
+3. *Eigener Walker:* Einsatzvorbereitung → Walker durchschalten (Vorschau rechts), im Einsatz
+   `Shift+V` Außenkamera.
+4. *Treffer:* Duell — die SICHEL beschießen, einen Arm abschießen (fällt ab), Beine zerstören
+   (sackt zusammen), Reaktor (Explosion, Wrack dunkel).
+5. Optionen → Grafik → Walker-Modelle → klassisch, Einsatz neu starten: alte Modelle.
+
 ## Sounds
 
 Rohdateien in `assets/sounds-raw/`, Aufbereitung mit `python3 tools/prepare_sounds.py`
@@ -721,5 +756,6 @@ eingebettet, damit der Offline-Build per `file://` funktioniert. Klang und Misch
   Gebäude-Geschütze `GUNS`; `src/data/enemyModels.js` – ihre Baupläne
 - `src/data/difficulty.js` – die fünf Schwierigkeitsgrade
 - `src/data/textures.js` – Detailtexturen (Datei, Kachelgröße, Quelle), Lagen, Materialgruppen
+- `src/data/walkerMeshes.js` – detaillierte Walker-Modelle (Geometrie-ID → Tripo-Datei), Quelle
 - `src/data/props.js` – externe Modelle (Paket, Datei, Maßstab, Kollision, Panzerung), Farbregeln
   der Materialgruppen; Prüfung mit `npm run check-credits`

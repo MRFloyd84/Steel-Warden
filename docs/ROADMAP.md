@@ -1,6 +1,6 @@
 # STEEL WARDEN – Fahrplan
 
-Stand: nach Detailtexturen und externen Umgebungsmodellen, davor Teil 2 (Menüsystem), Startphase-Fix, A3 (Synthese-Gegner und KI), Teil 2 (Karten-Erweiterung) und A2b. Dieses Dokument führt das Grundkonzept,
+Stand: nach den Walker-Modellen aus Tripo, davor Detailtexturen und externe Umgebungsmodelle, davor Teil 2 (Menüsystem), Startphase-Fix, A3 (Synthese-Gegner und KI), Teil 2 (Karten-Erweiterung) und A2b. Dieses Dokument führt das Grundkonzept,
 die Cockpit-Erweiterung, das Missionsdokument und die Ergänzungen (Stützpunkt, Bergung,
 Funk, Radar, Kampf, Übung) zusammen.
 
@@ -100,8 +100,12 @@ Funk, Radar, Kampf, Übung) zusammen.
      CC0) je Bodenart im Geländeshader (Mischung nach Bodenmaske und Hangneigung, zweite Lage
      gegen Kachelmuster, Drehung je Chunk) und je Materialgruppe auf Objekten; Farbe bleibt aus der
      Palette. 32 CC0-Modelle (Kenney, Quaternius) als Bauwerke und Streuobjekte mit verworfenen
-     Materialien, Platzhalter bei fehlenden Dateien, Credits-Prüfung. Offen: Einheiten-Modelle
-     (Tripo-GLBs, Rückfrage), Normal-/Rauheitskarten bewusst nicht.
+     Materialien, Platzhalter bei fehlenden Dateien, Credits-Prüfung. Normal-/Rauheitskarten
+     bewusst nicht.
+   - ✅ **Walker-Modelle aus Tripo:** sechs Walker, SPLITTER, SICHEL, MONOLITH und Abwehrstachel
+     als detaillierte Modelle (starre Segmente auf dem eigenen Rig, Maße aus dem Modell),
+     Umschalter detailliert/klassisch. Offen: Drohne (Flugmodell), Vierbein-Kriecher,
+     OBELISK-Modell, Waffenmodelle passend zu den modellierten Waffen.
 4. **Radar und Tarnung**:
    - Schalter aktiv/passiv im Cockpit.
    - Aktiv: große, einstellbare Reichweite, macht sichtbar.

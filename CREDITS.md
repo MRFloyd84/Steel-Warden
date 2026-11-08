@@ -47,5 +47,20 @@ Aus SBS: ground-gravel, ground-dirt, ground-mud, ground-rock, ground-snow, groun
 ground-dust, mat-concrete, mat-plaster, mat-wood, mat-stone. Prozedural erzeugt:
 ground-sand, ground-lava, ground-crystal, mat-metal, mat-tank, mat-crystal.
 
-Nicht eingebunden: die zwölf mitgelieferten Tripo-GLBs (Walker, Synth-Einheiten, Drohne,
-Stachelturm) — das sind Einheiten, keine Umgebungsmodelle; Lizenz und Einsatz noch offen.
+## Walker- und Synthese-Modelle (`assets/walkers/`, `assets/props/tripo-synth/`)
+
+| Paket | Name | Autor | Lizenz | Link |
+|---|---|---|---|---|
+| `assets/walkers` | STEEL WARDEN Tripo-Modelle (Walker und Synthese) | Rene, erzeugt mit Tripo AI | Tripo-Nutzungsbedingungen (siehe CREDITS.md) | https://www.tripo3d.ai |
+| `tripo-synth` | STEEL WARDEN Tripo-Modelle (Synthese) | Rene, erzeugt mit Tripo AI | Tripo-Nutzungsbedingungen (siehe CREDITS.md) | https://www.tripo3d.ai |
+
+Mit Tripo AI erzeugte, automatisch geriggte Modelle; mit `tools/import_walkers.py` in starre
+Segmente zerlegt, reduziert (≈ 3 500–7 500 Dreiecke) und mit Vertexfarben aus der Textur
+versehen. Zuordnung: KESTREL, MARDER, BASTION, HALBERD, GOLIATH, KOLOSS (Walker), SPLITTER,
+SICHEL, MONOLITH (Synthese), Abwehrstachel (`spike-tower`). Nutzungsrechte richten sich nach
+dem Tripo-Tarif, unter dem sie erzeugt wurden — vor einer Veröffentlichung prüfen (bei
+kostenlosen Konten gelten öffentliche Lizenzbedingungen mit Namensnennung, bei bezahlten
+Tarifen liegen die Rechte beim Ersteller).
+
+Nicht eingebunden: die Drohne (die Lufteinheit hat noch kein Flugmodell) und der vierbeinige
+Kriecher (das Rig kennt nur zwei Beine).

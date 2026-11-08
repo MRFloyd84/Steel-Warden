@@ -1,3 +1,4 @@
+import { WalkerMeshLibrary, WALKER_MESH } from '../render/walker/WalkerMeshes.js';
 import * as THREE from 'three';
 import { State } from '../core/State.js';
 import { World } from '../render/World.js';
@@ -676,6 +677,9 @@ function propDebugLines() {
   const tris = PropLibrary.triangles();
   const lines = [`Props ${PropLibrary.loaded}/${tris.length} geladen · Dreiecke: ${tris.slice(0, 6).map(([id, n]) => `${id} ${n}`).join(', ')}${tris.length > 6 ? ' …' : ''}`];
   if (PropLibrary.missing.length) lines.push(`PROPS FEHLEN (Platzhalter): ${PropLibrary.missing.join('; ')}`);
+  const wt = WalkerMeshLibrary.triangles();
+  lines.push(`Walker-Modelle ${WALKER_MESH.enabled ? 'detailliert' : 'klassisch'} · ${wt.length} geladen · ${wt.map(([id, n]) => `${id} ${n}`).join(', ')}`);
+  if (WalkerMeshLibrary.failed.length) lines.push(`WALKER-MODELLE FEHLERHAFT (prozedural): ${WalkerMeshLibrary.failed.join('; ')}`);
   return lines;
 }
 

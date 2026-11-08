@@ -99,6 +99,7 @@ function convert(id, def, gltf, cmap) {
     const color = new Float32Array(n * 3);
     const mat = new Float32Array(n);
     const uv = g.attributes.uv;
+    const vcol = g.attributes.color; // baked vertex colours (tools/import_walkers.py), sRGB
     // material index per vertex (geometry groups) — usually one material
     const matIndex = new Int32Array(n);
     for (const grp of g.groups ?? []) for (let i = grp.start; i < grp.start + grp.count && i < n; i++) matIndex[i] = grp.materialIndex ?? 0;
@@ -109,6 +110,12 @@ function convert(id, def, gltf, cmap) {
       let b = m.color?.b ?? 0.8;
       let [group, shade = 1] = (def.mats?.[m.name] ?? '').split(':');
       group ||= undefined;
+      if (vcol) {
+        r = vcol.getX(i);
+        gg = vcol.getY(i);
+        b = vcol.getZ(i);
+        group = undefined;
+      }
       if (cmap && uv) {
         const x = Math.min(cmap.w - 1, Math.max(0, Math.floor((uv.getX(i) % 1 + 1) % 1 * cmap.w)));
         const y = Math.min(cmap.h - 1, Math.max(0, Math.floor((uv.getY(i) % 1 + 1) % 1 * cmap.h)));

@@ -132,7 +132,7 @@ export class CombatUnits {
   loseLegs(unit) {
     if (unit.immobile) return;
     unit.immobile = true;
-    const plan = getWalkerModel(unit.walker.geometry);
+    const plan = unit.model.plan ?? getWalkerModel(unit.walker.geometry);
     unit.motion.setStanceRange(plan.legs.hipHeight * COMBAT.consequences.kneelDrop, COMBAT.consequences.kneelPitch);
     unit.motion.limits.stance = 0;
     unit.motion.limits.canMove = false;

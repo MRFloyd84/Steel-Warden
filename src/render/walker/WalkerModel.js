@@ -4,6 +4,7 @@ import { buildWalkerParts } from './WalkerBuilder.js';
 import { solveTwoBone, orientSegment } from '../../util/ik.js';
 import { CONFIG } from '../../data/config.js';
 import { patchObjectMaterial } from '../DetailTextures.js';
+import { walkerMesh, buildMeshWalker } from './WalkerMeshes.js';
 
 let shadowMaterial = null;
 /** Soft round contact shadow (Optionen → Grafik → Schatten). */
@@ -36,9 +37,13 @@ const crystalMaterial = patchObjectMaterial(new THREE.MeshLambertMaterial({ vert
 export class WalkerModel {
   constructor(walker, sampler, feel) {
     this.walker = walker;
-    this.plan = getWalkerModel(walker.geometry);
     this.sampler = sampler;
-    const { geometries, hardpointMounts } = buildWalkerParts(this.plan, walker);
+    // Detailed model (assets/walkers) if there is one, else the procedural construction plan
+    const proc = getWalkerModel(walker.geometry);
+    const detailed = walkerMesh(walker.geometry);
+    const { plan, geometries, hardpointMounts } = detailed ? buildMeshWalker(detailed, proc, walker) : { plan: proc, ...buildWalkerParts(proc, walker) };
+    this.plan = plan;
+    this.detailed = !!detailed;
     this.geometries = geometries;
 
     this.root = new THREE.Group();
@@ -75,8 +80,10 @@ export class WalkerModel {
     this.parts = { torso: this.torso };
     for (const [key, side] of [['armL', -1], ['armR', 1]]) {
       const g = new THREE.Group();
+      const own = this.plan.arms[key === 'armL' ? 'shoulderL' : 'shoulderR'];
       const s = this.plan.arms.shoulder;
-      g.position.set(s[0] * side, s[1], s[2]);
+      if (own) g.position.set(...own);
+      else g.position.set(s[0] * side, s[1], s[2]);
       mesh(geometries[key], key, g);
       glowMesh(geometries[`${key}Glow`], key, g);
       this.torso.add(g);
@@ -85,20 +92,32 @@ export class WalkerModel {
 
     // Legs live in world space (IK writes world transforms directly)
     this.legGroup = new THREE.Group();
-    this.legs = [-1, 1].map((side) => ({
-      side,
-      thigh: mesh(geometries.legs.thigh, 'legs', this.legGroup),
-      shin: mesh(geometries.legs.shin, 'legs', this.legGroup),
-      foot: mesh(geometries.legs.foot, 'legs', this.legGroup),
-      hip: new THREE.Vector3(),
-      knee: new THREE.Vector3(),
-      ankle: new THREE.Vector3(),
-    }));
+    this.legs = [-1, 1].map((side, i) => {
+      const lg = geometries.legSides?.[i] ?? geometries.legs;
+      const leg = {
+        side,
+        thigh: mesh(lg.thigh, 'legs', this.legGroup) ?? this.emptySegment(),
+        shin: mesh(lg.shin, 'legs', this.legGroup) ?? this.emptySegment(),
+        foot: mesh(lg.foot, 'legs', this.legGroup) ?? this.emptySegment(),
+        hip: new THREE.Vector3(),
+        knee: new THREE.Vector3(),
+        ankle: new THREE.Vector3(),
+      };
+      for (const k of ['thigh', 'shin', 'foot']) if (lg[`${k}Glow`]) glowMesh(lg[`${k}Glow`], 'legs', leg[k]);
+      return leg;
+    });
 
     this.hardpointMounts = hardpointMounts;
     this.gait = new WalkerGait(this.plan, sampler, feel.strideBase + walker.tonnage * feel.stridePerTon);
     this.eyeLocalY = walker.cockpit.eyeHeight - this.plan.torso.pivot;
     this.tmp = { fwd: new THREE.Vector3(), right: new THREE.Vector3(), pole: new THREE.Vector3(), target: new THREE.Vector3() };
+  }
+
+  /** Placeholder for a leg segment a detailed model has no geometry for. */
+  emptySegment() {
+    const o = new THREE.Object3D();
+    this.legGroup.add(o);
+    return o;
   }
 
   addTo(scene) {
@@ -176,11 +195,13 @@ export class WalkerModel {
     this.glowMaterial.dispose();
     this.root.removeFromParent();
     this.legGroup.removeFromParent();
-    for (const g of Object.values(this.geometries)) {
-      if (!g) continue;
+    const free = (g) => {
+      if (!g) return;
       if (g.isBufferGeometry) g.dispose();
-      else for (const sub of Object.values(g)) sub.dispose();
-    }
+      else if (Array.isArray(g)) g.forEach(free);
+      else Object.values(g).forEach(free);
+    };
+    free(this.geometries);
   }
 }
 

@@ -1,3 +1,4 @@
+import { WALKER_MESH } from '../render/walker/WalkerMeshes.js';
 import { CONFIG } from './config.js';
 import { setDetailFilter, setDetailEnabled, setDetailScale } from '../render/DetailTextures.js';
 
@@ -83,6 +84,12 @@ export const OPTIONS = [
       setDetailEnabled(v > 0);
       setDetailScale(v);
     },
+  },
+  {
+    id: 'walkerModels', page: 'graphics', label: 'Walker-Modelle', type: 'choice', default: 'detailed',
+    choices: [{ value: 'detailed', label: 'detailliert' }, { value: 'classic', label: 'klassisch' }],
+    help: 'Detailliert: die Tripo-Modelle (Segmente mit Originalfarben). Klassisch: die prozeduralen Baupläne. Wirkt ab dem nächsten Einsatz.',
+    apply: (g, v) => { WALKER_MESH.enabled = v !== 'classic'; },
   },
   {
     id: 'texFilter', page: 'graphics', label: 'Texturfilter', type: 'choice', default: 'nearest',
