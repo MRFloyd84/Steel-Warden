@@ -185,6 +185,78 @@ function heavyLayout(extraCircuit) {
   };
 }
 
+/**
+ * Modelled cockpit (cockpits.js → COCKPITS.model): the same switches as everywhere, placed
+ * where the model has its panels — startup on the left tall panel (like the overhead before),
+ * ENERGIE and weapon release on the right tall panel, lights / radar / radio left of the
+ * screens, six monitors in the model's frames. Monitors without bezel (the model has frames).
+ */
+function modelLayout(extraCircuit) {
+  const lampRow = (ids, panel, v, size) => ids.map(([id, text, color], i) => ({ id, type: 'lamp', panel, at: [(i + 0.5) / ids.length, v], text, color, size }));
+  const items = [
+    // Monitors in the model's frames (width in metres, 4:3)
+    { id: 'mfdRadar', type: 'monitor', panel: 'screenLeft', at: [0.5, 0.5], width: 0.235, display: 'radar', phosphor: 'green', bezel: false },
+    { id: 'mfdDamage', type: 'monitor', panel: 'screenCenter', at: [0.5, 0.5], width: 0.335, display: 'damage', phosphor: 'color', bezel: false },
+    { id: 'mfdWeapons', type: 'monitor', panel: 'screenRight', at: [0.5, 0.5], width: 0.235, display: 'weapons', phosphor: 'amber', bezel: false },
+    { id: 'mfdTarget', type: 'monitor', panel: 'screenRightMid', at: [0.5, 0.5], width: 0.25, display: 'target', phosphor: 'green', bezel: false },
+    { id: 'mfdSystem', type: 'monitor', panel: 'screenLeftLow', at: [0.5, 0.5], width: 0.31, display: 'system', phosphor: 'amber', bezel: false },
+    { id: 'mfdEnergy', type: 'monitor', panel: 'screenRightLow', at: [0.5, 0.5], width: 0.31, display: 'energy', phosphor: 'amber', bezel: false },
+
+    // Left tall panel: power, auxiliary unit, coolant (top) and reactor (bottom)
+    { id: 'batteryMaster', type: 'toggle', panel: 'leftTall', at: [0.28, 0.11], label: 'BATTERIE', positions: ['AUS', 'EIN'], guard: 'yellow' },
+    { id: 'apuStart', type: 'button', panel: 'leftTall', at: [0.74, 0.11], label: 'HILFSAGG.', cap: 'START', lampColor: 'amber', momentary: true },
+    { id: 'mainBus', type: 'toggle', panel: 'leftTall', at: [0.28, 0.26], label: 'HAUPTBUS', positions: ['HILFS', 'REAKT'] },
+    { id: 'coolantPumps', type: 'toggle', panel: 'leftTall', at: [0.74, 0.26], label: 'KÜHLPUMPEN', positions: ['AUS', 'EIN'] },
+    ...lampRow([['lampApuReady', 'HILFS BEREIT', 'green'], ['lampPressure1', 'DRUCK 1', 'green'], ['lampPressure2', 'DRUCK 2', 'green']], 'leftTall', 0.375, [0.085, 0.03]),
+    { id: 'reactorMode', type: 'rotary', panel: 'leftTall', at: [0.3, 0.57], label: 'BETRIEBSART', positions: ['AUS', 'VORH', 'BETR'] },
+    { id: 'reactorIgnition', type: 'toggle', panel: 'leftTall', at: [0.74, 0.56], label: 'ZÜNDUNG', positions: ['AUS', 'ZÜND'], guard: 'red' },
+    { id: 'lampPreheatOk', type: 'lamp', panel: 'leftTall', at: [0.3, 0.7], text: 'VORHEIZ OK', color: 'green', size: [0.09, 0.03] },
+    { id: 'hydraulics', type: 'toggle', panel: 'leftTall', at: [0.74, 0.73], label: 'HYDRAULIK', positions: ['AUS', 'EIN'] },
+
+    // Warning lamps on two bars on the dash
+    ...lampRow([['lampMasterWarning', 'WARNUNG', 'red'], ['lampMasterCaution', 'VORSICHT', 'amber'], ['lampHeat', 'HITZE', 'red'], ...(extraCircuit ? [['lampReactor2', 'KREIS 2', 'green']] : [])], 'glareLeft', 0.5, [0.085, 0.04]),
+    ...lampRow([['lampTracking', 'NACHF.', 'green'], ['lampMissile', 'RAKETE', 'red'], ['lampReactor', 'REAKTOR', 'amber'], ['lampShield', 'SCHILD', 'amber']], 'glareRight', 0.5, [0.085, 0.04]),
+
+    // Below the centre screen: monitor test, gyro, sensors, shields
+    ...mainSwitches('centerBezel', [0.13, 0.38, 0.62, 0.87], 0.66),
+    // Status lamps under the left screen, nameplate under the right one
+    ...statusLamps('leftStrip', [[0.18, 0.3], [0.5, 0.3], [0.82, 0.3], [0.18, 0.72], [0.5, 0.72], [0.82, 0.72]], [0.075, 0.024]),
+    { id: 'nameplate', type: 'nameplate', panel: 'rightStrip', at: [0.5, 0.5], width: 0.2 },
+
+    // Left of the screens: interior light, radar range, radio
+    { ...LEFT_CONSOLE[0], panel: 'leftMid', at: [0.27, 0.33] },
+    { ...LEFT_CONSOLE[1], panel: 'leftMid', at: [0.73, 0.33] },
+    { ...LEFT_CONSOLE[2], panel: 'leftMid', at: [0.27, 0.8] },
+    { id: 'missileCamera', type: 'button', panel: 'leftMid', at: [0.73, 0.82], label: 'MONITOR', cap: 'KAM', lampColor: 'green', momentary: true },
+
+    // Right tall panel: energy split, floodlight, guidance, tracking, weapon release
+    // ENERGIE as the big knob where the model has its dummy knob (as in the reference picture)
+    { id: 'energyPreset', type: 'rotary', panel: 'rightTall', at: [0.37, 0.25], scale: 1.8, label: 'ENERGIE', positions: ['SCHILD', 'AUSGL', 'WAFFE', 'ANTRIEB'], initial: 1 },
+    { id: 'floodlight', type: 'toggle', panel: 'rightTall', at: [0.8, 0.13], label: 'SCHEINW.', positions: ['AUS', 'EIN'] },
+    { id: 'targetTracking', type: 'toggle', panel: 'rightTall', at: [0.8, 0.38], label: 'ZIELNACHF.', positions: ['AUS', 'EIN'] },
+    { id: 'missileGuidance', type: 'rotary', panel: 'rightTall', at: [0.37, 0.53], scale: 1.15, label: 'LENKUNG', positions: ['UNGEL', 'AKTIV', 'HALB', 'A-RAD', 'OPT'] },
+    ...arming('rightTall', 0.79),
+
+    // The model's grips: left = throttle, right = side stick
+    { id: 'throttle', type: 'throttle', grip: 'gripL' },
+    { id: 'stick', type: 'stick', grip: 'gripR' },
+  ];
+  if (extraCircuit) {
+    items.push({ id: 'reactor2Ignition', type: 'toggle', panel: 'leftTall', at: [0.3, 0.88], label: 'KREIS 2', positions: ['AUS', 'ZÜND'], guard: 'red' });
+  }
+  return {
+    groups: [
+      { panel: 'leftTall', rect: [0.05, 0.03, 0.95, 0.43], label: 'STROM · HILFSAGGREGAT' },
+      { panel: 'leftTall', rect: [0.05, 0.47, 0.95, 0.97], label: 'REAKTOR' },
+      { panel: 'rightTall', rect: [0.05, 0.64, 0.95, 0.95], label: 'FREIGABE' },
+    ],
+    items,
+  };
+}
+
+PANEL_LAYOUTS.model = modelLayout(false);
+PANEL_LAYOUTS.modelAssault = modelLayout(true);
+
 export function getPanelLayout(id) {
   const layout = PANEL_LAYOUTS[id];
   if (!layout) throw new Error(`Unknown panel layout "${id}"`);

@@ -242,6 +242,115 @@ COCKPITS.heavy = {
   clipboard: { position: [-1.02, -0.26, -0.32], tilt: [-8, 0, 3], heldDistance: 0.38 },
 };
 
+// ---- Modelled cockpit (assets/cockpit/cockpit.glb, docs/COCKPIT-MODEL-PLAN.md) ----
+
+/**
+ * Placement of the model: the pilot's eye in model units (floor y = 0, front -z) and metres
+ * per model unit. Everything below is measured on the model in model units and converted.
+ */
+export const COCKPIT_MODEL = { eye: [0, 0.43, 0.22], scale: 2.7 };
+const toEye = (p) => p.map((v, i) => (v - COCKPIT_MODEL.eye[i]) * COCKPIT_MODEL.scale);
+const norm = (v) => {
+  const l = Math.hypot(...v);
+  return v.map((x) => x / l);
+};
+
+/**
+ * Panel on a model surface. c: surface centre, n: surface normal (toward the pilot), size in
+ * model units; lift raises the panel above the modelled knobs it covers (model units);
+ * slab: false = no plate (screens sit directly in the model's monitor frames).
+ */
+function modelPanel({ c, n, size, up = [0, 1, 0], lift = 0, slab = true }) {
+  const nn = norm(n);
+  const S = COCKPIT_MODEL.scale;
+  return {
+    center: toEye(c.map((v, i) => v + nn[i] * lift)),
+    size: size.map((v) => v * S),
+    normal: nn,
+    up,
+    slab,
+    depth: lift * S + 0.012,
+  };
+}
+const mirror = (d) => ({ ...d, c: [-d.c[0], d.c[1], d.c[2]], n: [-d.n[0], d.n[1], d.n[2]] });
+
+// widened toward the back edge, where the model's toggle row sticks out
+// lift clears the modelled dummy knob and toggles (up to 0.034 above the surface)
+const TALL = { c: [-0.418, 0.361, 0.1184], n: [0.745, 0, 0.667], size: [0.135, 0.218], lift: 0.037 };
+const MID = { c: [-0.2506, 0.209, -0.045], n: [0.7, 0.05, 0.71], size: [0.098, 0.085], lift: 0.014 };
+const LOW = { c: [-0.3665, 0.1582, 0.0896], n: [0.757, 0.065, 0.65], size: [0.14, 0.095], lift: 0.002, slab: false };
+const ROW = { c: [-0.1436, 0.2335, -0.0868], n: [0, 0.04, 1], size: [0.093, 0.096], lift: 0.002, slab: false };
+const STRIP = { c: [-0.14, 0.154, -0.074], n: [0, 0.5, 0.866], size: [0.094, 0.028], lift: 0.01 };
+const GLARE_BAR = { c: [-0.155, 0.3, -0.125], n: [0, 0.5, 0.866], size: [0.15, 0.026], lift: 0.012 };
+
+/** Model units → cockpit space for a list of points. */
+const pts = (list) => list.map(toEye);
+/** Axis-aligned block from model-space corners (the placement has no rotation). */
+const mBlock = (min, max, color) => ({ min: toEye(min), max: toEye(max), color });
+
+const modelFloor = toEye([0, 0, 0])[1];
+const modelSeat = seatAndHarness(modelFloor);
+
+/**
+ * One cockpit for all walkers: the textured model is the body, the plates, switches, lamps
+ * and screens of the panel layout ('model' / 'modelAssault') sit on its surfaces. The model
+ * is open behind the pilot and above the roof beams, so walls, roof, floor and seat behind
+ * the front section stay procedural. Walker classes scale the whole cockpit (classScale).
+ */
+COCKPITS.model = {
+  model: COCKPIT_MODEL,
+  classScale: { compact: 0.94, standard: 1, heavy: 1.06 },
+  canopy: { tint: '#a9c4bb', glassOpacity: 0.12 },
+  // Window panes just outside the model's frames (model units), one canvas strip each
+  glass: [
+    pts([[-0.26, 0.314, -0.206], [0.26, 0.314, -0.206], [0.19, 0.572, -0.174], [-0.19, 0.572, -0.174]]),
+    pts([[-0.19, 0.572, -0.174], [0.19, 0.572, -0.174], [0.2, 0.612, -0.094], [-0.2, 0.612, -0.094]]),
+    pts([[-0.3, 0.33, -0.06], [-0.26, 0.314, -0.206], [-0.19, 0.572, -0.174], [-0.365, 0.612, -0.07], [-0.405, 0.48, 0.03], [-0.395, 0.4, 0.08]]),
+    pts([[0.3, 0.33, -0.06], [0.395, 0.4, 0.08], [0.405, 0.48, 0.03], [0.365, 0.612, -0.07], [0.19, 0.572, -0.174], [0.26, 0.314, -0.206]]),
+  ],
+  colors: { ...COLORS, wall: '#38393b', wallDark: '#26272a', frame: '#1e1f21', panel: '#2e3032', floor: '#1d1e20', seat: '#3a3836', strap: '#5f5432' },
+  panels: {
+    leftTall: modelPanel(TALL),
+    rightTall: modelPanel(mirror(TALL)),
+    leftMid: modelPanel(MID),
+    screenRightMid: modelPanel({ ...mirror(MID), size: [0.1, 0.089], lift: 0.002, slab: false }),
+    screenLeftLow: modelPanel(LOW),
+    screenRightLow: modelPanel(mirror(LOW)),
+    screenLeft: modelPanel(ROW),
+    screenCenter: modelPanel({ c: [0, 0.2385, -0.087], n: [0, 0.05, 1], size: [0.13, 0.105], lift: 0.002, slab: false }),
+    screenRight: modelPanel(mirror(ROW)),
+    centerBezel: modelPanel({ c: [0, 0.153, -0.06], n: [0, 0.398, 0.917], size: [0.098, 0.044], lift: 0.018 }),
+    leftStrip: modelPanel(STRIP),
+    rightStrip: modelPanel(mirror(STRIP)),
+    glareLeft: modelPanel(GLARE_BAR),
+    glareRight: modelPanel(mirror(GLARE_BAR)),
+  },
+  // Behind the modelled front section: side walls, rear wall, roof and floor (model units)
+  blocks: [
+    mBlock([-0.48, -0.01, 0.15], [-0.47, 0.625, 0.57], 'wall'),
+    mBlock([0.47, -0.01, 0.15], [0.48, 0.625, 0.57], 'wall'),
+    mBlock([-0.48, -0.01, 0.56], [0.48, 0.625, 0.57], 'wallDark'),
+    mBlock([-0.48, 0.615, -0.1], [0.48, 0.625, 0.57], 'wallDark'),
+    mBlock([-0.48, -0.012, 0.0], [0.48, -0.002, 0.57], 'floor'),
+    // roof ribs
+    mBlock([-0.47, 0.6, 0.12], [0.47, 0.615, 0.14], 'frame'),
+    mBlock([-0.47, 0.6, 0.38], [0.47, 0.615, 0.4], 'frame'),
+    ...modelSeat.blocks,
+    // equipment rack behind the seat
+    mBlock([-0.4, 0.15, 0.47], [-0.26, 0.42, 0.56], 'frame'),
+    mBlock([0.26, 0.15, 0.47], [0.4, 0.36, 0.56], 'frame'),
+  ],
+  beams: modelSeat.beams,
+  cables: [],
+  lighting: {
+    off: { ambient: 0.16, ambientColor: '#55606a', flood: 0, floodColor: '#ffb060', sun: 0.35 },
+    night: { ambient: 0.3, ambientColor: '#5a6070', flood: 0.7, floodColor: '#ff9a3a', sun: 0.25 },
+    day: { ambient: 1.1, ambientColor: '#bcc3c9', flood: 0.3, floodColor: '#ffe2bd', sun: 0.5 },
+    emergency: { ambient: 0.18, ambientColor: '#6a1d14', flood: 0.4, floodColor: '#ff3418', sun: 0.35 },
+  },
+  clipboard: { position: toEye([-0.3, 0.21, 0.2]), tilt: [-8, 0, 3], heldDistance: 0.36 },
+};
+
 export function getCockpitVariant(id) {
   const variant = COCKPITS[id];
   if (!variant) throw new Error(`Unknown cockpit variant "${id}"`);

@@ -31,7 +31,18 @@ export function buildShell(variant, theater) {
   const ringAngles = [];
   let paneIndex = 0;
 
-  for (const seg of canopy.segments) {
+  // Modelled cockpit: no wall ring; window panes are given as polygons (fan from the first point)
+  for (const poly of variant.glass ?? []) {
+    const span = paneSpan(poly);
+    const u0 = paneIndex * 0.37;
+    const uv = paneUv(poly);
+    for (let i = 1; i < poly.length - 1; i++) {
+      glass.triUv(poly[0], poly[i], poly[i + 1], '#ffffff', [uv[0], uv[i], uv[i + 1]].map(([u, v]) => [u0 + u * span, v]));
+    }
+    paneIndex++;
+  }
+
+  for (const seg of canopy.segments ?? []) {
     const win = seg.window;
     const steps = win ? 1 : Math.max(1, Math.ceil((seg.to - seg.from) / canopy.wallStepDeg));
     const heights = win
@@ -68,13 +79,13 @@ export function buildShell(variant, theater) {
   }
 
   // Roof and floor fans
-  for (let i = 0; i < ringAngles.length; i++) {
+  for (let i = 0; i < ringAngles.length && canopy.segments; i++) {
     const a = ringAngles[i];
     const b = ringAngles[(i + 1) % ringAngles.length] + (i + 1 === ringAngles.length ? 360 : 0);
     walls.tri([0, canopy.roof, 0], point(a, canopy.roof), point(b, canopy.roof), col('wallDark'));
     walls.tri([0, canopy.floor, 0], point(b, canopy.floor), point(a, canopy.floor), col('floor'));
   }
-  opaque.push(walls.finish());
+  if (walls.pos.length) opaque.push(walls.finish());
 
   for (const blk of variant.blocks) opaque.push(colored(blockGeometry(blk.min, blk.max, blk.rot), col(blk.color)));
   for (const bm of variant.beams) opaque.push(colored(beamGeometry(bm.a, bm.b, bm.w, bm.h, bm.up), col(bm.color)));
@@ -97,4 +108,28 @@ export function buildShell(variant, theater) {
   const group = new THREE.Group();
   group.add(shell, glassMesh);
   return { group, glassMaterial, materials: [shellMaterial, glassMaterial] };
+}
+
+/** Width of a pane in "45° units" (as the ring panes): its horizontal extent at ~1 m. */
+function paneSpan(poly) {
+  const xs = poly.map((p) => Math.atan2(p[0], -p[2]));
+  return Math.max(0.3, (Math.max(...xs) - Math.min(...xs)) / (Math.PI / 4));
+}
+
+/** Pane-local [u, v] in 0..1 (u along the pane's horizontal, v up) for each polygon point. */
+function paneUv(poly) {
+  const a = new THREE.Vector3(...poly[0]);
+  const e1 = new THREE.Vector3(...poly[1]).sub(a);
+  const e2 = new THREE.Vector3(...poly[2]).sub(a);
+  const n = new THREE.Vector3().crossVectors(e1, e2).normalize();
+  const up = new THREE.Vector3(0, 1, 0).addScaledVector(n, -n.y).normalize();
+  const side = new THREE.Vector3().crossVectors(up, n).normalize();
+  const local = poly.map((p) => {
+    const d = new THREE.Vector3(...p).sub(a);
+    return [d.dot(side), d.dot(up)];
+  });
+  const us = local.map((l) => l[0]);
+  const vs = local.map((l) => l[1]);
+  const [u0, u1, v0, v1] = [Math.min(...us), Math.max(...us), Math.min(...vs), Math.max(...vs)];
+  return local.map(([u, v]) => [(u - u0) / (u1 - u0 || 1), (v - v0) / (v1 - v0 || 1)]);
 }

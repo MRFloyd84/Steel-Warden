@@ -10,6 +10,7 @@ import { getMission } from './data/missions.js';
 import { loadDetailTextures, DETAIL, setDetailFilter } from './render/DetailTextures.js';
 import { loadProps, PropLibrary } from './world/PropLibrary.js';
 import { loadWalkerMeshes, WalkerMeshLibrary } from './render/walker/WalkerMeshes.js';
+import { loadCockpitModel } from './render/cockpit/CockpitModel.js';
 
 // Fail loudly on broken weapon data before anything else runs.
 validateFactoryLoadouts();
@@ -23,7 +24,7 @@ game.states.register('debrief', new DebriefState(game));
 // Detail textures and external models decode asynchronously (embedded, a few hundred ms);
 // worlds are only built afterwards. Never wait longer than 6 s — placeholders cover the rest.
 const assetsReady = Promise.race([
-  Promise.all([loadDetailTextures(), loadProps(), loadWalkerMeshes()]),
+  Promise.all([loadDetailTextures(), loadProps(), loadWalkerMeshes(), loadCockpitModel()]),
   new Promise((resolve) => setTimeout(resolve, 6000)),
 ]);
 

@@ -92,3 +92,27 @@ export class SideStick {
     this.material.dispose();
   }
 }
+
+/**
+ * A grip of the cockpit model (node with its pivot at the grip base, model space: Y up,
+ * -Z forward) driven like the levers above: 'throttle' swings fore/aft with the throttle,
+ * 'stick' tilts with the stick input and twists. Geometry and material belong to the shared
+ * model; nothing to dispose here.
+ */
+export class ModelGrip {
+  constructor(node, kind) {
+    this.object = node;
+    this.kind = kind;
+    this.pickables = [];
+    node.traverse((o) => {
+      if (o.isMesh) this.pickables.push(o);
+    });
+  }
+
+  set(a, b = 0, twist = 0) {
+    if (this.kind === 'throttle') this.object.rotation.set(-a * 0.42, 0, 0);
+    else this.object.rotation.set(-b * 0.3, -twist * 0.35, -a * 0.3, 'XZY');
+  }
+
+  dispose() {}
+}

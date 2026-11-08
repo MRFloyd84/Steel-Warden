@@ -1,4 +1,5 @@
 import { WALKER_MESH } from '../render/walker/WalkerMeshes.js';
+import { COCKPIT_MODEL_USE } from '../render/cockpit/CockpitModel.js';
 import { CONFIG } from './config.js';
 import { setDetailFilter, setDetailEnabled, setDetailScale } from '../render/DetailTextures.js';
 
@@ -90,6 +91,12 @@ export const OPTIONS = [
     choices: [{ value: 'detailed', label: 'detailliert' }, { value: 'classic', label: 'klassisch' }],
     help: 'Detailliert: die Tripo-Modelle (Segmente mit Originalfarben). Klassisch: die prozeduralen Baupläne. Wirkt ab dem nächsten Einsatz.',
     apply: (g, v) => { WALKER_MESH.enabled = v !== 'classic'; },
+  },
+  {
+    id: 'cockpitModel', page: 'graphics', label: 'Cockpit', type: 'choice', default: 'model',
+    choices: [{ value: 'model', label: 'modelliert' }, { value: 'classic', label: 'klassisch' }],
+    help: 'Modelliert: das Tripo-Cockpit für alle Walker, echte Schalter auf seinen Paneelen. Klassisch: die prozeduralen Cockpits der Walkerklassen. Wirkt ab dem nächsten Einsatz.',
+    apply: (g, v) => { COCKPIT_MODEL_USE.enabled = v !== 'classic'; },
   },
   {
     id: 'texFilter', page: 'graphics', label: 'Texturfilter', type: 'choice', default: 'nearest',

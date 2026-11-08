@@ -111,6 +111,12 @@ Schnellstart-Parameter (Dev und Build):
   detaillierte Modelle (starre Segmente auf dem eigenen Rig), Abwehrstachel als Modell;
   Umschalter detailliert/klassisch.
 
+- **Cockpit-Modell aus Tripo:** ein texturiertes Cockpit für alle sechs Walker (je Klasse leicht
+  skaliert). Die echten Schalter, Lampen und sechs Monitore sitzen auf seinen Paneelen und in
+  seinen Rahmen: links Strom, Hilfsaggregat und Reaktor, rechts der große ENERGIE-Knopf und die
+  Freigabe. Schubhebel und Steuerknüppel sind die Griffe des Modells. Option **Cockpit:
+  modelliert/klassisch**. Bericht: `docs/COCKPIT-MODEL-PLAN.md`.
+
 - **0.5.0 Phase 1 (Architektur- und Zustandsaudit):** `sim/MachineCondition.js` übersetzt Schaden
   und Maschinenzustand in einheitliche Funktionswerte (Reaktor, Antrieb, Hydraulik, Stabilität,
   Waffenstabilisierung, Sensoren). Behoben: ein zerstörter Reaktor feuert und lädt nicht mehr;
@@ -504,7 +510,7 @@ Im Einsatz: Pausenmenü · Nachbesprechung
 - **Laden:** Missionsname, Schauplatz, Balken für Gelände, Modelle und Audio, wechselnde Hinweise.
 - **Optionen:** Spiel (Startprozedur, Zufallsereignisse, Tastenhilfe, Funktexte, Einheiten),
   Grafik (Sichtweite, Objektdichte, Schatten, Effekte, Scanlines, Auflösungsskala, FPS,
-  Detailtexturen, Texturfilter, Walker-Modelle),
+  Detailtexturen, Texturfilter, Walker-Modelle, Cockpit),
   Audio (Gesamt, Effekte, Cockpit/Maschine, Funk, Musik), Steuerung (Belegungsbildschirm).
   Wirkt sofort, gespeichert in `localStorage`, „Standard wiederherstellen“ je Seite.
   Sichtweite und Objektdichte gelten ab dem nächsten Einsatz.
@@ -834,7 +840,7 @@ Steuerung) laufen mit Puppeteer außerhalb des Projekts.
 - `src/data/config.js` – Engine-Einstellungen und Fahrgefühl (`feel`, `view`, `cockpit`)
 - `src/data/walkers.js` – Walker-Werte, Hardpoints, Baukosten, Startdauer-Abweichungen
 - `src/data/walkerModels.js` – Baupläne der Walker-Modelle (Profil, Beine, Arme, Aufbauten, Farben)
-- `src/data/cockpits.js` – Cockpit-Varianten standard/compact/heavy: Kanzel, Paneele, Sitz, Kabel, Licht
+- `src/data/cockpits.js` – Cockpit-Varianten standard/compact/heavy: Kanzel, Paneele, Sitz, Kabel, Licht; `model`: Lage des Tripo-Cockpits (`assets/cockpit/cockpit.glb`, Import mit `tools/import_cockpit.py`) und seine Paneele
 - `src/data/panelLayouts.js` – Schalter, Lampen, Monitore und Hebel auf den Paneelen
 - `src/data/weapons.js` – die 10 Waffen (Schaden, Faktoren gegen Schild/Panzer, Feuerrate, Munition, Hitze),
   Lenkarten und Flugmodell der Raketen (`guidance`, `missile`), Ausrüstung (Zielkapsel)

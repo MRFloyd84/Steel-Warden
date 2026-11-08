@@ -47,6 +47,17 @@ Aus SBS: ground-gravel, ground-dirt, ground-mud, ground-rock, ground-snow, groun
 ground-dust, mat-concrete, mat-plaster, mat-wood, mat-stone. Prozedural erzeugt:
 ground-sand, ground-lava, ground-crystal, mat-metal, mat-tank, mat-crystal.
 
+## Cockpit-Modell (`assets/cockpit/`)
+
+| Datei | Name | Autor | Lizenz | Link |
+|---|---|---|---|---|
+| `assets/cockpit/cockpit.glb` | STEEL WARDEN Tripo-Cockpit | Rene, erzeugt mit Tripo AI | Eigene Rechte (bezahlter Tripo-Tarif) | https://www.tripo3d.ai |
+
+Mit Tripo AI erzeugtes, texturiertes Cockpit (1,87 Mio. Dreiecke, 57 MB). Mit
+`tools/import_cockpit.py` die beiden Griffe als eigene Knoten ausgeschnitten, Texturen neu kodiert
+(Farbe 2048, Normalen 1024) und mit gltfpack auf ≈ 150 000 Dreiecke reduziert und komprimiert (1,8 MB).
+Gilt für alle sechs Walker; echte Schalter und Monitore sitzen auf seinen Paneelen.
+
 ## Walker- und Synthese-Modelle (`assets/walkers/`, `assets/props/tripo-synth/`)
 
 | Paket | Name | Autor | Lizenz | Link |

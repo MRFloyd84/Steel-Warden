@@ -21,7 +21,7 @@ export const PHOSPHORS = {
  * black, 'boot' runs the power-on sequence, 'on' draws the display page.
  */
 export class CrtScreen {
-  constructor({ id, width, display, phosphor = 'amber', resolution = [320, 240], refreshHz = 15, phaseOffset = 0 }) {
+  constructor({ id, width, display, phosphor = 'amber', resolution = [320, 240], refreshHz = 15, phaseOffset = 0, bezel = true }) {
     const [rw, rh] = resolution;
     this.id = id;
     this.flicker = false; // set from outside (e.g. reactor ignition)
@@ -50,6 +50,8 @@ export class CrtScreen {
     this.screen.position.z = 0.004;
     this.bezelMat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
     this.bezel = new THREE.Mesh(bezelGeometry(width, height), this.bezelMat);
+    // Without bezel the screen sits in a frame of the cockpit model
+    this.bezel.visible = bezel;
     this.object.add(this.bezel, this.screen);
     this.pickables = [this.screen];
   }

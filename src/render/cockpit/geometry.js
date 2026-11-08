@@ -83,6 +83,15 @@ export class QuadWriter {
     }
   }
 
+  triUv(p0, p1, p2, color, uvs) {
+    tmpColor.set(color);
+    [p0, p1, p2].forEach((p, i) => {
+      this.pos.push(p[0], p[1], p[2]);
+      this.col.push(tmpColor.r, tmpColor.g, tmpColor.b);
+      this.uv.push(uvs[i][0], uvs[i][1]);
+    });
+  }
+
   tri(p0, p1, p2, color) {
     tmpColor.set(color);
     for (const p of [p0, p1, p2]) {

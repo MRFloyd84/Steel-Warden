@@ -5,7 +5,8 @@ import { buildShell } from './CockpitShell.js';
 import { buildPanels } from './PanelBuilder.js';
 import { panelLocal } from './geometry.js';
 import { ControlFactory } from './ControlFactory.js';
-import { ThrottleLever, SideStick } from './Levers.js';
+import { ThrottleLever, SideStick, ModelGrip } from './Levers.js';
+import { CockpitModelInfo, instantiateCockpitModel, COCKPIT_MODEL_USE } from './CockpitModel.js';
 import { CrtScreen } from './CrtScreen.js';
 import { buildNameplate } from './Nameplate.js';
 import { getDisplay } from './displays/index.js';
@@ -13,6 +14,8 @@ import { Clipboard } from './Clipboard.js';
 
 /** INNENLICHT knob positions → lighting presets ('emergency' is set by the power state). */
 export const LIGHT_MODES = ['off', 'night', 'day'];
+
+export { COCKPIT_MODEL_USE };
 
 /**
  * The pilot's cockpit as its own scene in torso-local space (eye at the
@@ -25,17 +28,29 @@ export const LIGHT_MODES = ['off', 'night', 'day'];
 export class Cockpit {
   constructor(walker, theater, config) {
     this.walker = walker;
-    this.variant = getCockpitVariant(walker.cockpit.variant);
-    this.layout = getPanelLayout(walker.cockpit.panelLayout);
+    // The modelled cockpit for every walker once its file is decoded (cockpitModel option);
+    // otherwise the procedural variant and layout of the walker class.
+    this.modelled = COCKPIT_MODEL_USE.enabled && CockpitModelInfo.ready;
+    this.variant = getCockpitVariant(this.modelled ? 'model' : walker.cockpit.variant);
+    this.layout = getPanelLayout(this.modelled ? (walker.cockpit.extraCircuit ? 'modelAssault' : 'model') : walker.cockpit.panelLayout);
     this.scene = new THREE.Scene();
     this.scene.name = 'cockpit';
     this.disposables = [];
+    // Everything physical hangs in root; walker classes scale the modelled cockpit around the eye
+    this.root = new THREE.Group();
+    this.root.name = 'cockpitRoot';
+    this.root.scale.setScalar(this.modelled ? this.variant.classScale[walker.cockpit.variant] ?? 1 : 1);
+    this.scene.add(this.root);
 
     this.shell = buildShell(this.variant, theater);
-    this.scene.add(this.shell.group);
+    this.root.add(this.shell.group);
+    if (this.modelled) {
+      this.model = instantiateCockpitModel(this.variant.model);
+      this.root.add(this.model.object);
+    }
 
     this.panels = buildPanels(this.variant, this.layout, config.panelPixelsPerMetre);
-    this.scene.add(this.panels.group);
+    this.root.add(this.panels.group);
 
     this.factory = new ControlFactory();
     this.controls = new Map();
@@ -82,6 +97,16 @@ export class Cockpit {
   mountItems(config) {
     let monitorIndex = 0;
     for (const item of this.layout.items) {
+      if (item.grip) {
+        // Grip of the cockpit model (left throttle, right stick): already in the scene
+        const grip = new ModelGrip(this.model.grips[item.grip], item.type);
+        if (item.type === 'throttle') this.throttleLever = grip;
+        else this.stick = grip;
+        for (const mesh of grip.pickables) mesh.userData.controlId = item.id;
+        this.pickables.push(...grip.pickables);
+        this.extraParts.set(item.id, { item, object: grip.object, pickables: grip.pickables });
+        continue;
+      }
       const panel = this.panels.frames.get(item.panel);
       if (!panel) throw new Error(`Layout item "${item.id}" references unknown panel "${item.panel}"`);
       const [x, y] = panelLocal(panel.def, item.at);
@@ -97,6 +122,7 @@ export class Cockpit {
             phosphor: item.phosphor,
             refreshHz: config.monitorHz,
             phaseOffset: (monitorIndex++ * 0.37) % 1,
+            bezel: item.bezel ?? true,
           });
           this.monitors.push(crt);
           object = crt.object;
@@ -129,6 +155,7 @@ export class Cockpit {
       }
 
       object.position.set(x, y, object.position.z);
+      if (item.scale) object.scale.setScalar(item.scale);
       object.name = item.id;
       if (!this.controls.has(item.id)) this.extraParts.set(item.id, { item, object, pickables });
       for (const mesh of pickables) mesh.userData.controlId = item.id;
@@ -139,7 +166,9 @@ export class Cockpit {
 
   mountClipboard() {
     if (!this.variant.clipboard) return;
-    this.clipboard = new Clipboard(this.variant.clipboard, this.walker);
+    const k = this.root.scale.x;
+    const def = { ...this.variant.clipboard, position: this.variant.clipboard.position.map((v) => v * k) };
+    this.clipboard = new Clipboard(def, this.walker);
     this.scene.add(this.clipboard.object);
     for (const mesh of this.clipboard.pickables) mesh.userData.controlId = 'clipboard';
     this.pickables.push(...this.clipboard.pickables);
@@ -204,6 +233,7 @@ export class Cockpit {
     this.unbind?.();
     this.clipboard?.dispose();
     this.scene.traverse((o) => {
+      if (o.userData.shared) return; // cockpit model: owned by the cache (CockpitModel.js)
       o.geometry?.dispose();
       const mats = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
       for (const m of mats) m.dispose();

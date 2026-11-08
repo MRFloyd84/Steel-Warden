@@ -29,13 +29,17 @@ export function buildPanels(variant, layout, ppm) {
     group.add(frame);
     frames.set(id, { frame, def });
 
+    // Screen panels on the model: no plate, the parts sit in the model's own frames
+    if (def.slab === false) continue;
+
     const items = layout.items.filter((it) => it.panel === id);
     const groups = (layout.groups ?? []).filter((g) => g.panel === id);
     const texture = paintPanel(def, items, groups, variant.colors.panel, ppm, id.length * 31);
     const faceMat = new THREE.MeshLambertMaterial({ map: texture });
     disposables.push(texture, faceMat);
 
-    const geo = new THREE.BoxGeometry(def.size[0], def.size[1], SLAB).translate(0, 0, -SLAB / 2);
+    const depth = def.depth ?? SLAB;
+    const geo = new THREE.BoxGeometry(def.size[0], def.size[1], depth).translate(0, 0, -depth / 2);
     // BoxGeometry material order: +x, -x, +y, -y, +z (face), -z
     const slab = new THREE.Mesh(geo, [sideMat, sideMat, sideMat, sideMat, faceMat, sideMat]);
     slab.name = `slab:${id}`;
@@ -79,7 +83,8 @@ function paintPanel(def, items, groups, baseColor, ppm, seed) {
   }
 
   const toPx = (at) => [at[0] * W, at[1] * H];
-  const mm = (m) => m * px;
+  const mmBase = (m) => m * px;
+  const mm = mmBase;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
@@ -99,6 +104,9 @@ function paintPanel(def, items, groups, baseColor, ppm, seed) {
   for (const it of items) {
     const [x, y] = toPx(it.at);
     ctx.fillStyle = INK;
+    // item.scale enlarges a control and its printing together (Cockpit scales the part)
+    const k = it.scale ?? 1;
+    const mm = (v) => mmBase(v * k);
     switch (it.type) {
       case 'toggle': {
         fitText(ctx, it.label, x, y - mm(it.guard ? 0.044 : 0.04), mm(0.075), mm(0.012));

@@ -46,6 +46,12 @@ const walkDir = join(root, 'assets/walkers');
 for (const id of Object.keys(WALKER_MESHES)) if (!existsSync(join(walkDir, `${id}.glb`))) problems.push(`Walker-Modell ${id}: Datei fehlt (${id}.glb)`);
 for (const f of existsSync(walkDir) ? readdirSync(walkDir) : []) if (!WALKER_MESHES[f.replace(/\.glb$/, '')]) problems.push(`assets/walkers/${f}: in walkerMeshes.js nicht eingetragen`);
 
+// Cockpit model (one file, CREDITS.md section "Cockpit-Modell")
+const cockpitDir = join(root, 'assets/cockpit');
+for (const f of existsSync(cockpitDir) ? readdirSync(cockpitDir) : []) {
+  if (!credits.includes(`assets/cockpit/${f}`)) problems.push(`assets/cockpit/${f}: kein Eintrag in CREDITS.md`);
+}
+
 // Credits entries
 const need = (what, entry) => {
   for (const key of ['name', 'author', 'license', 'url']) {
