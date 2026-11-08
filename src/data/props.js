@@ -28,7 +28,7 @@ export const PROP_PACKS = {
     url: 'https://kenney.nl/assets/space-kit',
   },
   'tripo-synth': {
-    name: 'STEEL WARDEN Tripo-Modelle (Synthese)', author: 'Rene, erzeugt mit Tripo AI', license: 'Tripo-Nutzungsbedingungen (siehe CREDITS.md)',
+    name: 'STEEL WARDEN Tripo-Modelle (Synthese)', author: 'Rene, erzeugt mit Tripo AI', license: 'Eigene Rechte (bezahlter Tripo-Tarif)',
     url: 'https://www.tripo3d.ai',
   },
   'quaternius-scifi': {

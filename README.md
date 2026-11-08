@@ -290,7 +290,7 @@ je Werfer).
 - *Optisch (SPEER):* Feuer gedrückt halten, die Maus lenkt die Rakete (Torso steht still,
   Schub geht weiter). Die Raketenkamera schaltet sich dazu selbst ein.
 
-**Zielkapsel.** BASTION (LA2) und KESTREL (RA) tragen ab Werk eine ZK-1. Mit `Tab` wird die
+**Zielkapsel.** BASTION und KESTREL tragen ab Werk eine ZK-1 (CT, unter der Kanzel). Mit `Tab` wird die
 Komponente gewählt: Zielmonitor rahmt sie ein und lässt sie blinken, im HUD sitzt ein kleiner
 Rahmen darauf. Liegt das Fadenkreuz in ihrer Nähe (8°), laufen alle Geschosse dort zusammen
 (◆ auf dem Zielmonitor, durchgezogener Rahmen). Ohne Kapsel meldet sich die Technik.
@@ -698,6 +698,12 @@ Torso-Drehpunkt und Schultern kommen aus dem Modell; die Waffen-Hardpoints werde
 prozeduralen Plan in die Modellteile übertragen. OBELISK und die Drohne behalten den
 prozeduralen Bauplan.
 
+- *Waffen:* Die Waffen sitzen dort, wo das Modell sie hat — Mündungen an den modellierten
+  Rohren, Werferrohren und Kristallen (`WALKER_MESH_MOUNTS` in `src/data/walkerMeshes.js`,
+  Suche in `render/walker/muzzleFinder.js`). Mehrrohrige Waffen feuern reihum, zusätzliche
+  Waffenmodelle entfallen. Die Werksbewaffnung passt zum Aussehen (Tabelle:
+  `docs/WALKER-WEAPONS-PLAN.md`), neu sind die RK-30 Rotorkanone (KOLOSS) und die große
+  Schwarmsalve (MONOLITH); der GOLIATH trägt weniger Waffen und dafür mehr Panzerung.
 - *Optionen → Grafik → Walker-Modelle:* detailliert (Standard) oder klassisch (die alten
   Baupläne), wirkt ab dem nächsten Einsatz.
 - *Neu einlesen:* `pip install numpy scipy pillow fast-simplification`, dann
@@ -718,6 +724,12 @@ prozeduralen Bauplan.
 4. *Treffer:* Duell — die SICHEL beschießen, einen Arm abschießen (fällt ab), Beine zerstören
    (sackt zusammen), Reaktor (Explosion, Wrack dunkel).
 5. Optionen → Grafik → Walker-Modelle → klassisch, Einsatz neu starten: alte Modelle.
+6. *Waffen:* „Requisiten“ mit `?walker=koloss` (bzw. kestrel, bastion …), Außenkamera `Shift+V`,
+   jede Kette abfeuern: Leuchtspur aus beiden Rotorkanonen abwechselnd über die drei Rohre,
+   Raketen aus den vier Brustwerfern; KESTREL feuert aus den Kinngeschützen, die FALKE aus den
+   Gitterkästen. In der Synthese-Parade (Debug-Modus) feuert nichts — dafür „Duell“ oder
+   „Hinterhalt“: SICHEL schießt aus den Klauen, SPLITTER aus Ausleger und Auge; MONOLITH (Wellen-
+   Einsatz) feuert Salven aus dem Armwerfer.
 
 ## Sounds
 

@@ -33,7 +33,7 @@ export const WALKER_MODELS = {
     canopy: { at: [0, 1.3, -1.32], size: [1.3, 0.7, 0.8], tilt: 35 },
     arms: { shoulder: [1.15, 0.7, -0.1], upper: [0.35, 0.9, 0.35], pod: [0.42, 0.42, 1.5], drop: 1.0 },
     shoulderPods: null,
-    torsoMounts: { torsoC: [0, -0.1, -1.4] },
+    torsoMounts: { torsoC: [0, -0.1, -1.4], torsoTop: [0, 1.0, -0.6] },
     extras: [
       { kind: 'beam', part: 'sensors', a: [0.5, 1.7, 0.6], b: [0.65, 2.9, 1.0], w: 0.06 },
       { kind: 'box', part: 'sensors', at: [0, 1.85, 0.3], size: [0.6, 0.25, 0.6], color: 'dark' },
@@ -74,7 +74,7 @@ export const WALKER_MODELS = {
     canopy: { at: [0, 2.2, -1.68], size: [1.8, 0.75, 0.5], tilt: 30 },
     arms: { shoulder: [2.15, 1.3, 0], upper: [0.7, 1.4, 0.7], pod: [0.8, 0.8, 2.6], drop: 1.5 },
     shoulderPods: { at: [1.3, 2.95, 0.3], size: [1.0, 0.7, 1.4], tubes: [2, 2] },
-    torsoMounts: {},
+    torsoMounts: { torsoC: [0, 0.4, -1.95] },
     extras: [
       { kind: 'beam', part: 'sensors', a: [-1.2, 2.6, 0.9], b: [-1.35, 4.0, 1.2], w: 0.08 },
       { kind: 'box', part: 'torso', at: [0, 1.0, 1.75], size: [2.6, 1.6, 0.3], color: 'dark' },

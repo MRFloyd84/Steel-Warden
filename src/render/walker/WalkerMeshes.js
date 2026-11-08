@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { buildWalkerParts } from './WalkerBuilder.js';
+import { findMuzzles } from './muzzleFinder.js';
+import { WALKER_MESH_MOUNTS } from '../../data/walkerMeshes.js';
 
 /**
  * Detailed walker models (assets/walkers/<geometry id>.glb, made by tools/import_walkers.py
@@ -80,6 +82,7 @@ const avg = (a, b) => (a + b) / 2;
  * hardpoints of data/walkers.js keep their meaning.
  */
 export function buildMeshWalker(mesh, proc, walker) {
+  const id = walker.geometry;
   const J = mesh.joints;
   const S = mesh.segments;
   const hipBind = avg(J.hipL.y, J.hipR.y);
@@ -164,7 +167,24 @@ export function buildMeshWalker(mesh, proc, walker) {
     g.computeBoundingBox();
     return g.boundingBox;
   };
+  // origin of each attach part in model space (part-local = model − origin)
+  const partOrigin = {
+    torso: torsoOrigin, sensors: torsoOrigin, pelvis: pelvisOrigin,
+    armL: J.shoulderL, armR: J.shoulderR,
+  };
+  const specs = WALKER_MESH_MOUNTS[id] ?? {};
   for (const hp of walker.hardpoints) {
+    const spec = specs[hp.id];
+    const found = spec ? findMuzzles(S, spec) : null;
+    if (found) {
+      // the weapon is modelled: muzzles at its barrels, no extra weapon model
+      const o = partOrigin[spec.attach];
+      const local = new THREE.Vector3(...found.centre).sub(o);
+      const muzzles = found.muzzles.map((m) => new THREE.Vector3(...m).sub(o));
+      hardpointMounts[hp.id] = { part: spec.attach === 'sensors' ? 'torso' : spec.attach, local, muzzles, modelled: true };
+      continue;
+    }
+    if (spec) console.warn(`${id}: Waffe ${hp.id} nicht im Modell gefunden — Lage aus dem Bauplan`);
     const pm = procParts.hardpointMounts[hp.id];
     const from = boxOf(procParts.geometries[pm.part]);
     const to = boxOf(geometries[pm.part]) ?? boxOf(geometries.torso);

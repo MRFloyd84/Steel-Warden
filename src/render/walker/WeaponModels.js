@@ -103,6 +103,18 @@ export class WeaponMounts {
     this.mounts = new Map();
     for (const slot of slots) {
       const m = model.hardpointMounts[slot.id];
+      if (m.modelled) {
+        // Detailed model: the weapon is part of the hull — muzzles sit at its barrels and
+        // take turns (twin guns, launcher tubes); no extra weapon model
+        const muzzles = m.muzzles.map((p) => {
+          const o = new THREE.Object3D();
+          o.position.copy(p);
+          model.parts[m.part].add(o);
+          return o;
+        });
+        this.mounts.set(slot.id, { slot, mesh: null, muzzle: muzzles[0], muzzles, next: 0, part: m.part });
+        continue;
+      }
       const { geometry, length } = geometryFor(slot.def.visual.model);
       const mesh = new THREE.Mesh(geometry, material);
       mesh.position.copy(m.local);
@@ -112,7 +124,7 @@ export class WeaponMounts {
       muzzle.position.set(0, 0, -length);
       mesh.add(muzzle);
       model.parts[m.part].add(mesh);
-      this.mounts.set(slot.id, { slot, mesh, muzzle, part: m.part });
+      this.mounts.set(slot.id, { slot, mesh, muzzle, muzzles: [muzzle], next: 0, part: m.part });
     }
     this.arms = ['armL', 'armR'].map((key) => ({
       key,
@@ -123,10 +135,16 @@ export class WeaponMounts {
     this.tmp = new THREE.Vector3();
   }
 
-  muzzleWorld(slotId, out) {
+  /** World position of a weapon's muzzle; `fire` steps to the next barrel (twin guns, tubes). */
+  muzzleWorld(slotId, out, fire = false) {
     const m = this.mounts.get(slotId);
-    m.muzzle.updateWorldMatrix(true, false);
-    return m.muzzle.getWorldPosition(out);
+    let muzzle = m.muzzle;
+    if (fire && m.muzzles.length > 1) {
+      muzzle = m.muzzles[m.next];
+      m.next = (m.next + 1) % m.muzzles.length;
+    }
+    muzzle.updateWorldMatrix(true, false);
+    return muzzle.getWorldPosition(out);
   }
 
   /** Turns the arms toward a world point (within their arcs). */

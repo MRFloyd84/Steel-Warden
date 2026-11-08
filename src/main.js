@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import './ui/style.css';
 import { Game } from './core/Game.js';
 import { MenuState } from './states/MenuState.js';
@@ -51,4 +52,4 @@ assetsReady.then(() => {
 
 // Exposed for console tinkering during development.
 window.steelWarden = game;
-game.debugHandles = { detail: DETAIL, setDetailFilter, props: PropLibrary, walkers: WalkerMeshLibrary };
+game.debugHandles = { THREE, detail: DETAIL, setDetailFilter, props: PropLibrary, walkers: WalkerMeshLibrary };

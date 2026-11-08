@@ -69,6 +69,8 @@ FIXES = {
     'kestrel': [(('armL', 'armR'), 'torso', {'y': (5.0, 99)})],          # nose hull; gun pods stay arms
     'marder': [(('armL', 'armR'), 'torso', {'ax': (0, 2.0), 'y': (6.0, 99)})],
     'halberd': [(('armL', 'armR'), 'torso', {'y': (10.2, 99)})],          # missile boxes on the torso
+    'bastion': [(('armL', 'armR'), 'torso', {'ax': (1.9, 4.0), 'y': (9.4, 99)})],  # shoulder boxes
+    'monolith': [(('sensors',), 'armL', {'x': (-99, -2.5)})],             # missile rack on the left arm
 }
 
 PART_OF = {

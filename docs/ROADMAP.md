@@ -104,8 +104,9 @@ Funk, Radar, Kampf, Übung) zusammen.
      bewusst nicht.
    - ✅ **Walker-Modelle aus Tripo:** sechs Walker, SPLITTER, SICHEL, MONOLITH und Abwehrstachel
      als detaillierte Modelle (starre Segmente auf dem eigenen Rig, Maße aus dem Modell),
-     Umschalter detailliert/klassisch. Offen: Drohne (Flugmodell), Vierbein-Kriecher,
-     OBELISK-Modell, Waffenmodelle passend zu den modellierten Waffen.
+     Umschalter detailliert/klassisch; Waffen an den modellierten Rohren, Werksbewaffnung
+     passend zum Aussehen (RK-30, große Schwarmsalve). Offen: Drohne (Flugmodell),
+     Vierbein-Kriecher, OBELISK-Modell; Hangar (C) mit Waffen ohne Gegenstück am Modell.
 4. **Radar und Tarnung**:
    - Schalter aktiv/passiv im Cockpit.
    - Aktiv: große, einstellbare Reichweite, macht sichtbar.

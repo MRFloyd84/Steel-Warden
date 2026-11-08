@@ -32,13 +32,13 @@ export const ENEMIES = {
     shields: { front: 50, rear: 30, left: 40, right: 40, rechargeRate: 6 },
     armor: { torso: 90, armL: 50, armR: 50, legs: 80, sensors: 30, reactor: 60 },
     hardpoints: [
-      { id: 'LA', location: 'armL', size: 'S', type: 'energy', mount: 'armL.0', arc: ARM },
-      { id: 'RA', location: 'armR', size: 'S', type: 'energy', mount: 'armR.0', arc: ARM },
+      { id: 'LT', location: 'torso', size: 'S', type: 'energy', mount: 'torsoL', arc: FIXED },  // emitter on its boom
+      { id: 'CT', location: 'torso', size: 'S', type: 'energy', mount: 'torsoC', arc: FIXED },  // red eye
     ],
     maxLoadoutWeight: 6,
-    defaultLoadout: { LA: 'syn-splitter', RA: 'syn-splitter' },
-    defaultGroups: { LA: 1, RA: 1 },
-    defaultChains: [{ name: 'SPLITTER', weapons: ['LA', 'RA'], mode: 'salvo' }],
+    defaultLoadout: { LT: 'syn-splitter', CT: 'syn-splitter' },
+    defaultGroups: { LT: 1, CT: 1 },
+    defaultChains: [{ name: 'SPLITTER', weapons: ['LT', 'CT'], mode: 'salvo' }],
     jumpJets: null,
     cockpit: COCKPIT(5.35),
     sound: SOUND(1.5),
@@ -87,15 +87,14 @@ export const ENEMIES = {
     shields: { front: 150, rear: 70, left: 110, right: 110, rechargeRate: 7 },
     armor: { torso: 380, armL: 180, armR: 180, legs: 300, sensors: 70, reactor: 220 },
     hardpoints: [
-      { id: 'LA', location: 'armL', size: 'L', type: 'ballistic', mount: 'armL.0', arc: ARM },
-      { id: 'RA', location: 'armR', size: 'L', type: 'ballistic', mount: 'armR.0', arc: ARM },
-      { id: 'LS', location: 'torso', size: 'M', type: 'missile', mount: 'shoulderL', arc: FIXED },
-      { id: 'RS', location: 'torso', size: 'M', type: 'missile', mount: 'shoulderR', arc: FIXED },
+      { id: 'RA', location: 'armR', size: 'L', type: 'ballistic', mount: 'armR.0', arc: ARM },  // hex cannon
+      { id: 'LA', location: 'armL', size: 'L', type: 'missile', mount: 'armL.0', arc: ARM },    // 6-tube rack
+      { id: 'CT', location: 'torso', size: 'M', type: 'energy', mount: 'torsoC', arc: FIXED },  // chest crystal
     ],
     maxLoadoutWeight: 18,
-    defaultLoadout: { LA: 'syn-hammer', RA: 'syn-hammer', LS: 'syn-schwarm', RS: 'syn-schwarm' },
-    defaultGroups: { LA: 1, RA: 1, LS: 2, RS: 2 },
-    defaultChains: [{ name: 'HAMMER', weapons: ['LA', 'RA'], mode: 'sequence' }, { name: 'SCHWARM', weapons: ['LS', 'RS'], mode: 'sequence' }],
+    defaultLoadout: { RA: 'syn-hammer', LA: 'syn-schwarm-l', CT: 'syn-impuls' },
+    defaultGroups: { RA: 1, CT: 1, LA: 2 },
+    defaultChains: [{ name: 'HAMMER', weapons: ['RA', 'CT'], mode: 'sequence' }, { name: 'SCHWARM', weapons: ['LA'], mode: 'salvo' }],
     jumpJets: null,
     cockpit: COCKPIT(10.4),
     sound: SOUND(0.75),

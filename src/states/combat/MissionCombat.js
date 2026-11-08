@@ -270,7 +270,7 @@ export class MissionCombat {
   /** Player weapon fires one shot toward the crosshair aim point. */
   fire(slot, shotIndex) {
     const d = slot.def;
-    const origin = this.player.mounts.muzzleWorld(slot.id, v1);
+    const origin = this.player.mounts.muzzleWorld(slot.id, v1, true);
     const dir = v2.subVectors(this.aimPoint, origin).normalize();
     spreadDir(dir, d.spread);
     const extra = d.missile ? this.missiles.spawnParams(slot, this.eye, this.aimDir) : { aimPoint: this.aimPoint.clone() };
@@ -285,7 +285,7 @@ export class MissionCombat {
    */
   fireFrom(owner, slot, shotIndex, aimPoint, shot = {}) {
     const d = slot.def;
-    const origin = shot.origin ?? owner.mounts.muzzleWorld(slot.id, v1);
+    const origin = shot.origin ?? owner.mounts.muzzleWorld(slot.id, v1, true);
     const dir = shot.dir ? v2.copy(shot.dir) : v2.subVectors(aimPoint, origin).normalize();
     spreadDir(dir, d.spread);
     if (d.missile) {

@@ -43,14 +43,15 @@ export const WALKERS = {
     shields: { front: 80, rear: 40, left: 60, right: 60, rechargeRate: 6 },
     armor: { torso: 120, armL: 60, armR: 60, legs: 100, sensors: 50, reactor: 70 },
     hardpoints: [
-      { id: 'LA', location: 'armL', size: 'S', type: 'energy', mount: 'armL.0', arc: ARM },
-      { id: 'RA', location: 'armR', size: 'S', type: 'universal', mount: 'armR.0', arc: ARM },
-      { id: 'CT', location: 'torso', size: 'S', type: 'missile', mount: 'torsoC', arc: FIXED },
+      { id: 'LA', location: 'armL', size: 'S', type: 'energy', mount: 'armL.0', arc: ARM },     // twin chin gun left
+      { id: 'RA', location: 'armR', size: 'S', type: 'universal', mount: 'armR.0', arc: ARM },  // twin chin gun right
+      { id: 'CT', location: 'torso', size: 'S', type: 'universal', mount: 'torsoC', arc: FIXED }, // slot under the canopy
+      { id: 'TS', location: 'torso', size: 'S', type: 'missile', mount: 'torsoTop', arc: FIXED },  // grille pods on top
     ],
     maxLoadoutWeight: 6,
-    defaultLoadout: { LA: 'lux-12', RA: 'target-pod', CT: 'falke-4' },
-    defaultGroups: { LA: 1, CT: 3 },
-    defaultChains: [{ name: 'LASER', weapons: ['LA'], mode: 'salvo' }, { name: 'RAKETEN', weapons: ['CT'], mode: 'salvo' }, { name: 'ALLES', weapons: ['LA', 'CT'], mode: 'sequence' }],
+    defaultLoadout: { LA: 'lux-12', RA: 'lux-12', CT: 'target-pod', TS: 'falke-4' },
+    defaultGroups: { LA: 1, RA: 1, TS: 3 },
+    defaultChains: [{ name: 'LASER', weapons: ['LA', 'RA'], mode: 'salvo' }, { name: 'RAKETEN', weapons: ['TS'], mode: 'salvo' }, { name: 'ALLES', weapons: ['LA', 'RA', 'TS'], mode: 'sequence' }],
     secondaryChain: 'RAKETEN',
     jumpJets: { thrust: 14, fuel: 4 },
     cockpit: { variant: 'compact', eyeHeight: 6.2, canopyShape: 'bubble', panelLayout: 'compact', serial: 'LW2-25-1183' },
@@ -120,17 +121,16 @@ export const WALKERS = {
     shields: { front: 120, rear: 60, left: 90, right: 90, rechargeRate: 8 },
     armor: { torso: 240, armL: 120, armR: 120, legs: 200, sensors: 60, reactor: 140 },
     hardpoints: [
-      { id: 'LA1', location: 'armL', size: 'M', type: 'energy', mount: 'armL.0', arc: ARM },
-      { id: 'LA2', location: 'armL', size: 'S', type: 'universal', mount: 'armL.1', arc: ARM },
-      { id: 'RA1', location: 'armR', size: 'M', type: 'ballistic', mount: 'armR.0', arc: ARM },
-      { id: 'RA2', location: 'armR', size: 'S', type: 'universal', mount: 'armR.1', arc: ARM },
-      { id: 'LS', location: 'torso', size: 'M', type: 'missile', mount: 'shoulderL', arc: FIXED },
-      { id: 'RS', location: 'torso', size: 'M', type: 'missile', mount: 'shoulderR', arc: FIXED },
+      { id: 'LA', location: 'armL', size: 'M', type: 'missile', mount: 'armL.0', arc: ARM },       // 2×2 rack on the forearm
+      { id: 'RA', location: 'armR', size: 'M', type: 'ballistic', mount: 'armR.0', arc: ARM },     // twin cannon
+      { id: 'LS', location: 'torso', size: 'M', type: 'missile', mount: 'shoulderL', arc: FIXED }, // shoulder box, X hatch
+      { id: 'RS', location: 'torso', size: 'M', type: 'energy', mount: 'shoulderR', arc: FIXED },  // shoulder box, vents
+      { id: 'CT', location: 'torso', size: 'S', type: 'universal', mount: 'torsoC', arc: FIXED },  // under the canopy
     ],
     maxLoadoutWeight: 16,
-    defaultLoadout: { LA1: 'lux-40', LA2: 'target-pod', RA1: 'ak-20', RA2: 'sk-6', LS: 'habicht-8', RS: 'falke-4' },
-    defaultGroups: { LA1: 1, RA1: 2, RA2: 2, LS: 3, RS: 3 },
-    defaultChains: [{ name: 'ARME', weapons: ['LA1', 'RA1', 'RA2'], mode: 'salvo' }, { name: 'RAKETEN', weapons: ['LS', 'RS'], mode: 'sequence' }, { name: 'DAUERFEUER', weapons: ['LA1', 'RA1'], mode: 'salvo' }],
+    defaultLoadout: { LA: 'falke-4', RA: 'ak-20', LS: 'habicht-8', RS: 'lux-40', CT: 'target-pod' },
+    defaultGroups: { RA: 1, RS: 1, LA: 3, LS: 3 },
+    defaultChains: [{ name: 'KANONE + LASER', weapons: ['RA', 'RS'], mode: 'salvo' }, { name: 'RAKETEN', weapons: ['LA', 'LS'], mode: 'sequence' }, { name: 'DAUERFEUER', weapons: ['RA'], mode: 'salvo' }],
     secondaryChain: 'RAKETEN',
     jumpJets: null,
     cockpit: { variant: 'standard', eyeHeight: 9.2, canopyShape: 'faceted', panelLayout: 'standard', serial: 'MW1-50-0417' },
@@ -198,18 +198,18 @@ export const WALKERS = {
     heatCapacity: 140,
     heatDissipation: 9,
     shields: { front: 200, rear: 100, left: 150, right: 150, rechargeRate: 12 },
-    armor: { torso: 420, armL: 220, armR: 220, legs: 340, sensors: 90, reactor: 240 },
+    // more armour in place of the dropped torso guns (only four weapons on the model)
+    armor: { torso: 500, armL: 260, armR: 260, legs: 400, sensors: 100, reactor: 270 },
     hardpoints: [
-      { id: 'LA', location: 'armL', size: 'L', type: 'ballistic', mount: 'armL.0', arc: ARM },
-      { id: 'RA', location: 'armR', size: 'L', type: 'energy', mount: 'armR.0', arc: ARM },
-      { id: 'LT', location: 'torso', size: 'M', type: 'missile', mount: 'torsoL', arc: FIXED },
-      { id: 'RT', location: 'torso', size: 'M', type: 'ballistic', mount: 'torsoR', arc: FIXED },
-      { id: 'CT', location: 'torso', size: 'M', type: 'energy', mount: 'torsoC', arc: FIXED },
+      { id: 'RA', location: 'armR', size: 'L', type: 'ballistic', mount: 'armR.0', arc: ARM },   // twin-barrel cannon
+      { id: 'LA', location: 'armL', size: 'M', type: 'missile', mount: 'armL.0', arc: ARM },     // 2×2 rack
+      { id: 'LT', location: 'torso', size: 'M', type: 'energy', mount: 'torsoL', arc: FIXED },   // chest slit left
+      { id: 'RT', location: 'torso', size: 'M', type: 'energy', mount: 'torsoR', arc: FIXED },   // chest slit right
     ],
     maxLoadoutWeight: 28,
-    defaultLoadout: { LA: 'sr-3', RA: 'pz-9', LT: 'habicht-8', RT: 'ak-20', CT: 'lux-40' },
-    defaultGroups: { LA: 2, RA: 1, LT: 3, RT: 2, CT: 1 },
-    defaultChains: [{ name: 'SCHWER', weapons: ['LA', 'RA'], mode: 'salvo' }, { name: 'DAUERFEUER', weapons: ['RT', 'CT'], mode: 'salvo' }, { name: 'RAKETEN', weapons: ['LT'], mode: 'salvo' }],
+    defaultLoadout: { RA: 'sr-3', LA: 'habicht-8', LT: 'lux-40', RT: 'lux-40' },
+    defaultGroups: { RA: 1, LT: 2, RT: 2, LA: 3 },
+    defaultChains: [{ name: 'SCHWER', weapons: ['RA'], mode: 'salvo' }, { name: 'LASER', weapons: ['LT', 'RT'], mode: 'salvo' }, { name: 'RAKETEN', weapons: ['LA'], mode: 'salvo' }],
     secondaryChain: 'RAKETEN',
     jumpJets: null,
     cockpit: { variant: 'heavy', eyeHeight: 11.2, canopyShape: 'slit', panelLayout: 'heavy', serial: 'HW2-80-0071' },
@@ -240,17 +240,17 @@ export const WALKERS = {
     shields: { front: 260, rear: 140, left: 200, right: 200, rechargeRate: 15 },
     armor: { torso: 560, armL: 300, armR: 300, legs: 440, sensors: 120, reactor: 320 },
     hardpoints: [
-      { id: 'LA', location: 'armL', size: 'L', type: 'energy', mount: 'armL.0', arc: ARM },
-      { id: 'RA', location: 'armR', size: 'L', type: 'ballistic', mount: 'armR.0', arc: ARM },
-      { id: 'LS', location: 'torso', size: 'L', type: 'missile', mount: 'shoulderL', arc: FIXED },
-      { id: 'RS', location: 'torso', size: 'L', type: 'missile', mount: 'shoulderR', arc: FIXED },
-      { id: 'LT', location: 'torso', size: 'M', type: 'universal', mount: 'torsoL', arc: FIXED },
-      { id: 'RT', location: 'torso', size: 'M', type: 'universal', mount: 'torsoR', arc: FIXED },
+      { id: 'LA', location: 'armL', size: 'L', type: 'ballistic', mount: 'armL.0', arc: ARM },     // rotary cannon
+      { id: 'RA', location: 'armR', size: 'L', type: 'ballistic', mount: 'armR.0', arc: ARM },     // rotary cannon
+      { id: 'LS', location: 'torso', size: 'M', type: 'missile', mount: 'shoulderL', arc: FIXED }, // chest rack, upper left
+      { id: 'RS', location: 'torso', size: 'M', type: 'missile', mount: 'shoulderR', arc: FIXED }, // chest rack, upper right
+      { id: 'LT', location: 'torso', size: 'S', type: 'missile', mount: 'torsoL', arc: FIXED },    // chest rack, lower left
+      { id: 'RT', location: 'torso', size: 'S', type: 'missile', mount: 'torsoR', arc: FIXED },    // chest rack, lower right
     ],
     maxLoadoutWeight: 38,
-    defaultLoadout: { LA: 'pz-9', RA: 'sr-3', LS: 'speer', RS: 'habicht-8', LT: 'ak-20', RT: 'lux-40' },
-    defaultGroups: { LA: 1, RA: 2, LS: 3, RS: 3, LT: 2, RT: 1 },
-    defaultChains: [{ name: 'SCHWER', weapons: ['LA', 'RA'], mode: 'sequence' }, { name: 'RAKETEN', weapons: ['LS', 'RS'], mode: 'sequence' }, { name: 'DAUERFEUER', weapons: ['LT', 'RT'], mode: 'salvo' }],
+    defaultLoadout: { LA: 'rk-30', RA: 'rk-30', LS: 'habicht-8', RS: 'habicht-8', LT: 'falke-4', RT: 'falke-4' },
+    defaultGroups: { LA: 1, RA: 1, LS: 3, RS: 3, LT: 2, RT: 2 },
+    defaultChains: [{ name: 'ROTOREN', weapons: ['LA', 'RA'], mode: 'salvo' }, { name: 'LENKRAKETEN', weapons: ['LS', 'RS'], mode: 'sequence' }, { name: 'KURZSTRECKE', weapons: ['LT', 'RT'], mode: 'salvo' }],
     secondaryChain: 'RAKETEN',
     jumpJets: null,
     cockpit: { variant: 'heavy', eyeHeight: 13.6, canopyShape: 'tower', panelLayout: 'assault', serial: 'AW1-100-0009', extraCircuit: true },

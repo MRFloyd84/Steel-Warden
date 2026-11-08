@@ -28,7 +28,7 @@ export const ENEMY_MODELS = {
     canopy: { at: [0, 0.75, -1.25], size: [0.9, 0.18, 0.5], tilt: 30 },
     arms: { shoulder: [0.95, 0.3, -0.2], upper: [0.3, 0.8, 0.3], pod: [0.35, 0.35, 1.5], drop: 0.8 },
     shoulderPods: null,
-    torsoMounts: {},
+    torsoMounts: { torsoL: [-0.7, 0.4, -1.6], torsoC: [0, 0.75, -2.0] },
     extras: [
       { kind: 'shard', part: 'torso', at: [0.5, 1.4, 0.4], size: [0.35, 1.6], rot: [-30, 0, -20], color: 'accent', glow: true },
       { kind: 'shard', part: 'torso', at: [-0.2, 1.3, 0.9], size: [0.25, 1.1], rot: [-50, 0, 15], color: 'accent' },
@@ -74,7 +74,7 @@ export const ENEMY_MODELS = {
     canopy: { at: [0, 2.4, -2.55], size: [1.6, 0.22, 0.5], tilt: 20 },
     arms: { shoulder: [3.1, 1.6, 0], upper: [1.0, 1.6, 1.0], pod: [1.2, 1.1, 3.2], drop: 1.8 },
     shoulderPods: { at: [1.9, 3.9, 0.6], size: [1.5, 1.0, 1.8], tubes: [3, 2] },
-    torsoMounts: {},
+    torsoMounts: { torsoC: [0, 0.6, -2.4] },
     extras: [
       // Stacked armour slabs that hover a hand's width off the hull
       { kind: 'plate', part: 'torso', at: [0, 1.0, -2.9], size: [4.2, 2.2, 0.3], rot: [8, 0, 3] },
