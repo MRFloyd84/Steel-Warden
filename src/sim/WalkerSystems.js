@@ -149,6 +149,15 @@ export class WalkerSystems {
     this.s.reactor.externalRate = rate;
   }
 
+  /**
+   * Drive overload 0..1 (WalkerMotion.driveOverload: extra drive energy actually turned into
+   * speed or acceleration) → reactor heat in °C/s. Own channel: not weapon heat, not ground.
+   */
+  setDriveOverload(overload) {
+    const o = overload > 1 ? 1 : overload > 0 ? overload : 0;
+    this.s.reactor.driveRate = this.cfg.reactor.driveOverloadHeat * o;
+  }
+
   /** Weapons may fire: armed and a reactor that carries the load. */
   get canFire() {
     return this.flags.weaponsReady && this.flags.reactorRunning;
@@ -262,7 +271,7 @@ function createState(cfg, monitorIds) {
     power: { aux: false, main: false, bus: false, batteryBus: false, fault: false, faultAt: -Infinity, source: 'none' },
     coolant: { p1: 0, p2: 0, flow: 0, onTime: 0, pump2Failed: false },
     reactor: {
-      temp: cfg.reactor.ambient, power: 0, mode: 'cold', ignT: 0, heater: false, pendingHeat: 0, weaponHeatRate: 0,
+      temp: cfg.reactor.ambient, power: 0, mode: 'cold', ignT: 0, heater: false, pendingHeat: 0, weaponHeatRate: 0, driveRate: 0,
       lockout: false, failUntil: -Infinity, flickerUntil: -Infinity, scramAt: -Infinity, restartNeeded: false,
     },
     reactor2: { mode: 'off', t: 0 },

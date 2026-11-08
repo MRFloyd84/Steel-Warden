@@ -1,6 +1,6 @@
 import { COMBAT, stageIndex } from '../data/combat.js';
 import { CONFIG } from '../data/config.js';
-import { energySplitOf, driveEnergyFactor } from '../data/systems.js';
+import { energySplitOf, driveEnergyFactor, driveAccelFactor } from '../data/systems.js';
 
 const HEAVY = 3;
 const DESTROYED = COMBAT.stages.length - 1;
@@ -49,6 +49,7 @@ export function evaluateCondition({ damage, systems = null, wreck = null, immobi
   let canTwistSys = true;
   let legsReleased = true;
   let driveEnergy = 1;
+  let driveAccelEnergy = 1;
   if (systems) {
     const s = systems.s;
     const cfg = systems.cfg;
@@ -56,7 +57,9 @@ export function evaluateCondition({ damage, systems = null, wreck = null, immobi
     hydraulic = clamp01(s.hydraulics.pressure / cfg.hydraulics.readyPressure);
     // Gyro works while it is aligning or aligned and the bus carries power
     gyro = (s.gyro.mode === 'aligned' || s.gyro.mode === 'aligning') && s.power.bus ? clamp01(s.gyro.align) : 0;
-    driveEnergy = driveEnergyFactor(energySplitOf(systems.c));
+    const split = energySplitOf(systems.c);
+    driveEnergy = driveEnergyFactor(split);
+    driveAccelEnergy = driveAccelFactor(split);
     sensorLevel = s.power.bus ? clamp01(s.sensors.level) : 0;
     systemsCanFire = systems.canFire;
     shieldsReady = !!systems.flags.shieldsReady;
@@ -90,7 +93,7 @@ export function evaluateCondition({ damage, systems = null, wreck = null, immobi
     // Energy can raise the drive only on a walker that can move at all (reactor, legs, systems)
     drivePower: canMove ? reactorOutput * legsSpeed * driveEnergy : 0,
     driveEnergy,
-    driveAccel: canMove ? driveEnergy : 0,
+    driveAccel: canMove ? driveAccelEnergy : 0,
     legsSpeed,
     gyro,
     limp,
@@ -150,7 +153,7 @@ export class MachineCondition {
   debugLine() {
     const c = this.evaluate();
     const p = (v) => `${Math.round(v * 100)}`;
-    return `Zustand: Reaktor ${p(c.reactorIntegrity)}% ${c.reactorAvailable ? 'verfügbar' : 'ZERSTÖRT'} Ausgang ${p(c.reactorOutput)}  Antrieb ${p(c.drivePower)} (Energie ×${c.driveEnergy.toFixed(2)})  Hydraulik ${p(c.hydraulicPower)}  Gyro ${p(c.gyro)}${c.limp ? `  Hinken ${p(c.limp)}` : ''}  `
+    return `Zustand: Reaktor ${p(c.reactorIntegrity)}% ${c.reactorAvailable ? 'verfügbar' : 'ZERSTÖRT'} Ausgang ${p(c.reactorOutput)}  Antrieb ${p(c.drivePower)} (Energie ×${c.driveEnergy.toFixed(2)}, Beschl. ×${c.driveAccel.toFixed(2)})  Hydraulik ${p(c.hydraulicPower)}  Gyro ${p(c.gyro)}${c.limp ? `  Hinken ${p(c.limp)}` : ''}  `
       + `Stabil ${p(c.movementStability)}  Waffenstab ${p(c.weaponStabilization)}  Sensoren ${p(c.sensorPerformance)}${c.disrupted ? ' GESTÖRT' : ''}  `
       + `Waffen ${c.weaponsOnline ? 'an' : 'aus'} (${p(c.weaponAvailability)}%)  Schilde ${c.shieldsOnline ? 'an' : 'aus'}${c.critical ? '  KRITISCH' : ''}`;
   }

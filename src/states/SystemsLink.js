@@ -31,9 +31,13 @@ export class SystemsLink {
     Object.assign(this.motion.limits, this.systems.drive);
   }
 
-  /** Fixed step: limits must be current before WalkerMotion.update. */
+  /**
+   * Fixed step: limits must be current before WalkerMotion.update. The drive overload of the
+   * previous step (one step = 1/60 s late) becomes reactor heat.
+   */
   update() {
     this.applyDrive();
+    this.systems.setDriveOverload(this.motion.driveOverload ?? 0);
   }
 
   /** Per rendered frame: lights, flicker, floodlight. */

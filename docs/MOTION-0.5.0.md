@@ -1,5 +1,9 @@
 # STEEL WARDEN 0.5.0 – Phase 2: Walker-Bewegung und Systemintegration
 
+> **Nachtrag Phase 2.1:** Energiefaktoren, Bremsen, Antriebswärme und Rückstoß bei Dauerfeuer wurden
+> nachgemessen und angepasst — aktuelle Werte in `docs/VALIDATION-0.5.0.md`. Die Zahlen unten sind
+> der Stand von Phase 2.
+
 Grundlage: Commit 05bfccd (Phase 1). Geprüft vor der Änderung: `WalkerMotion.js` (Schub mit
 Trägheit, Hang, Boden, Federn für Nicken und Rollen, Gang), `CombatUnits.applyLimits`,
 `MachineCondition.js`, `ENERGY_PRESETS` (nur für Schilde und Waffen genutzt, der Antriebsanteil

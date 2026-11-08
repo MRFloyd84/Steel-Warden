@@ -30,6 +30,7 @@ export class WalkerMotion {
     this.legYaw = 0;
     this.speed = 0;
     this.accel = 0;
+    this.driveOverload = 0; // 0..1, drive work above nominal (overloadOf)
     this.twist = 0;
     this.twistTarget = 0;
     this.twistRate = 0; // rad/s actually turned (for servo sound)
@@ -60,6 +61,11 @@ export class WalkerMotion {
     this.limpSide = 1;
     this.headY = new Spring(feel.headSpring);
     this.headZ = new Spring(feel.headSpring);
+    this.recoilPending = 0; // rad/s kicked since the last step
+    this.recoilRate = 0; // low-passed kick rate (rad/s²)
+    this.recoilComp = 0;
+    this.recoilGap = Infinity; // s since the last shot
+    this.recoilShot = false;
 
     // Ground: type under the feet (data/surfaces.js), thin ice breaking, collisions
     this.obstacles = null; // WorldObjects (buildings, big scatter)
@@ -178,15 +184,19 @@ export class WalkerMotion {
     const t = this.throttle.value;
     let target = t >= 0 ? t * w.maxSpeed : t * w.maxReverseSpeed;
     const slope = clamp(1 - Math.max(0, this.grade) * f.uphillDrag + Math.max(0, -this.grade) * f.downhillBoost, 0.2, 1.2);
-    target *= slope * lim.speedFactor * this.updateGround(dt);
+    this.groundFactor = this.updateGround(dt);
+    target *= slope * lim.speedFactor * this.groundFactor;
     if (this.grade > f.maxGrade || !lim.canMove || this.stuck > 0) target = 0;
 
     const prevSpeed = this.speed;
     const speedingUp = Math.abs(target) > Math.abs(this.speed) && Math.sign(target) !== -Math.sign(this.speed);
-    const rate = w.acceleration * (lim.accelFactor ?? 1) * (speedingUp ? 1 : this.brakeFactor);
+    // Energy split / damage set how hard the legs can push (accelFactor); braking is the legs'
+    // own resistance and does not depend on the drive share (Phase 2.1)
+    const rate = w.acceleration * (speedingUp ? (lim.accelFactor ?? 1) : this.brakeFactor);
     const diff = target - this.speed;
     this.speed += clamp(diff, -rate * dt, rate * dt);
     this.accel = (this.speed - prevSpeed) / dt;
+    this.driveOverload = this.overloadOf(lim, slope, speedingUp, t >= 0 ? w.maxSpeed : w.maxReverseSpeed);
 
     const px = this.x;
     const pz = this.z;
@@ -228,13 +238,33 @@ export class WalkerMotion {
     const damping = this.springDamping * (1 - (f.unrestDamping ?? 0) * unrest);
     this.pitchSpring.c = damping;
     this.rollSpring.c = damping;
-    this.pitchSpring.step(dt, this.accel * f.brakePitch);
+    const held = this.updateRecoil(dt);
+    this.pitchSpring.step(dt, this.accel * f.brakePitch - held / this.pitchSpring.k);
     this.rollSpring.step(dt, this.turnState * speedFrac * f.turnRoll);
     this.headY.step(dt);
-    this.headZ.step(dt);
+    this.headZ.step(dt, (-held * 0.6) / this.headZ.k);
     this.headZ.kick(-this.accel * 0.004);
 
     this.writePose(this.pose);
+  }
+
+  /**
+   * Share 0..1 of the actual drive work above the nominal walker (only possible with extra
+   * drive energy, speedFactor / accelFactor > 1): speed above the nominal top speed for the
+   * ground and slope, or acceleration above the nominal acceleration. Measured from what the
+   * legs really do — standing or walking at nominal pace with ANTRIEB set gives 0.
+   * SystemsLink turns it into reactor heat (docs/VALIDATION-0.5.0.md).
+   */
+  overloadOf(lim, slope, speedingUp, maxSpeed) {
+    let over = 0;
+    const sf = lim.speedFactor ?? 1;
+    if (sf > 1 && lim.canMove) {
+      const nominal = maxSpeed * slope * (this.groundFactor ?? 1);
+      if (nominal > 0) over = (Math.abs(this.speed) - nominal) / (nominal * (sf - 1));
+    }
+    const af = lim.accelFactor ?? 1;
+    if (af > 1 && speedingUp) over = Math.max(over, (Math.abs(this.accel) - this.w.acceleration) / (this.w.acceleration * (af - 1)));
+    return clamp(over, 0, 1);
   }
 
   /** Ground type under the walker; returns its speed factor. Thin ice breaks under heavy walkers. */
@@ -314,10 +344,40 @@ export class WalkerMotion {
    * @param impulse  rad/s on the torso pitch spring (MissionCombat computes it from weapon
    *                 weight, type and fire rate, walker tonnage and the stabilisation)
    */
-  recoil(impulse) {
+  /**
+   * One shot's torso kick (rad/s). `comp` 0..1 is the stabilisation (weaponStabilization):
+   * under sustained fire it holds the torso against the mean recoil (see updateRecoil), so
+   * rapid fire shakes but does not leave the torso pitched while the trigger is held.
+   */
+  recoil(impulse, comp = 0) {
     if (!(impulse > 0)) return;
     this.pitchSpring.kick(impulse);
     this.headZ.kick(impulse * 0.6);
+    // only shots that follow another one within recoilHoldGap count as sustained fire
+    if (this.recoilGap <= (this.feel.recoilHoldGap ?? 0.25)) this.recoilPending += impulse;
+    this.recoilShot = true;
+    this.recoilComp = clamp(comp, 0, 1);
+  }
+
+  /**
+   * Stabiliser against sustained fire (Phase 2.1): the mean kick rate (low-pass, recoilCompTime)
+   * would hold the springs at rate / stiffness; the spring targets are moved by the stabilised
+   * share of that. Single shots and slow weapons (shots further apart than recoilHoldGap) are
+   * not taken out,
+   * and once the trigger is released the filter runs down (recoilReleaseTime) and the targets
+   * return to 0.
+   */
+  updateRecoil(dt) {
+    const f = this.feel;
+    // Rises slowly while shots keep coming; once no shot came for recoilHoldGap (trigger
+    // released, or a slow weapon between shots) it runs down fast, so nothing is left over.
+    this.recoilGap = this.recoilShot ? 0 : this.recoilGap + dt;
+    this.recoilShot = false;
+    const tau = this.recoilGap > (f.recoilHoldGap ?? 0.25) ? f.recoilReleaseTime ?? 0.1 : f.recoilCompTime ?? 1;
+    this.recoilRate += (this.recoilPending / dt - this.recoilRate) * (1 - Math.exp(-dt / tau));
+    this.recoilPending = 0;
+    if (this.recoilRate < 1e-6) this.recoilRate = 0;
+    return this.recoilRate * this.recoilComp;
   }
 
   // ---- readouts for instruments and sound ----

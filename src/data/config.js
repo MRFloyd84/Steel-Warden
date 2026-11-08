@@ -99,6 +99,11 @@ export const CONFIG = {
     recoil: 2.0,
     recoilType: { ballistic: 1, energy: 0.35, missile: 0.25, universal: 0.35 },
     recoilGyroDamping: 0.6, // share of the recoil the stabilisation (gyro) takes out
+    // Stabiliser against sustained fire (WalkerMotion.updateRecoil): follows the mean recoil with
+    // recoilCompTime while shots come closer than recoilHoldGap, runs down with recoilReleaseTime
+    recoilCompTime: 1.0,
+    recoilHoldGap: 0.25,
+    recoilReleaseTime: 0.1,
   },
 
   // Torso-mounted searchlight (SCHEINWERFER switch).

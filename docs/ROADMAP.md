@@ -1,6 +1,6 @@
 # STEEL WARDEN – Fahrplan
 
-Stand: nach 0.5.0 Phase 2 (Bewegung und Systemintegration), davor Phase 1 (Architektur- und Zustandsaudit, MachineCondition), davor Walker-Modelle aus Tripo, davor Detailtexturen und externe Umgebungsmodelle, davor Teil 2 (Menüsystem), Startphase-Fix, A3 (Synthese-Gegner und KI), Teil 2 (Karten-Erweiterung) und A2b. Dieses Dokument führt das Grundkonzept,
+Stand: nach 0.5.0 Phase 2.1 (Bewegungsvalidierung und Balancing), davor Phase 2 (Bewegung und Systemintegration), davor Phase 1 (Architektur- und Zustandsaudit, MachineCondition), davor Walker-Modelle aus Tripo, davor Detailtexturen und externe Umgebungsmodelle, davor Teil 2 (Menüsystem), Startphase-Fix, A3 (Synthese-Gegner und KI), Teil 2 (Karten-Erweiterung) und A2b. Dieses Dokument führt das Grundkonzept,
 die Cockpit-Erweiterung, das Missionsdokument und die Ergänzungen (Stützpunkt, Bergung,
 Funk, Radar, Kampf, Übung) zusammen.
 
@@ -102,6 +102,10 @@ Funk, Radar, Kampf, Übung) zusammen.
      Palette. 32 CC0-Modelle (Kenney, Quaternius) als Bauwerke und Streuobjekte mit verworfenen
      Materialien, Platzhalter bei fehlenden Dateien, Credits-Prüfung. Normal-/Rauheitskarten
      bewusst nicht.
+   - ✅ **0.5.0 Phase 2.1 – Validierung:** Antriebsenergie vor allem auf Beschleunigung, Bremsen
+     unabhängig, Wärme aus genutzter Überleistung (eigener Kanal), Stabilisator gegen
+     Dauerfeuer-Versatz, KI-Navigation unter Drehträgheit gemessen (`docs/VALIDATION-0.5.0.md`).
+     Offen: Wegfindung am hangarLong (Walker-Radius im NavGrid), KI-Zufall mit festem Startwert.
    - ✅ **0.5.0 Phase 2 – Bewegung:** Antriebsanteil der ENERGIE-Verteilung (neue Stellung
      ANTRIEB), Gyro auf Torso, Gang, Streuung und Rückstoß, Masse auf Federn, Drehträgheit und
      Bremsen, Hinken bei Beinschaden, Rückstoß schwerer Waffen (`docs/MOTION-0.5.0.md`).

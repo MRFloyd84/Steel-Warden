@@ -288,7 +288,7 @@ export class MissionCombat {
     const extra = d.missile ? this.missiles.spawnParams(slot, this.eye, this.aimDir) : { aimPoint: this.aimPoint.clone() };
     const proj = this.launch(this.player, slot, shotIndex, origin, dir, extra);
     if (d.missile) this.missiles.launched(slot, proj);
-    if (shotIndex === 0) this.player.motion.recoil(this.recoilImpulse(d));
+    if (shotIndex === 0) this.player.motion.recoil(this.recoilImpulse(d), this.cond?.weaponStabilization ?? 1);
   }
 
   /** Spread multiplier while walking (MachineCondition.spreadFactor). */

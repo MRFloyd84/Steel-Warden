@@ -59,6 +59,7 @@ export const SYSTEMS = {
     coolantSetpoint: 300, // coolant only removes heat above this temperature
     coolingPerFlow: 0.33, // per °C above setpoint at full flow (both pumps)
     passiveCooling: 0.02, // per °C above ambient, always
+    driveOverloadHeat: 10, // °C/s at full drive overload (extra drive energy actually used, Phase 2.1)
     warnTemp: 700, // HITZE + master warning + alarm
     scramTemp: 900, // emergency shutdown
     scramPowerRate: 1.5,
@@ -137,11 +138,20 @@ export const ENERGY_PRESETS = {
 };
 
 /**
- * Drive share of the ENERGIE knob → drive factor (speed and acceleration). AUSGL is the
- * reference (1); the factor follows the share with `sensitivity` and is clamped.
- * SCHILD / WAFFE (0.25) → 0.855, ANTRIEB (0.5) → 1.15 (overdrive limit).
+ * Drive share of the ENERGIE knob → drive factors. AUSGL is the reference (1); each factor
+ * follows the share with its `sensitivity` and is clamped.
+ * Top-level keys: top speed (mild) — SCHILD / WAFFE (0.25) → 0.927, ANTRIEB (0.5) → 1.08.
+ * `accel`: acceleration (strong) — SCHILD / WAFFE → 0.758, ANTRIEB → 1.35.
+ * Phase 2.1 (docs/VALIDATION-0.5.0.md): with one common factor the time to 90 % top speed
+ * did not change at all (v/a constant); the energy now acts mainly on the acceleration.
  */
-export const DRIVE_ENERGY = { reference: 0.33, sensitivity: 0.6, min: 0.75, max: 1.15 };
+export const DRIVE_ENERGY = {
+  reference: 0.33,
+  sensitivity: 0.3,
+  min: 0.9,
+  max: 1.08,
+  accel: { sensitivity: 1.0, min: 0.75, max: 1.35 },
+};
 
 /** The energy split set on the cockpit (single source for weapons, shields and drive). */
 export function energySplitOf(controls) {
@@ -149,10 +159,19 @@ export function energySplitOf(controls) {
   return ENERGY_PRESETS[label] ?? ENERGY_PRESETS.AUSGL;
 }
 
-export function driveEnergyFactor(split) {
-  const k = DRIVE_ENERGY;
-  const f = 1 + k.sensitivity * (split.drive / k.reference - 1);
+function shareFactor(split, k) {
+  const f = 1 + k.sensitivity * (split.drive / DRIVE_ENERGY.reference - 1);
   return Math.min(k.max, Math.max(k.min, f));
+}
+
+/** Drive share → top-speed factor. */
+export function driveEnergyFactor(split) {
+  return shareFactor(split, DRIVE_ENERGY);
+}
+
+/** Drive share → acceleration factor. */
+export function driveAccelFactor(split) {
+  return shareFactor(split, DRIVE_ENERGY.accel);
 }
 
 /** Radio lines (sender, text) for system events. */

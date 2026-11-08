@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { WALKERS, WALKER_ORDER } from '../src/data/walkers.js';
 import { COMBAT } from '../src/data/combat.js';
 import { CONFIG } from '../src/data/config.js';
-import { ENERGY_PRESETS, DRIVE_ENERGY, energySplitOf, driveEnergyFactor } from '../src/data/systems.js';
+import { ENERGY_PRESETS, DRIVE_ENERGY, energySplitOf, driveEnergyFactor, driveAccelFactor } from '../src/data/systems.js';
 import { WEAPONS } from '../src/data/weapons.js';
 import { WeaponSystem } from '../src/sim/WeaponSystem.js';
 import { DamageModel } from '../src/sim/DamageModel.js';
@@ -34,7 +34,8 @@ test('drive power = reactor output × legs factor × energy, counted once (all s
       const { cond } = scenario(id, preset);
       const expect = cond.reactorOutput * cond.legsSpeed * driveEnergyFactor(ENERGY_PRESETS[preset]);
       assert.ok(close(cond.drivePower, expect), `${id} ${preset}: ${cond.drivePower} vs ${expect}`);
-      assert.equal(cond.driveAccel, cond.driveEnergy);
+      // Phase 2.1: acceleration has its own, stronger factor (was: driveAccel === driveEnergy)
+      assert.equal(cond.driveAccel, driveAccelFactor(ENERGY_PRESETS[preset]));
     }
   }
 });

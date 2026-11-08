@@ -118,10 +118,16 @@ Schnellstart-Parameter (Dev und Build):
   Modelle werden vollständig geprüft. Bericht: `docs/AUDIT-0.5.0.md`, Tests: `npm test`.
 
 - **0.5.0 Phase 2 (Bewegung und Systemintegration):** ENERGIE-Schalter mit vierter Stellung
-  ANTRIEB wirkt auf Tempo und Beschleunigung (SCHILD/WAFFE ×0,855, ANTRIEB ×1,15). Der Gyro
+  ANTRIEB wirkt auf Tempo und Beschleunigung (SCHILD/WAFFE ×0,855, ANTRIEB ×1,15; in 2.1 neu abgestimmt). Der Gyro
   stabilisiert Torso, Gang, Zielen im Gehen und Rückstoß. Die Masse jedes Walkers prägt
   Federn, Drehträgheit und Bremsen; beschädigte Beine lassen den Walker hinken. Schwere
   Waffen haben Rückstoß. Bericht: `docs/MOTION-0.5.0.md`.
+
+- **0.5.0 Phase 2.1 (Validierung und Balancing):** Antriebsenergie wirkt vor allem auf den
+  Antritt (ANTRIEB Beschleunigung ×1,35, Tempo ×1,08; SCHILD/WAFFE ×0,76 / ×0,93), Bremsen ist
+  davon unabhängig. Tatsächlich genutzte Überleistung heizt den Reaktor (bis 10 °C/s, eigener
+  Kanal). Ein Stabilisator hält den Torso bei Dauerfeuer in Position. KI-Navigation mit
+  Drehträgheit geprüft, ohne Änderungsbedarf. Bericht: `docs/VALIDATION-0.5.0.md`.
 
 Fahrplan für die nächsten Phasen inklusive Stützpunkt, Bergung, Funk, Radar und Missionen:
 `docs/ROADMAP.md`.
@@ -786,8 +792,11 @@ Steuerung) laufen mit Puppeteer außerhalb des Projekts.
 ## Bewegung, Energie und Gyro (0.5.0 Phase 2)
 
 - **ENERGIE-Drehschalter** (rechte Konsole): SCHILD, AUSGL, WAFFE, neu ANTRIEB. Der
-  Antriebsanteil ergibt den Faktor für Höchsttempo und Beschleunigung (AUSGL ×1, SCHILD und WAFFE
-  ×0,855, ANTRIEB ×1,15). Schilde und Waffen bekommen ihre Anteile wie bisher. Ein Walker mit
+  Antriebsanteil wirkt vor allem auf die Beschleunigung (AUSGL ×1, SCHILD und WAFFE ×0,758,
+  ANTRIEB ×1,35), mild auf das Höchsttempo (×0,927 / ×1,08; seit Phase 2.1). Bremsen hängt nicht
+  davon ab. Nur die tatsächlich genutzte Überleistung (schneller oder kräftiger als nominal)
+  heizt den Reaktor, bis 10 °C/s; Stehen mit ANTRIEB kostet nichts. Schilde und Waffen bekommen
+  ihre Anteile wie bisher. Ein Walker mit
   zerstörtem Reaktor, zerstörten Beinen oder angezogener Beinsperre bleibt stehen, egal mit wie
   viel Energie.
 - **Gyro:** ausgerichtet (Taste GYRO in der Startprozedur) ist der Torso ruhig. Ohne Gyro (nicht
@@ -797,6 +806,8 @@ Steuerung) laufen mit Puppeteer außerhalb des Projekts.
   (KOLOSS ≈ 1,2 s bis zur vollen Drehrate) und schwingen länger.
 - **Beine:** ab Schaden MITTEL hinkt der Walker, ab SCHWER zusätzlich Tempo ×0,6 (wie bisher).
 - **Rückstoß:** schwere Waffen heben den Torso an (SR-3 auf GOLIATH ≈ 0,7°, ohne Gyro ≈ 1,2°).
+  Bei Dauerfeuer (RK-30, AK-20) hält der Stabilisator den Torso in Position; ohne Gyro bleibt
+  ein halber Versatz, nach Feuerende ist er wieder neutral.
 - Debug-Zeile „Zustand“ (Overlay `^`): Antrieb mit Energiefaktor, Gyro, Hinken.
 - Kennwerte: `src/data/config.js` → `feel` (Masse, Unruhe, Hinken, Rückstoß),
   `src/data/systems.js` → `ENERGY_PRESETS`, `DRIVE_ENERGY`, `src/data/combat.js` → `condition`.
@@ -805,7 +816,8 @@ Steuerung) laufen mit Puppeteer außerhalb des Projekts.
 **Testanleitung (Phase 2):**
 
 1. Paradeplatz, Debug `^`: ENERGIE im freien Blick (`V`) auf ANTRIEB → Zeile „Zustand“ zeigt
-   Antrieb 115, der Walker wird schneller; SCHILD → 85.
+   Antrieb 108 und Beschl. ×1,35, der Walker zieht deutlich kräftiger an; SCHILD → 93 / ×0,76.
+   Mit ANTRIEB Vollgas laufen: Reaktortemperatur steigt um ≈ 25–30 °C, im Stand nicht.
 2. Startprozedur ohne GYRO-Schritt (Handstart, Gyro auslassen) und dann laufen: der Torso rollt
    spürbar mehr, Treffer im Gehen streuen; im Stand trifft man wie gewohnt.
 3. GOLIATH (`?walker=goliath`): SR-3 abfeuern — der Torso ruckt kurz nach oben.
