@@ -1,6 +1,6 @@
 # STEEL WARDEN – Fahrplan
 
-Stand: nach den Walker-Modellen aus Tripo, davor Detailtexturen und externe Umgebungsmodelle, davor Teil 2 (Menüsystem), Startphase-Fix, A3 (Synthese-Gegner und KI), Teil 2 (Karten-Erweiterung) und A2b. Dieses Dokument führt das Grundkonzept,
+Stand: nach 0.5.0 Phase 1 (Architektur- und Zustandsaudit, MachineCondition), davor Walker-Modelle aus Tripo, davor Detailtexturen und externe Umgebungsmodelle, davor Teil 2 (Menüsystem), Startphase-Fix, A3 (Synthese-Gegner und KI), Teil 2 (Karten-Erweiterung) und A2b. Dieses Dokument führt das Grundkonzept,
 die Cockpit-Erweiterung, das Missionsdokument und die Ergänzungen (Stützpunkt, Bergung,
 Funk, Radar, Kampf, Übung) zusammen.
 
@@ -102,6 +102,11 @@ Funk, Radar, Kampf, Übung) zusammen.
      Palette. 32 CC0-Modelle (Kenney, Quaternius) als Bauwerke und Streuobjekte mit verworfenen
      Materialien, Platzhalter bei fehlenden Dateien, Credits-Prüfung. Normal-/Rauheitskarten
      bewusst nicht.
+   - ✅ **0.5.0 Phase 1 – Zustandsaudit:** `MachineCondition` als einzige Übersetzung von
+     Schaden und Maschinenzustand in Funktionswerte; Widersprüche behoben (zerstörter Reaktor,
+     Aufschalten ohne Sensoren, Störeffekt), Trefferzonen-Breitphase, Node-Tests (`npm test`).
+     Offen für Phase 2: Wirkung von Gyro/Stabilität auf Streuung und Gang, Antriebsanteil der
+     ENERGIE-Verteilung, Zustand der KI-Einheiten als Grundlage für KI-Entscheidungen.
    - ✅ **Walker-Modelle aus Tripo:** sechs Walker, SPLITTER, SICHEL, MONOLITH und Abwehrstachel
      als detaillierte Modelle (starre Segmente auf dem eigenen Rig, Maße aus dem Modell),
      Umschalter detailliert/klassisch; Waffen an den modellierten Rohren, Werksbewaffnung

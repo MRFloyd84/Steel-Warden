@@ -25,7 +25,30 @@ export class HitVolumes {
     });
     add(model.root, false);
     add(model.legGroup, true);
-    this.radius = model.walker.cockpit.eyeHeight * 0.85;
+    this.minRadius = model.walker.cockpit.eyeHeight * 0.85;
+    this.radius = this.minRadius;
+  }
+
+  /**
+   * Broad-phase radius from the zones in their current pose (largest distance of a box
+   * corner from the walker's root) plus a margin for movement until the next update.
+   * The fixed radius alone (eye height × 0.85) cut off the outer parts of wide or tall
+   * models (docs/AUDIT-0.5.0.md, P4). Call once per simulation step.
+   */
+  updateBounds(margin = 1) {
+    const root = this.model.root.position;
+    let max = this.minRadius;
+    for (const v of this.volumes) {
+      if (!v.mesh.parent) continue;
+      const m = v.mesh.matrixWorld;
+      for (let i = 0; i < 8; i++) {
+        a.set(i & 1 ? v.box.max.x : v.box.min.x, i & 2 ? v.box.max.y : v.box.min.y, i & 4 ? v.box.max.z : v.box.min.z).applyMatrix4(m);
+        const d = a.distanceTo(root) + margin;
+        if (d > max) max = d;
+      }
+    }
+    this.radius = max;
+    return max;
   }
 
   /** Removes the volumes of a detached part (e.g. an arm that was shot off). */

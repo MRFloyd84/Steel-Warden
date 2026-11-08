@@ -92,6 +92,7 @@ export class MissionCombat {
     this.lockAnnounced = false;
     this.time = 0;
     this.stats = { shots: 0, hits: 0 };
+    this.player.condition.systems = systems;
     if (systems.flags.shieldsReady) this.player.damage.fillShields();
     this.onNoise = null; // (pos, radius, source) — the AI hears shots and explosions
     this.units.onNoise = (pos, r, src) => this.onNoise?.(pos, r, src);
@@ -121,8 +122,9 @@ export class MissionCombat {
     return !this.world.objects.blocked(a, b);
   }
 
+  /** Target and radar range factor: sensor damage × SENSOREN level × disruption (MachineCondition). */
   get sensorsRange() {
-    return COMBAT.consequences.sensorRange[this.player.damage.stage('sensors')];
+    return this.player.condition.evaluate().sensorPerformance;
   }
 
   // ---- input (per frame) ----
@@ -155,7 +157,7 @@ export class MissionCombat {
     t.chain = canAim && pointerOk && input.held('fireChain');
     t.secondary = canAim && pointerOk && input.held('fireSecondary');
     t.all = canAim && pointerOk && input.held('fireAll');
-    if (this.firing && !was && !this.systems.canFire) this.blocked();
+    if (this.firing && !was && !this.player.condition.evaluate().weaponsOnline) this.blocked();
   }
 
   /** Chooses chain i (or steps by `step`); clicks, or dry-clicks if there is no such chain. */
@@ -225,12 +227,19 @@ export class MissionCombat {
     this.units.applyLimits(this.player);
   }
 
+  /** Before MissionEntities.update: the AI units move with this step's limits. */
+  applyUnitLimits() {
+    this.units.applyUnitLimits();
+  }
+
   update(dt) {
     this.time += dt;
     const sys = this.systems;
     const preset = ENERGY_PRESETS[this.controls.has('energyPreset') ? this.controls.positionLabel('energyPreset') : 'AUSGL'] ?? ENERGY_PRESETS.AUSGL;
-    const power = sys.s.reactor.power;
-    this.units.update(dt, { enabled: sys.flags.shieldsReady, rate: power * (preset.shields / 0.34) });
+    // Reactor output, weapons and shields from the machine condition (a destroyed reactor stops all three)
+    const cond = this.player.condition.evaluate();
+    const power = cond.reactorOutput;
+    this.units.update(dt, { enabled: cond.shieldsOnline, rate: power * (preset.shields / 0.34) });
     // Until the radar (A4): the player emits while the SENSOREN switch is on
     if (this.controls.has('sensors')) this.player.emitting = this.controls.value('sensors') === 1 && sys.s.power.bus;
     this.player.signature = signatureOf(sys);
@@ -239,7 +248,7 @@ export class MissionCombat {
     this.missiles.updateModes();
     const heat = this.weapons.update(dt, {
       holdReason: (slot) => this.missiles.holdReason(slot),
-      canFire: sys.canFire,
+      canFire: cond.weaponsOnline,
       power,
       weaponShare: preset.weapons,
       chain: this.triggers.chain,
@@ -540,6 +549,7 @@ export class MissionCombat {
         wreck: t.wreck?.kind ?? null,
       } : null,
       sensorsRange: this.sensorsRange,
+      condition: this.player.condition.evaluate(),
       sensorsFlicker: p.stage('sensors') >= 2,
       lockState: this.missiles.lockState,
       lockProgress: this.missiles.lockProgress ?? 0,

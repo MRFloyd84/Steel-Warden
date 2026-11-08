@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "check-credits": "node tools/check_credits.mjs"
+    "check-credits": "node tools/check_credits.mjs",
+    "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
     "three": "^0.187.0"

@@ -131,8 +131,8 @@ function updateCombatData(d, m, combat) {
   }
   // Torso internal structure is the reactor
   const t = r.parts.torso;
-  d.health.reactor = t.internal / t.maxInternal;
-  d.stages.reactor = t.internal <= 0 ? 4 : t.internal / t.maxInternal > 0.8 ? 0 : t.internal / t.maxInternal > 0.55 ? 1 : t.internal / t.maxInternal > 0.3 ? 2 : 3;
+  d.health.reactor = r.condition.reactorIntegrity;
+  d.stages.reactor = r.condition.reactorStage;
   d.armorNow.reactor = t.internal;
   d.radarRange *= r.sensorsRange;
   d.weaponsReadout = r.weapons;

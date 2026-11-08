@@ -42,6 +42,14 @@ export const COMBAT = {
     sensorRange: [1, 0.85, 0.6, 0.35, 0.1], // radar range factor per sensors stage
     kneelDrop: 0.42, // share of hip height the walker sinks when the legs are destroyed
     kneelPitch: 9, // degrees nose-down
+    disruptSensor: 0.25, // sensor performance factor while a 'disrupt' hit (PZ-9) is in effect
+  },
+
+  // Indicators of sim/MachineCondition.js without a consumer yet (phase 2 decides their effect)
+  condition: {
+    stabilityGyroShare: 0.3, // movement stability: part that depends on the gyro
+    stabilizationGyroShare: 0.5, // weapon stabilisation: part that depends on the gyro
+    legsStability: [1, 0.95, 0.85, 0.6, 0], // movement stability factor per legs stage
   },
 
   targeting: {

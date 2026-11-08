@@ -236,8 +236,7 @@ export class CockpitHits {
     this.time += dt;
     this.updateEnemy(dt);
     const dm = this.player.damage;
-    const torso = dm.parts.torso;
-    const critical = torso.internal / torso.maxInternal <= this.cfg.critical.torsoInternal && this.player.wreck?.kind !== 'reactor';
+    const critical = this.player.condition.evaluate().critical;
     if (critical && !this.critical) {
       this.systems.criticalAlarmUntil = this.systems.time + 6;
       if (this.time - this.lastCriticalRadio > this.cfg.criticalRadioCooldown) {

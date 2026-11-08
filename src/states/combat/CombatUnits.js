@@ -3,6 +3,7 @@ import { HitVolumes } from '../../sim/HitVolumes.js';
 import { DamageModel } from '../../sim/DamageModel.js';
 import { WeaponMounts } from '../../render/walker/WeaponModels.js';
 import { WeaponSystem } from '../../sim/WeaponSystem.js';
+import { MachineCondition } from '../../sim/MachineCondition.js';
 import { getWalkerModel } from '../../data/walkerModels.js';
 import { COMBAT } from '../../data/combat.js';
 import { patchObjectMaterial } from '../../render/DetailTextures.js';
@@ -56,6 +57,8 @@ export class CombatUnits {
     u.immobile = false;
     u.lostArms = new Set();
     u.aimPoint = null; // AI: where the arms point
+    // Functional values from damage and machinery (MissionCombat hands the player its WalkerSystems)
+    u.condition = new MachineCondition(u);
     return u;
   }
 
@@ -196,15 +199,22 @@ export class CombatUnits {
     return this.units.filter((u) => u.wreck && !u.isPlayer).map((u) => `${u.id} ${u.walker.name}: ${u.wreck.kind === 'legs' ? 'Beine' : 'Reaktor'} · Bergung ${Math.round(u.wreck.salvage * 100)} % = ${u.wreck.scrap} Schrott`);
   }
 
-  /** Movement limits from damage (call after SystemsLink set the system limits). */
+  /**
+   * Movement limits from the machine condition (player: call after SystemsLink set the
+   * system limits). Sets absolute values — calling it twice gives the same limits.
+   */
   applyLimits(unit) {
     const lim = unit.motion.limits;
-    if (!unit.isPlayer) lim.speedFactor = 1; // the player's base comes from SystemsLink each step
-    if (unit.damage.stage('legs') >= HEAVY) lim.speedFactor *= COMBAT.consequences.legsHeavySpeed;
-    if (unit.immobile) {
-      lim.canMove = false;
-      lim.stance = 0;
-    }
+    const c = unit.condition.evaluate();
+    lim.speedFactor = c.drivePower;
+    if (!c.canMove) lim.canMove = false;
+    if (!c.canTwist) lim.canTwist = false;
+    if (unit.immobile) lim.stance = 0;
+  }
+
+  /** Limits of all AI units, before they move this step. */
+  applyUnitLimits() {
+    for (const u of this.units) if (!u.isPlayer) this.applyLimits(u);
   }
 
   update(dt, playerShield) {
@@ -212,7 +222,7 @@ export class CombatUnits {
     for (const u of this.units) {
       if (u.isPlayer) u.damage.updateShields(dt, playerShield.enabled, playerShield.rate);
       else u.damage.updateShields(dt, u.wreck?.kind !== 'reactor', 1);
-      if (!u.isPlayer) this.applyLimits(u);
+      u.volumes.updateBounds();
       // Synthesis wrecks: the energy veins fade out slowly, splinters drop now and then
       if (u.wreck && u.faction === 'synth' && u.wreck.kind !== 'reactor') {
         const k = Math.max(0, 1 - (this.time - u.wreck.time) / COMBAT.synthGlowFade);

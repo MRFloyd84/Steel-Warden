@@ -546,6 +546,7 @@ export class MissionState extends State {
     this.checkDeploy();
     if (this.deployed) this.missionTime += dt;
     this.door?.update(dt);
+    this.combat.applyUnitLimits();
     this.entities.update(dt);
     this.combat.update(dt);
     this.ai.update(dt);
@@ -665,7 +666,7 @@ export class MissionState extends State {
   debugInfo() {
     const wrecks = this.combat.units.wreckLines();
     return [
-      ...missionDebugLines(this), ...this.worldLink.debugLine(), ...this.combat.debugLines(), this.hits.debugLine(),
+      ...missionDebugLines(this), ...this.worldLink.debugLine(), ...this.combat.debugLines(), this.combat.player.condition.debugLine(), this.hits.debugLine(),
       ...this.ai.debugLines(), this.script.debugLine(), ...(wrecks.length ? ['Wracks:', ...wrecks.map((w) => `  ${w}`)] : []),
       detailDebugLine(), ...propDebugLines(),
     ].filter((l) => l !== null);

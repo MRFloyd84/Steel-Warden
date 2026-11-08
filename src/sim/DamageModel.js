@@ -27,7 +27,8 @@ export class DamageModel {
       this.parts[c] = { armor, maxArmor: armor, internal, maxInternal: internal, stage: 0 };
     }
     const sh = walker.shields;
-    this.designShare = sh.front / (sh.front + sh.rear);
+    // Walkers without shields (drone): no split, no division by zero
+    this.designShare = sh.front + sh.rear > 0 ? sh.front / (sh.front + sh.rear) : 0.5;
     this.shiftLevel = 0;
     this.shields = { max: { ...sh }, value: { front: 0, rear: 0, left: 0, right: 0 } };
     delete this.shields.max.rechargeRate;
@@ -80,6 +81,7 @@ export class DamageModel {
       return;
     }
     if (this.time - this.lastHit < COMBAT.shields.regenDelay || this.time < this.regenBlockedUntil) return;
+    if (m.front <= 0) return;
     const gain = this.rechargeRate * rateFactor * dt;
     for (const s of SIDES) v[s] = Math.min(m[s], v[s] + gain * (m[s] / m.front));
   }

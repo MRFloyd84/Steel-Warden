@@ -111,6 +111,12 @@ Schnellstart-Parameter (Dev und Build):
   detaillierte Modelle (starre Segmente auf dem eigenen Rig), Abwehrstachel als Modell;
   Umschalter detailliert/klassisch.
 
+- **0.5.0 Phase 1 (Architektur- und Zustandsaudit):** `sim/MachineCondition.js` übersetzt Schaden
+  und Maschinenzustand in einheitliche Funktionswerte (Reaktor, Antrieb, Hydraulik, Stabilität,
+  Waffenstabilisierung, Sensoren). Behoben: ein zerstörter Reaktor feuert und lädt nicht mehr;
+  aufschalten geht nur noch mit Sensoren; der Störeffekt der PZ-9 wirkt; die Trefferzonen der großen
+  Modelle werden vollständig geprüft. Bericht: `docs/AUDIT-0.5.0.md`, Tests: `npm test`.
+
 Fahrplan für die nächsten Phasen inklusive Stützpunkt, Bergung, Funk, Radar und Missionen:
 `docs/ROADMAP.md`.
 
@@ -738,6 +744,39 @@ Rohdateien in `assets/sounds-raw/`, Aufbereitung mit `python3 tools/prepare_soun
 eingebettet, damit der Offline-Build per `file://` funktioniert. Klang und Mischung:
 `src/data/sounds.js`. Herkunft: `CREDITS.md`.
 
+## Zustandsrechnung und Tests
+
+`src/sim/MachineCondition.js` liest DamageModel, WalkerSystems (nur Spieler), Wrack, stationär und
+verlorene Arme und liefert Werte von 0 bis 1:
+
+- Reaktor: Struktur, verfügbar, Ausgangsleistung
+- Antriebsleistung, Hydraulikleistung
+- Bewegungsstabilität, Waffenstabilisierung
+- Sensorleistung
+- Waffen und Schilde an/aus, Anteil verbliebener Waffen
+- kritisch
+
+Der Zustand schreibt nie zurück; Schaden rechnet weiterhin nur das DamageModel. Verbraucher:
+Bewegungsgrenzen, Waffen, Schilde, Aufschaltreichweite und Radar, Reaktorstufe im Cockpit,
+kritischer Alarm. Bewegungsstabilität und Waffenstabilisierung werden nur angezeigt (Debug-Zeile
+„Zustand“); welche Wirkung sie haben, legt Phase 2 fest.
+
+`npm test` startet die Node-Tests in `tests/`, ohne Browser: Zustandswerte, Determinismus,
+Schadensrechnung, Trefferzonen, Automatik- und Handstart. Die Browser-Prüfungen (Kampf, Menü,
+Steuerung) laufen mit Puppeteer außerhalb des Projekts.
+
+**Testanleitung (Phase 1):**
+
+1. Kalt starten, `Shift+S`: Die Schalter bewegen sich wie bisher, nach gut einer Minute
+   Spielzeit ist der Walker bereit (Debug `^`: Zeile „Zustand“ zeigt Antrieb, Sensoren, Waffen an).
+2. Im „Duell“ SENSOREN ausschalten: Aufschalten (`T`/`E`) findet kein Ziel mehr. Einschalten:
+   nach etwa 3 s geht es wieder.
+3. „Duell“, Debug `Shift+F8` mehrfach (schwere Treffer auf den Torso): kritischer Alarm wie bisher.
+   Explodiert der Reaktor, feuern die Waffen nicht mehr und die Schilde fallen.
+4. Störeffekt: Den hat nur der PZ-9 Partikelwerfer, und den führt seit der Waffenumstellung kein
+   Walker ab Werk (wieder möglich mit dem Hangar, Phase C). Geprüft wird er deshalb im Node-Test
+   (`tests/machineCondition.test.mjs`).
+
 ## Datenpflege
 
 - `src/input/actions.js` – alle Eingabe-Aktionen: Kontexte, Typ, Standardtasten, Gamepad, Achsen;
@@ -767,6 +806,7 @@ eingebettet, damit der Offline-Build per `file://` funktioniert. Klang und Misch
 - `src/data/enemies.js` – Synthese-Einheiten (Walker-Format plus `ai`, `salvage`, `faction`),
   Gebäude-Geschütze `GUNS`; `src/data/enemyModels.js` – ihre Baupläne
 - `src/data/difficulty.js` – die fünf Schwierigkeitsgrade
+- `src/data/combat.js` → `consequences.disruptSensor`, `condition` – Kennwerte der Zustandsrechnung
 - `src/data/textures.js` – Detailtexturen (Datei, Kachelgröße, Quelle), Lagen, Materialgruppen
 - `src/data/walkerMeshes.js` – detaillierte Walker-Modelle (Geometrie-ID → Tripo-Datei), Quelle
 - `src/data/props.js` – externe Modelle (Paket, Datei, Maßstab, Kollision, Panzerung), Farbregeln
