@@ -66,6 +66,7 @@ export class AIDirector {
     this.spotted = new Map(); // target → time any AI unit last saw it (artillery spotting)
     this.frozen = false;
     this.holdFire = false;
+    this.flight = null; // ai/Flight.js — the player's wingmen (MissionState attaches it)
     this.time = 0;
     this.tickMs = 0;
     this.groupSerial = 0;
@@ -117,10 +118,15 @@ export class AIDirector {
     return this.sideCache[side] ?? [];
   }
 
-  /** Someone sees the target: artillery anywhere on the side gets the data (Synthesis network). */
+  /**
+   * Someone sees the target: artillery anywhere on the side gets the data (Synthesis network).
+   * Only units of the other side learn it (a wingman spotting an enemy must not hand that enemy
+   * to the enemy artillery as a target).
+   */
   spot(target, pos, vel, from) {
+    if (target.side === 'enemy') return; // seen by a wingman: nothing for the Synthesis net
     this.spotted.set(target, this.time);
-    for (const c of this.controllers) if (c !== from && !c.dead && c.ai.needsSpotter) c.learn(target, pos, vel, 'net');
+    for (const c of this.controllers) if (c !== from && !c.dead && c.ai.needsSpotter && c.unit.side !== target.side) c.learn(target, pos, vel, 'net');
   }
 
   /** Seconds since any AI unit saw the target. */
@@ -331,7 +337,7 @@ export class AIDirector {
 
   /** Shots and explosions: units in hearing range learn the position. */
   noise(pos, radius, source) {
-    for (const c of this.controllers) {
+    for (const c of [...this.controllers, ...(this.flight?.members ?? [])]) {
       if (c.dead || c.dormant || c.unit === source) continue;
       const m = c.unit.motion;
       if (Math.hypot(pos.x - m.x, pos.z - m.z) < radius) c.hear(pos, source);
@@ -375,6 +381,9 @@ export class AIDirector {
       for (const c of this.controllers) if (!c.dormant) c.step(dt);
     }
     for (const g of this.gunners) if (g.active) g.update(dt);
+    // Wingmen (ai/Flight.js) are not in controllers: objectives, waves and the Synthesis net
+    // only see the enemy; they are not frozen by the debug freeze either
+    this.flight?.update(dt);
     for (let n = 0; n < PATHS_PER_STEP && this.pathQueue.length; n++) {
       const c = this.pathQueue.shift();
       c.pathPending = false;

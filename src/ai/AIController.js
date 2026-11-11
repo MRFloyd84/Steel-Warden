@@ -11,6 +11,8 @@ const DEFAULT_AI = { profile: 'hunter', preferredRange: 300, aggression: 0.5, mo
 export const STATE_LABELS = {
   idle: 'Ruhe', patrol: 'Patrouille', investigate: 'Untersuchen', attack: 'Angriff', flank: 'Flankieren',
   retreat: 'Rückzug', callHelp: 'Verstärkung', search: 'Suchen', cover: 'Deckung', dead: 'Wrack',
+  // wingmen (WingmanController)
+  wait: 'Wartet', follow: 'Formation', hold: 'Stellung', move: 'Marsch', fallBack: 'Zurück',
 };
 
 const v1 = new THREE.Vector3();
@@ -74,6 +76,8 @@ export class AIController {
     this.scanPhase = Math.random() * 10;
     this.ballisticCache = null;
     this.shots = 0;
+    this.aimComponent = 'torso'; // wingmen: 'legs' on order (Beine zielen)
+    this.friendlyCheck = false; // wingmen: hold fire when a friend is in the line of fire
     // Weapon figures for aiming
     const slots = unit.weapons.slots;
     const direct = slots.filter((s) => !s.def.missile && !s.def.ballistic);
@@ -518,7 +522,8 @@ export class AIController {
   /** Motion input for this step (called by MissionEntities). */
   drive(dt) {
     const m = this.unit.motion;
-    if (this.d.frozen || this.dead || this.dormant) {
+    // The debug freeze ("Gegner einfrieren") holds the enemy only, not the player's wingmen
+    if ((this.d.frozen && this.unit.side === 'enemy') || this.dead || this.dormant) {
       m.throttle.value = 0;
       return IDLE;
     }
@@ -619,7 +624,7 @@ export class AIController {
       let vel;
       // Artillery aims with its spotters' data (live) while someone sees the target
       if (c.visible || (this.ai.needsSpotter && this.d.spottedAgo(tgt) < 3)) {
-        pos = tgt.volumes.componentCenter('torso', v1);
+        pos = tgt.volumes.componentCenter(this.aimComponent !== 'torso' && tgt.volumes.hasComponent?.(this.aimComponent) ? this.aimComponent : 'torso', v1);
         vel = velocityOf(tgt, v2);
       } else {
         pos = v1.copy(c.pos).addScaledVector(c.vel, Math.min(2, this.time - c.time));
@@ -708,7 +713,8 @@ export class AIController {
       if (!visible) return 'SICHT';
       if (d.guidance?.includes('active') && !this.locked) return 'AUFSCHALT.';
       if (dist > d.range) return 'REICHW.';
-      return this.yawErr > 20 * DEG ? 'AUSR.' : '';
+      if (this.yawErr > 20 * DEG) return 'AUSR.';
+      return this.friendlyCheck && this.friendInLine() ? 'FREUND' : '';
     }
     if (d.ballistic) {
       if (!spotted) return 'SICHT';
@@ -722,7 +728,39 @@ export class AIController {
     const tol = (s.hp.location.startsWith('arm') ? 10 : 3.5) * DEG + Math.atan2(3, Math.max(1, dist));
     if (this.yawErr > tol) return 'AUSR.';
     if (this.pitchErr > tol * 1.6 && !s.hp.location.startsWith('arm')) return 'AUSR.';
+    if (this.friendlyCheck && this.friendInLine()) return 'FREUND';
     return '';
+  }
+
+  /**
+   * A unit of the own side close to the line from this walker to the aim point (wingmen hold
+   * fire). Checked at most every 0.1 s.
+   */
+  friendInLine() {
+    if (this.time - (this.friendT ?? -1) < 0.1) return this.friendHit;
+    this.friendT = this.time;
+    const p = this.unit.motion.pose;
+    const ap = this.aimPoint;
+    const ax = ap.x - p.x;
+    const ay = ap.y - p.y;
+    const az = ap.z - p.z;
+    const len2 = ax * ax + ay * ay + az * az || 1;
+    this.friendHit = false;
+    for (const o of this.d.unitsOfSide(this.unit.side)) {
+      if (o === this.unit || o.wreck?.kind === 'reactor') continue;
+      const c = o.volumes.componentCenter('torso', v3);
+      const t = ((c.x - p.x) * ax + (c.y - p.y) * ay + (c.z - p.z) * az) / len2;
+      if (t <= 0 || t >= 1) continue;
+      const dx = p.x + ax * t - c.x;
+      const dy = p.y + ay * t - c.y;
+      const dz = p.z + az * t - c.z;
+      const r = o.motion.radius + (this.friendlyGap ?? 4);
+      if (dx * dx + dy * dy + dz * dz < r * r) {
+        this.friendHit = true;
+        break;
+      }
+    }
+    return this.friendHit;
   }
 
   shotFor(s) {

@@ -7,6 +7,7 @@ import { DIFFICULTY, DIFFICULTY_ORDER } from '../../data/difficulty.js';
 import { Storage } from '../../core/Storage.js';
 import { missionError, startupOf } from '../../states/missionStartup.js';
 import { TIME_LABELS, theaterName, weatherName, START_LABELS } from './missionInfo.js';
+import { PILOTS, WING_NAMES, wingmenSlots } from '../../data/pilots.js';
 
 const ALL = WALKER_ORDER.map((id) => WALKERS[id]);
 const armorOf = (w) => Object.values(w.armor).reduce((a, b) => a + b, 0);
@@ -39,6 +40,29 @@ export class MissionPrep extends MenuPage {
     this.practice = { ...PRACTICE_DEFAULTS, ...(Storage.load('practice', {}) ?? {}) };
     const d = Storage.load('difficulty', 'normal');
     this.difficulty = DIFFICULTY[d] ? d : 'normal';
+    // Team: one walker (or none) per wingman slot; the mission limits the slots
+    const savedTeam = Storage.load('prepWingmen', []) ?? [];
+    this.team = WING_NAMES.map((_, i) => (WALKERS[savedTeam[i]] ? savedTeam[i] : null));
+  }
+
+  get slots() {
+    return wingmenSlots(this.mission);
+  }
+
+  /** Chosen wingmen for the mission start (null = slot empty). */
+  get wingmen() {
+    return this.team.slice(0, this.slots);
+  }
+
+  teamHtml() {
+    const n = this.slots;
+    if (!n) return '<h3>Team</h3><p class="m-dim">Dieser Einsatz ist allein zu fliegen.</p>';
+    const rows = this.team.slice(0, n).map((id, i) => {
+      const p = PILOTS[i];
+      return choiceRow(`wing${i}`, `${WING_NAMES[i]} · ${p.callsign}`, id ? WALKERS[id].name : '—', { hint: `${p.name} — Walker wählen oder leer lassen` });
+    }).join('');
+    const count = this.wingmen.filter(Boolean).length;
+    return `<h3>Team <span class="m-dim">(${count ? `${count} Flügel${count > 1 ? 'leute' : 'mann'}` : 'allein'} · Funk: F, Befehle Shift+1–7)</span></h3>${rows}`;
   }
 
   mount() {
@@ -86,6 +110,7 @@ export class MissionPrep extends MenuPage {
           <div class="m-stats">${bars}</div>
           <h3>Bewaffnung <span class="m-dim">(Werk — Hangar folgt in Phase C)</span></h3>
           <table class="m-loadout">${loadout}</table>
+          ${this.teamHtml()}
           <h3>Übung</h3>
           ${choiceRow('invulnerable', 'Verwundbar', p.invulnerable ? 'nein' : 'ja')}
           ${choiceRow('infiniteAmmo', 'Munition', p.infiniteAmmo ? 'unbegrenzt' : 'begrenzt')}
@@ -123,6 +148,12 @@ export class MissionPrep extends MenuPage {
       this.walkerId = n;
       Storage.save('prepWalker', n);
       this.stack.scene?.showcase(n);
+      changed = true;
+    } else if (key.startsWith('wing')) {
+      const i = Number(key.slice(4));
+      const list = [null, ...WALKER_ORDER];
+      this.team[i] = this.cycle(list, this.team[i], dir, true);
+      Storage.save('prepWingmen', this.team);
       changed = true;
     } else if (key === 'invulnerable' || key === 'infiniteAmmo') {
       p[key] = !p[key];
@@ -169,7 +200,7 @@ export class MissionPrep extends MenuPage {
     }
     const practice = { ...this.practice, difficulty: this.difficulty };
     this.game.loading.show({ name: this.mission.name, place: `${theaterName(this.mission)} · ${this.walker.name}` });
-    this.game.states.change('mission', { missionId: this.mission.id, walkerId: this.walkerId, practice });
+    this.game.states.change('mission', { missionId: this.mission.id, walkerId: this.walkerId, practice, wingmen: this.wingmen });
     return true;
   }
 }

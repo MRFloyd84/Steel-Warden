@@ -111,6 +111,14 @@ Schnellstart-Parameter (Dev und Build):
   detaillierte Modelle (starre Segmente auf dem eigenen Rig), Abwehrstachel als Modell;
   Umschalter detailliert/klassisch.
 
+- **Flügelleute (Team):** bis zu drei benannte Flügelleute (ZWEI · ANKER, DREI · FUNKE,
+  VIER · RIEGEL), Walker je Platz in der Einsatzvorbereitung wählbar; die Mission begrenzt die
+  Plätze (Duell: allein). Sieben Funkbefehle über `F` oder `Shift+1`–`7`: Formation, Mein Ziel
+  angreifen, Freies Feuer, Navpunkt anlaufen, Stellung halten, Zurückfallen, Beine zielen.
+  Eigene Schüsse treffen die Flügelleute (Funkwarnung); sie selbst schießen nicht durch Freunde.
+  Moral im Einsatz, Funkmeldungen, Marken im HUD, Ringe auf dem Radar, Teamtabelle und
+  Abschüsse je Schütze in der Nachbesprechung. Plan und Prüfung: `docs/WINGMEN-PLAN.md`.
+
 - **Cockpit-Modell aus Tripo:** ein texturiertes Cockpit für alle sechs Walker (je Klasse leicht
   skaliert). Die echten Schalter, Lampen und sechs Monitore sitzen auf seinen Paneelen und in
   seinen Rahmen: links Strom, Hilfsaggregat und Reaktor, rechts der große ENERGIE-Knopf und die
@@ -158,7 +166,7 @@ wichtigsten Tasten von selbst.
 - **Optische Rakete:** Beim Start schaltet der Monitor selbst auf die Raketenkamera (Kontext
   Raketenkamera); bei gehaltenem Feuer lenkt die Maus die Rakete. Nach Einschlag oder Absturz
   zurück. `M` dient zum Zuschauen bei aktiven/halbaktiven Raketen.
-- **Funkmenü** `F`: Ziffern 1–7 wählen den Befehl, `Esc` schließt (bis Phase B: keine Flügelleute).
+- **Funkmenü** `F`: zeigt die Flügelleute (Walker, Torso, Befehl); Ziffern 1–7 wählen den Befehl, `Esc` schließt. Dieselben Befehle direkt mit `Shift+1`–`7`.
 - **Pause:** `Esc` gibt die Maus frei und pausiert in einem Schritt; `Esc` oder „Fortsetzen“ geht
   weiter, ein Klick ins Bild fängt die Maus wieder. Fokuswechsel lässt alle gehaltenen Tasten los,
   der Schub bleibt stehen.
@@ -256,6 +264,13 @@ _Erzeugt aus `src/input/actions.js` mit `node tools/gen-controls.mjs` — nicht 
 | Aktion | Tastatur / Maus | Gamepad | Kontext |
 |---|---|---|---|
 | Funkmenü | `F` | Y | Kampf, freier Blick, Außenkamera |
+| Team: Formation | `Shift+1` | – | Kampf, freier Blick, Außenkamera |
+| Team: Mein Ziel angreifen | `Shift+2` | – | Kampf, freier Blick, Außenkamera |
+| Team: Freies Feuer | `Shift+3` | – | Kampf, freier Blick, Außenkamera |
+| Team: Navpunkt anlaufen | `Shift+4` | – | Kampf, freier Blick, Außenkamera |
+| Team: Stellung halten | `Shift+5` | – | Kampf, freier Blick, Außenkamera |
+| Team: Zurückfallen / zu mir | `Shift+6` | – | Kampf, freier Blick, Außenkamera |
+| Team: Beine zielen (an/aus) | `Shift+7` | – | Kampf, freier Blick, Außenkamera |
 | Tastenhilfe ein/aus | `H` | Select | überall |
 | Pause | `Esc` | Start | Kampf, freier Blick, Raketenkamera, Außenkamera, Freiflug |
 

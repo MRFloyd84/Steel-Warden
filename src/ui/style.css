@@ -246,6 +246,19 @@ td:first-child { color: var(--green-dim); }
 .radio-panel li { padding: 2px 4px; }
 .radio-panel li.selected { background: rgba(109, 255, 142, 0.14); }
 .radio-foot { font-size: 11px; color: var(--green-dim); margin-top: 6px; }
+.radio-key { float: right; margin-left: 14px; color: var(--green-dim); font-size: 11px; }
+.radio-wing { color: var(--green); font-size: 12px; white-space: nowrap; }
+.radio-wing span { margin-left: 8px; color: var(--green-dim); }
+.radio-wing.broken span:last-child, .radio-wing.immobile span:last-child { color: var(--amber); }
+.radio-wing.lost { color: #ff6a4a; }
+.radio-wing-foot { color: var(--amber-dim); font-size: 11px; margin: 2px 0 2px; }
+/* wingmen on the HUD */
+.ally-tag { position: absolute; left: 0; top: 0; font-size: 11px; color: #6dff8e; white-space: nowrap; pointer-events: none; text-shadow: 0 0 3px #000; }
+.ally-tag::before { content: ''; display: inline-block; width: 8px; height: 8px; border: 1px solid #6dff8e; border-radius: 50%; margin-right: 4px; vertical-align: -1px; }
+.ally-tag.lost { color: #ff6a4a; }
+.ally-tag[hidden] { display: none; }
+.crosshair.on-friend { border-color: #6dff8e; }
+.crosshair.on-friend::after { background: #6dff8e; }
 .help-card { position: absolute; right: 18px; top: 60px; max-height: calc(100% - 120px); overflow: auto; padding: 10px 14px; font-size: 12px; color: var(--green); }
 .help-card.intro { top: auto; bottom: 90px; }
 .help-title { color: var(--amber); letter-spacing: 0.1em; margin-bottom: 6px; }
@@ -321,3 +334,8 @@ kbd.pad { border-color: var(--amber-dim); color: var(--amber); }
   white-space: pre-wrap; font: 13px/1.5 var(--mono, monospace); color: #ffb8a8;
   background: rgba(20, 8, 6, 0.96); border: 1px solid #c0503a; box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
 }
+
+/* Debrief: team table (wingmen) */
+.m-team td { white-space: nowrap; vertical-align: top; padding-bottom: 6px; }
+.m-team.lost td:first-child { color: #ff6a4a; }
+.m-warn { color: var(--amber); }

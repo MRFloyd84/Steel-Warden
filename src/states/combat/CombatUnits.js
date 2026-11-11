@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { killCredit } from '../../sim/friendlyFire.js';
 import { HitVolumes } from '../../sim/HitVolumes.js';
 import { DamageModel } from '../../sim/DamageModel.js';
 import { WeaponMounts } from '../../render/walker/WeaponModels.js';
@@ -31,6 +32,7 @@ export class CombatUnits {
     this.sampler = sampler;
     this.droppedWeapons = [];
     this.kills = 0;
+    this.teamKills = 0;
     this.time = 0;
 
     this.player = this.prep(entities.player, true);
@@ -45,7 +47,10 @@ export class CombatUnits {
   prep(u, isPlayer) {
     const w = u.walker;
     u.isPlayer = isPlayer;
-    u.side = isPlayer ? 'player' : 'enemy';
+    // Wingmen are spawned with side 'player' (MissionEntities.addUnit side)
+    u.side = isPlayer ? 'player' : u.spawnSide ?? 'enemy';
+    u.lastHitBy = null; // shooter of the last hit (kill credit)
+    u.killedBy = null;
     u.faction = w.faction ?? 'human';
     u.weapons = new WeaponSystem(w, { loadout: w.defaultLoadout, groups: w.defaultGroups, chains: w.defaultChains });
     u.mounts = new WeaponMounts(u.model, [...u.weapons.slots, ...u.weapons.equipment]);
@@ -76,8 +81,14 @@ export class CombatUnits {
     return this.units;
   }
 
+  /** Units of the other side (lock, radar contacts, kills). */
   get enemies() {
-    return this.units.filter((u) => !u.isPlayer);
+    return this.units.filter((u) => u.side === 'enemy');
+  }
+
+  /** The player's wingmen. */
+  get allies() {
+    return this.units.filter((u) => !u.isPlayer && u.side === 'player');
   }
 
   /** Applies stage changes from a hit. */
@@ -190,8 +201,16 @@ export class CombatUnits {
     const first = !unit.wreck;
     const scrap = Math.round((unit.walker.salvage?.scrap ?? unit.walker.tonnage * 4) * COMBAT.salvage[kind]);
     unit.wreck = { kind, time: this.time, salvage: COMBAT.salvage[kind], scrap };
-    if (first && !unit.isPlayer) this.kills++;
-    this.bus.emit('combat:wreck', { unit: unit.id, kind });
+    if (first) {
+      unit.killedBy = unit.lastHitBy ?? null;
+      // kills: enemies the player put out of action (or nobody known: ground, chain blast — as
+      // before wingmen existed); teamKills: by its wingmen
+      const credit = killCredit(unit);
+      if (credit === 'player') this.kills++;
+      else if (credit === 'team') this.teamKills++;
+    }
+    // first: the unit just went out of action (legs or reactor); a later reactor loss of a legless wreck is not a new kill
+    this.bus.emit('combat:wreck', { unit: unit.id, kind, side: unit.side, by: unit.killedBy?.id ?? null, first });
   }
 
   /** Wrecks for the debug overlay: id, kind, salvage value. */

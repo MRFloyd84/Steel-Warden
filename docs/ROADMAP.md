@@ -1,6 +1,6 @@
 # STEEL WARDEN – Fahrplan
 
-Stand: nach dem Cockpit-Modell aus Tripo, davor 0.5.0 Phase 2.1 (Bewegungsvalidierung und Balancing), davor Phase 2 (Bewegung und Systemintegration), davor Phase 1 (Architektur- und Zustandsaudit, MachineCondition), davor Walker-Modelle aus Tripo, davor Detailtexturen und externe Umgebungsmodelle, davor Teil 2 (Menüsystem), Startphase-Fix, A3 (Synthese-Gegner und KI), Teil 2 (Karten-Erweiterung) und A2b. Dieses Dokument führt das Grundkonzept,
+Stand: nach den Flügelleuten (B5 vorgezogen), davor Cockpit-Modell aus Tripo, davor 0.5.0 Phase 2.1 (Bewegungsvalidierung und Balancing), davor Phase 2 (Bewegung und Systemintegration), davor Phase 1 (Architektur- und Zustandsaudit, MachineCondition), davor Walker-Modelle aus Tripo, davor Detailtexturen und externe Umgebungsmodelle, davor Teil 2 (Menüsystem), Startphase-Fix, A3 (Synthese-Gegner und KI), Teil 2 (Karten-Erweiterung) und A2b. Dieses Dokument führt das Grundkonzept,
 die Cockpit-Erweiterung, das Missionsdokument und die Ergänzungen (Stützpunkt, Bergung,
 Funk, Radar, Kampf, Übung) zusammen.
 
@@ -102,6 +102,11 @@ Funk, Radar, Kampf, Übung) zusammen.
      Palette. 32 CC0-Modelle (Kenney, Quaternius) als Bauwerke und Streuobjekte mit verworfenen
      Materialien, Platzhalter bei fehlenden Dateien, Credits-Prüfung. Normal-/Rauheitskarten
      bewusst nicht.
+   - ✅ **Flügelleute (B5 vorgezogen):** bis zu 3 benannte Piloten, Auswahl in der
+     Einsatzvorbereitung, Plätze je Mission (`wingmen`), 7 Befehle (Funkmenü + Shift+1–7),
+     Eigenbeschuss durch den Spieler, Moral im Einsatz, Funk, HUD-Marken, Radar, Nachbesprechung
+     (`docs/WINGMEN-PLAN.md`). Offen für B/C: Erfahrung, Verwundung und Tod über Einsätze hinweg,
+     begrenzte Funkreichweite, Befehle an einzelne Flügelleute.
    - ✅ **Cockpit-Modell aus Tripo:** ein Cockpit für alle Walker, echte Schalter und Monitore auf
      den Modellflächen, Griffe als Hebel, Option modelliert/klassisch (`docs/COCKPIT-MODEL-PLAN.md`).
      Offen: Sitz und Rückwand noch prozedural.
@@ -142,7 +147,9 @@ Funk, Radar, Kampf, Übung) zusammen.
 4. Briefing (Befehlshaber, Karte, Ziele, Feindaufklärung, erwartete Bergung) und Debriefing
    (Ergebnisstufe, Abschüsse je Pilot, Schäden, Bergung, Erfahrung, Funk-Kommentare).
 5. Wingmen mit den 7 Befehlen, Erfahrung, Moral, Verwundung, Tod. Begrenzte Funkreichweite,
-   zerstörtes Funkgerät → Bildrauschen.
+   zerstörtes Funkgerät → Bildrauschen. *(Teil 1 erledigt: Befehle, Moral im Einsatz, Funk,
+   Auswahl, Eigenbeschuss — siehe A „Flügelleute“; offen: Erfahrung/Verwundung/Tod über
+   Einsätze, Funkreichweite, Funkgerät-Schaden.)*
 
 ### C – Stützpunkt und Kampagne
 - Bildschirme: Reparatur · Werkstatt · Waffenfertigung · Besatzung · Bewaffnung (Hangar) · Einsatz.

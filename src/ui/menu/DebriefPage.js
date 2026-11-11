@@ -3,6 +3,7 @@ import { MenuPage, esc } from './MenuPage.js';
 const RESULT_LABELS = { aborted: 'Einsatz abgebrochen', completed: 'Einsatz erfüllt', failed: 'Einsatz gescheitert' };
 const COMPONENT_LABELS = { torso: 'Torso', armL: 'Arm links', armR: 'Arm rechts', legs: 'Beine', sensors: 'Sensoren', reactor: 'Reaktor' };
 const WRECK_LABELS = { legs: 'Beine zerstört (intaktes Wrack)', reactor: 'Reaktor (ausgebrannt)' };
+const TEAM_STATE = { ok: 'einsatzbereit', broken: 'erschüttert', immobile: 'Beine verloren', lost: 'ausgefallen' };
 
 /**
  * Debrief (simple, extended in phase B): result, mission time from deploy,
@@ -20,7 +21,8 @@ export class DebriefPage extends MenuPage {
     const t = Math.floor(s.duration ?? 0);
     const time = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')} min${s.deployed === false ? ' (nicht ausgerückt)' : ''}`;
     const acc = s.shots ? `${Math.round((s.hits / s.shots) * 100)} % (${s.hits} von ${s.shots} Schüssen)` : '—';
-    const kills = (s.killList ?? []).map((k) => `<tr><td>${esc(k.name)}</td><td>${esc(WRECK_LABELS[k.kind] ?? k.kind)}</td><td>${k.scrap} Schrott</td></tr>`).join('');
+    const kills = (s.killList ?? []).map((k) => `<tr><td>${esc(k.name)}</td><td>${esc(WRECK_LABELS[k.kind] ?? k.kind)}</td><td>${k.scrap} Schrott</td><td>${esc(k.by ?? '')}</td></tr>`).join('');
+    const team = (s.team ?? []).map((t) => `<tr class="m-team ${t.state}"><td>${esc(t.name)} · ${esc(t.callsign)}<br><span class="m-dim">${esc(t.pilot)}</span></td><td>${esc(t.walker)}<br><span class="m-dim">${esc(TEAM_STATE[t.state] ?? t.state)}${t.state === 'lost' ? '' : ` · Torso ${Math.round(t.torso * 100)} %`}</span></td><td>${t.kills} ${t.kills === 1 ? 'Abschuss' : 'Abschüsse'}${t.friendlyHits ? `<br><span class="m-warn">${t.friendlyHits}× Eigenbeschuss</span>` : ''}</td></tr>`).join('');
     const dmg = Object.entries(s.damage ?? {}).map(([c, d]) => `
       <tr><td>${esc(COMPONENT_LABELS[c] ?? c)}</td><td><span class="m-bar dmg"><span style="width:${Math.round(d.left * 100)}%"></span></span></td><td>${Math.round(d.left * 100)} %${d.lost ? ' · zerstört' : ''}</td></tr>`).join('');
     return `
@@ -33,7 +35,7 @@ export class DebriefPage extends MenuPage {
               <tr><td>Schauplatz</td><td>${esc(this.theaterName)}</td></tr>
               <tr><td>Einsatzzeit</td><td>${time}</td></tr>
               <tr><td>Strecke</td><td>${((s.distance ?? 0) / 1000).toFixed(2)} km</td></tr>
-              <tr><td>Abschüsse</td><td>${s.kills ?? 0}</td></tr>
+              <tr><td>Abschüsse</td><td>${s.kills ?? 0}${s.team?.length ? ` eigene · ${s.teamKills ?? 0} Team` : ''}</td></tr>
               <tr><td>Treffergenauigkeit</td><td>${acc}</td></tr>
             </table>
             <h3>Abschüsse</h3>
@@ -42,6 +44,7 @@ export class DebriefPage extends MenuPage {
           <section>
             <h3>Eigener Schaden</h3>
             <table class="m-facts m-dmg">${dmg}</table>
+            ${team ? `<h3>Team</h3><table class="m-facts">${team}</table>` : ''}
           </section>
         </div>
         <footer class="m-buttons">

@@ -28,7 +28,7 @@ export class Targeting {
     const out = [];
     const maxRange = COMBAT.targeting.maxRange * rangeFactor;
     for (const u of units) {
-      if (u.isPlayer || u.wreck?.kind === 'reactor') continue;
+      if (u.side !== 'enemy' || u.wreck?.kind === 'reactor') continue; // not the player, not its wingmen
       u.volumes.componentCenter('torso', to).sub(eye);
       const dist = to.length();
       if (dist > maxRange) continue;

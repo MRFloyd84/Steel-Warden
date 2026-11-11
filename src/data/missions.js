@@ -21,6 +21,7 @@
  * Enemies and objectives (A3):
  *   forces         groups, guns, reinforcements, waves — see ai/AIDirector.js
  *   script         objectives (nav, destroy, waves, extract) — see states/MissionScript.js
+ *   wingmen        team slots 0..3 (default 3, data/pilots.js); chosen in the mission preparation
  */
 export const MISSIONS = [
   {
@@ -301,6 +302,7 @@ export const MISSIONS = [
     seed: 31337,
     briefing: 'Ein Synthese-Jäger (SICHEL) gegen dich auf offenem Feld, 800 m voraus. Er kennt deine Position. Je Schwierigkeitsgrad einmal spielen und vergleichen (Treffsicherheit, Ausweichen, Flankieren).',
     playerStart: { x: 0, z: 0, heading: 0, walker: 'bastion' },
+    wingmen: 0, // a duel: alone
     startup: { mode: 'safe', location: 'dropZone', safeRadius: 700 },
     navPoints: [{ id: 'ALPHA', x: 0, z: -800 }],
     terrainFeatures: false, autoStructures: false, scatter: false, weather: 'clear',

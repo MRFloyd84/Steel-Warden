@@ -93,6 +93,10 @@ export const ACTIONS = [
 
   // ---- communication ----
   { id: 'radioMenu', label: 'Funkmenü', category: 'comms', contexts: ['combat', 'freeLook', 'external'], type: 'press', keys: ['KeyF'], pad: [3], help: true },
+  // The seven wingman orders (ui/RadioMenu.js RADIO_COMMANDS, ai/Flight.js) — also in the radio menu
+  ...['Formation', 'Mein Ziel angreifen', 'Freies Feuer', 'Navpunkt anlaufen', 'Stellung halten', 'Zurückfallen / zu mir', 'Beine zielen (an/aus)'].map((label, i) => ({
+    id: `wing${i + 1}`, label: `Team: ${label}`, category: 'comms', contexts: ['combat', 'freeLook', 'external'], type: 'press', keys: [`Shift+Digit${i + 1}`], help: i === 0 || i === 1,
+  })),
   { id: 'help', label: 'Tastenhilfe ein/aus', category: 'comms', contexts: ['global'], type: 'toggle', keys: ['KeyH'], pad: [8], help: true, intro: true },
   { id: 'pause', label: 'Pause', category: 'comms', contexts: ['combat', 'freeLook', 'missileCam', 'external', 'freeCam'], type: 'press', keys: ['Escape'], pad: [9], help: true, intro: true },
 

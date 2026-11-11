@@ -38,6 +38,9 @@ import { HelpPanel } from '../ui/HelpPanel.js';
 import { RadioMenu } from '../ui/RadioMenu.js';
 import { damp } from '../util/math.js';
 import { AIDirector } from '../ai/AIDirector.js';
+import { Flight } from '../ai/Flight.js';
+import { wingmenSlots } from '../data/pilots.js';
+import { RADIO_COMMANDS } from '../ui/RadioMenu.js';
 import { DETAIL, detailDebugLine } from '../render/DetailTextures.js';
 import { PropLibrary } from '../world/PropLibrary.js';
 import { AIDebugView } from '../render/AIDebugView.js';
@@ -55,12 +58,12 @@ const COMPONENT_LABELS = { torso: 'TORSO', armL: 'ARM L', armR: 'ARM R', legs: '
  * startup procedure, audio, pause, stats.
  */
 export class MissionState extends State {
-  enter({ missionId, walkerId, practice = null }) {
+  enter({ missionId, walkerId, practice = null, wingmen = null }) {
     const game = this.game;
     const cfg = game.config;
     const params = new URLSearchParams(window.location.search);
     // Practice options from the mission preparation (menu); URL parameters stay for tests
-    this.missionParams = { missionId, walkerId, practice };
+    this.missionParams = { missionId, walkerId, practice, wingmen };
     const pr = practice ?? {};
     // Start site (hangar base or drop zone) is added to the mission; validation ran before (missionStartup.js)
     const base = getMission(missionId);
@@ -202,6 +205,13 @@ export class MissionState extends State {
     }
     this.systems.scrambleAlarm = this.startup.mode === 'scramble' && !hot;
     this.combat.ai = this.ai;
+    // Wingmen (docs/WINGMEN-PLAN.md): from the mission preparation, URL ?wingmen=marder,bastion for tests
+    const picks = (wingmen ?? (params.get('wingmen') ? params.get('wingmen').split(',') : [])).map((w) => (WALKERS[w] ? w : null)).slice(0, wingmenSlots(this.mission));
+    this.flight = new Flight({
+      director: this.ai, entities: this.entities, world: this.world, bus: game.bus, radio: (msg) => this.radioMessage(msg), picks,
+      env: { startup: this.startup, navPoint: () => this.activeNavPoint(), target: () => this.combat.targeting.target ?? this.combat.aimUnit },
+    });
+    this.radioMenu.flight = this.flight;
     this.aiDebug = new AIDebugView({ scene: this.world.scene, container: game.container, renderer: game.renderer, director: this.ai, sampler: this.world.sampler });
     this.script = new MissionScript({
       mission: this.mission, director: this.ai, combat: this.combat, data: this.data,
@@ -246,6 +256,7 @@ export class MissionState extends State {
     this.systemsAudio.dispose();
     this.camView.dispose();
     this.aiDebug.dispose();
+    this.flight.dispose();
     this.ai.dispose();
     this.objectiveEl.remove();
     this.hits.dispose();
@@ -293,9 +304,16 @@ export class MissionState extends State {
     }
   }
 
-  /** Radio menu choice (wingmen arrive with phase B). */
+  /** Radio menu choice or Shift+1..7: order to the wingmen (ai/Flight.js). */
   radioCommand(cmd) {
-    this.radioMessage({ from: 'FUNK', text: `${cmd.label}: keine Flügelleute im Einsatz.` });
+    this.flight.command(cmd.id);
+  }
+
+  /** Nav point the wingmen go to: the active one on the nav display, else the first. */
+  activeNavPoint() {
+    const id = this.data.navPoints.find((n) => n.active)?.id;
+    const list = this.mission.navPoints ?? [];
+    return list.find((n) => n.id === id) ?? list[0] ?? null;
   }
 
   radioMessage({ from, text }) {
@@ -311,6 +329,7 @@ export class MissionState extends State {
     this.deployed = true;
     this.systems.scrambleAlarm = false;
     this.ai.deploy();
+    this.flight.deploy();
     this.door?.open();
     this.game.bus.emit('mission:deploy', { time: this.stats.duration });
     const nav = this.mission.navPoints?.[0];
@@ -339,7 +358,9 @@ export class MissionState extends State {
       params: this.missionParams,
       stats: {
         kills: units.kills,
-        killList: units.units.filter((u) => u.wreck && !u.isPlayer).map((u) => ({ name: `${u.walker.name} (${u.id})`, kind: u.wreck.kind, scrap: u.wreck.scrap })),
+        teamKills: units.teamKills,
+        killList: units.units.filter((u) => u.wreck && u.side === 'enemy').map((u) => ({ name: `${u.walker.name} (${u.id})`, kind: u.wreck.kind, scrap: u.wreck.scrap, by: u.killedBy?.isPlayer ? 'EINS' : u.killedBy?.wingName ?? null })),
+        team: this.flight.status(),
         duration: this.missionTime, // from deploy
         deployed: this.deployed,
         totalTime: this.stats.duration,
@@ -431,6 +452,9 @@ export class MissionState extends State {
       this.radioMenu.show();
       return;
     }
+    RADIO_COMMANDS.forEach((cmd, i) => {
+      if (input.pressed(`wing${i + 1}`)) this.radioCommand(cmd);
+    });
 
     if (input.pressed('debugFreeCam')) this.toggleFreeCam();
     if (input.pressed('debugTextures')) {
@@ -609,7 +633,7 @@ export class MissionState extends State {
         this.systemsAudio.update();
       }
       this.radioLog.update(this.stats.duration);
-      this.hints.update({ reticle: renderer.project(this.combat.aimPoint, this.tmpProj), tag: 'AUSSENKAMERA', locked: game.input.pointerLocked || this.paused, target: this.targetBox() });
+      this.hints.update({ reticle: renderer.project(this.combat.aimPoint, this.tmpProj), tag: 'AUSSENKAMERA', locked: game.input.pointerLocked || this.paused, target: this.targetBox(), allies: this.allyTags(), aimOnFriend: this.combat.aimUnit?.side === 'player' });
       return;
     }
     this.floodlight.update(this.renderPose, this.view.torsoQuat, this.view.aimDir);
@@ -637,7 +661,27 @@ export class MissionState extends State {
       locked: game.input.pointerLocked || this.paused,
       target: this.targetBox(),
       aimOnUnit: !!this.combat.aimUnit,
+      aimOnFriend: this.combat.aimUnit?.side === 'player',
+      allies: this.allyTags(),
     });
+  }
+
+  /** HUD marks over the wingmen in view (up to 1 500 m): ring + radio name. */
+  allyTags() {
+    const out = [];
+    const r = this.game.renderer;
+    const m = this.motion;
+    for (const c of this.flight.members) {
+      const u = c.unit;
+      if (Math.hypot(u.motion.x - m.x, u.motion.z - m.z) > 1500) continue;
+      // own vectors: the reticle still holds tmpProj while the HUD is updated
+      const top = u.volumes.componentCenter('torso', (this.allyVec ??= new THREE.Vector3()));
+      top.y += u.walker.cockpit.eyeHeight * 0.6;
+      const p = r.project(top, (this.allyProj ??= new THREE.Vector3()));
+      if (!p) continue;
+      out.push({ x: p.x, y: p.y, label: `${u.wingName} ${c.pilot.callsign}`, lost: u.wreck?.kind === 'reactor' });
+    }
+    return out;
   }
 
   /** Screen box of the locked target for the HUD frame. */
@@ -667,7 +711,7 @@ export class MissionState extends State {
     const wrecks = this.combat.units.wreckLines();
     return [
       ...missionDebugLines(this), ...this.worldLink.debugLine(), ...this.combat.debugLines(), this.combat.player.condition.debugLine(), this.hits.debugLine(),
-      ...this.ai.debugLines(), this.script.debugLine(), ...(wrecks.length ? ['Wracks:', ...wrecks.map((w) => `  ${w}`)] : []),
+      ...this.ai.debugLines(), ...this.flight.debugLines(), this.script.debugLine(), ...(wrecks.length ? ['Wracks:', ...wrecks.map((w) => `  ${w}`)] : []),
       detailDebugLine(), ...propDebugLines(),
     ].filter((l) => l !== null);
   }

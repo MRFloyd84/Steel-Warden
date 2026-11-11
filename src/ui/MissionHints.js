@@ -16,7 +16,10 @@ export class MissionHints extends Overlay {
       <div class="comp-box" data-role="comp" hidden><span></span></div>
       <div class="view-tag" data-role="tag"></div>
       <div class="flash-note" data-role="flash" hidden></div>
-      <div class="click-hint" data-role="click">Klicken zum Fortsetzen (Maus fangen)</div>`;
+      <div class="click-hint" data-role="click">Klicken zum Fortsetzen (Maus fangen)</div>
+      <div data-role="allies"></div>`;
+    this.alliesEl = this.root.querySelector('[data-role="allies"]');
+    this.allyTags = [];
     this.flashEl = this.root.querySelector('[data-role="flash"]');
     this.reticle = this.root.querySelector('[data-role="reticle"]');
     this.targetEl = this.root.querySelector('[data-role="target"]');
@@ -43,8 +46,27 @@ export class MissionHints extends Overlay {
   /** Kept for old callers: the key reference moved to the help panel (H). */
   toggleBar() {}
 
+  /** Wingmen in view: small ring with radio name over each (list of {x, y, label, lost}). */
+  updateAllies(list) {
+    while (this.allyTags.length < list.length) {
+      const el = document.createElement('div');
+      el.className = 'ally-tag';
+      this.alliesEl.appendChild(el);
+      this.allyTags.push(el);
+    }
+    this.allyTags.forEach((el, i) => {
+      const a = list[i];
+      el.hidden = !a;
+      if (!a) return;
+      if (el.textContent !== a.label) el.textContent = a.label;
+      el.classList.toggle('lost', !!a.lost);
+      el.style.transform = `translate(${(a.x - 6).toFixed(1)}px, ${(a.y - 6).toFixed(1)}px)`;
+    });
+  }
+
   /** @param reticle {x, y} in CSS pixels or null to hide */
-  update({ reticle, tag, locked, target = null, aimOnUnit = false }) {
+  update({ reticle, tag, locked, target = null, aimOnUnit = false, aimOnFriend = false, allies = null }) {
+    if (allies) this.updateAllies(allies);
     if (target) {
       this.targetEl.hidden = false;
       const size = target.half * 2;
@@ -76,7 +98,8 @@ export class MissionHints extends Overlay {
       this.lockEl.style.transform = `translate(${(target.x - r).toFixed(1)}px, ${(target.y - r).toFixed(1)}px)`;
       this.lockEl.classList.toggle('locked', lock.progress >= 1);
     }
-    this.reticle.classList.toggle('on-target', aimOnUnit);
+    this.reticle.classList.toggle('on-target', aimOnUnit && !aimOnFriend);
+    this.reticle.classList.toggle('on-friend', aimOnFriend);
     if (reticle) {
       this.reticle.hidden = false;
       this.reticle.style.transform = `translate(${reticle.x.toFixed(1)}px, ${reticle.y.toFixed(1)}px)`;

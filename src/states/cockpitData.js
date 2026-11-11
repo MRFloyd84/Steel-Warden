@@ -120,6 +120,8 @@ function phase(systems) {
   return ['HILFSSTROM', false];
 }
 
+const WING_DIGIT = { ZWEI: '2', DREI: '3', VIER: '4' };
+
 function updateCombatData(d, m, combat) {
   const r = combat.readout();
   Object.assign(d.shields, r.shields);
@@ -153,6 +155,13 @@ function updateCombatData(d, m, combat) {
     const dx = p.x - m.x;
     const dz = p.z - m.z;
     d.contacts.push({ dx, dz, dist: Math.hypot(dx, dz), locked: u === r.target?.unit, wreck: !!u.wreck });
+  }
+  // Wingmen (own data link): ring with their number
+  for (const u of combat.units.allies) {
+    const p = u.motion.pose;
+    const dx = p.x - m.x;
+    const dz = p.z - m.z;
+    d.contacts.push({ dx, dz, dist: Math.hypot(dx, dz), ally: WING_DIGIT[u.wingName] ?? '?', wreck: !!u.wreck, lost: u.wreck?.kind === 'reactor' });
   }
 
   const tg = r.target;

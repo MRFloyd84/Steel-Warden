@@ -42,7 +42,7 @@ export class MissionEntities {
   }
 
   /** Adds a walker to the mission (also while it runs); returns the unit. */
-  addUnit({ id = null, type, x, z, heading = 0, behavior = null, emitting = false }) {
+  addUnit({ id = null, type, x, z, heading = 0, behavior = null, emitting = false, side = 'enemy' }) {
     const walker = findWalker(type);
     const motion = new WalkerMotion(walker, this.sampler, this.feel, this.quietBus);
     motion.place(x, z, heading);
@@ -55,6 +55,7 @@ export class MissionEntities {
       controller: null,
       renderPose: { ...motion.pose },
       spawnEmitting: !!emitting,
+      spawnSide: side, // 'enemy' | 'player' (wingmen) — CombatUnits.prep
     };
     this.units.push(u);
     this.onAdd?.(u);

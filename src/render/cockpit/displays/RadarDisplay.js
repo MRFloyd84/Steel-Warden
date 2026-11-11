@@ -80,6 +80,13 @@ export const RadarDisplay = {
     if (d.sensorsReadyFor > 0.5) for (const c of d.contacts) {
       if (c.dist > range) continue;
       const [x, y] = toScreen(c.dx, c.dz);
+      if (c.ally) {
+        // Wingman: ring with its number (crossed out when lost)
+        p.circle(x, y, 4, c.lost ? 0.4 : 1, false);
+        p.text(c.ally, x + 6, y - 4, { size: 10, alpha: c.lost ? 0.4 : 1 });
+        if (c.lost) p.line(x - 4, y - 4, x + 4, y + 4, 0.5);
+        continue;
+      }
       if (c.wreck) {
         p.line(x - 3, y - 3, x + 3, y + 3, 0.6);
         p.line(x - 3, y + 3, x + 3, y - 3, 0.6);

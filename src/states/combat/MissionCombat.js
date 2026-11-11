@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { canHit } from '../../sim/friendlyFire.js';
 import { CombatFx } from '../../render/fx/CombatFx.js';
 import { CombatAudio } from '../../audio/CombatAudio.js';
 import { Projectiles } from '../../sim/Projectiles.js';
@@ -353,7 +354,7 @@ export class MissionCombat {
     const end = v3.copy(from).addScaledVector(dir, d.range);
     let best = null;
     for (const u of this.units.all) {
-      if (u === owner || u.side === owner.side) continue;
+      if (!canHit(owner, u)) continue;
       const hit = u.volumes.intersectSegment(from, end);
       if (hit && (!best || hit.t < best.hit.t)) best = { unit: u, hit };
     }
@@ -367,7 +368,7 @@ export class MissionCombat {
       best = null;
     } else if (best && (groundD === null || best.hit.t * d.range <= groundD)) {
       to = best.hit.point;
-      this.hitUnit(best.unit, best.hit, d, dir, dt);
+      this.hitUnit(best.unit, best.hit, d, dir, dt, owner);
     } else if (groundD !== null) {
       to = from.clone().addScaledVector(dir, groundD);
       if (Math.random() < dt * 20) this.fx.groundHit(to, 0.3);
@@ -384,7 +385,7 @@ export class MissionCombat {
   onProjectileHit({ proj, unit, hit, point, ground, obstacle }) {
     const d = proj.def;
     const dir = v1.copy(proj.vel).normalize();
-    if (unit) this.hitUnit(unit, hit, d, dir, proj.damageFactor ?? 1);
+    if (unit) this.hitUnit(unit, hit, d, dir, proj.damageFactor ?? 1, proj.owner);
     if (obstacle) this.hitObstacle(obstacle, d, proj.damageFactor ?? 1);
     if (ground) {
       const big = d.kind === 'missile' || d.size === 'L';
@@ -446,13 +447,14 @@ export class MissionCombat {
       if (dist < d.blastRadius) this.world.objects.damage(st, d.damage * 0.5 * (1 - Math.max(0, dist) / d.blastRadius));
     }
     for (const u of this.units.all) {
-      if (u === direct || u.side === owner?.side || u.wreck?.kind === 'reactor') continue;
+      if (u === direct || !canHit(owner, u) || u.wreck?.kind === 'reactor') continue;
       const dist = u.volumes.center(v2).distanceTo(point);
       if (dist > d.blastRadius) continue;
       const k = 1 - dist / d.blastRadius;
       const component = point.y < u.motion.pose.y - u.walker.cockpit.eyeHeight * 0.5 ? 'legs' : 'torso';
       const amount = d.damage * 0.5 * k * d.vsArmor;
       const changes = u.damage.applyRaw(component, amount);
+      this.creditHit(u, owner);
       this.units.apply(u, changes);
       if (u.isPlayer) this.onPlayerHit?.({ side: hitSide(u.motion.pose.yaw, v3.subVectors(u.motion.pose, point).setY(0).normalize()), component, res: { shieldHit: false, armorHit: true, armorDamage: amount, changes }, show: true });
     }
@@ -463,9 +465,20 @@ export class MissionCombat {
     if (p.owner === this.player && this.missileEnds.length < 64) this.missileEnds.push({ serial: p.serial, reason });
   }
 
+  /**
+   * Remembers who hit the unit last (kill credit) and reports the player's hits on its own
+   * wingmen (combat:friendlyFire, radio by Flight). Throttled for beams by the listener.
+   */
+  creditHit(unit, owner) {
+    if (!owner || unit.wreck?.kind === 'reactor') return;
+    unit.lastHitBy = owner;
+    if (owner.isPlayer && unit !== owner && unit.side === owner.side) this.game.bus.emit('combat:friendlyFire', { unit: unit.id });
+  }
+
   /** One hit (scale = dt share for beams, or the semi-active bonus) through the damage pipeline, with effects. */
-  hitUnit(unit, hit, d, dir, scale) {
-    if (!unit.isPlayer) this.stats.hits += scale >= 1 ? 1 : 0;
+  hitUnit(unit, hit, d, dir, scale, owner = null) {
+    if (owner?.isPlayer && unit.side === 'enemy') this.stats.hits += scale >= 1 ? 1 : 0;
+    this.creditHit(unit, owner);
     if (unit.wreck?.kind === 'reactor') {
       if (scale >= 1 || Math.random() < scale * 10) this.fx.armorHit(hit.point, hit.normal, null, null, null, 0.3);
       return;

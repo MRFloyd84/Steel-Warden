@@ -1,3 +1,4 @@
+import { canHit } from './friendlyFire.js';
 import * as THREE from 'three';
 import { stepMissile } from './Guidance.js';
 
@@ -15,7 +16,7 @@ const segEnd = new THREE.Vector3();
  * (semi-active illumination).
  *
  * Hits are reported through onHit({ proj, unit|null, hit|null, point, ground, obstacle? }).
- * Projectiles never hit units of their owner's side (owner.side); a gun on a
+ * Projectiles hit by sim/friendlyFire.js canHit (the player's shots hit its wingmen); a gun on a
  * building (owner.structure) doesn't hit its own building. def.ballistic
  * shells fall with gravity (spawn speed may be set per shot: mortar charge).
  */
@@ -120,9 +121,8 @@ export class Projectiles {
       tGround = above0 > 0 ? above0 / (above0 - above1) : 0;
     }
     let best = null;
-    const side = p.owner?.side;
     for (const u of units) {
-      if (u === p.owner || (side && u.side === side)) continue; // no friendly fire
+      if (!canHit(p.owner, u)) continue; // sim/friendlyFire.js
       const hit = u.volumes.intersectSegment(p.prev, p.pos);
       if (hit && (!best || hit.t < best.hit.t)) best = { unit: u, hit };
     }
