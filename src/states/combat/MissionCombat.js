@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { canHit } from '../../sim/friendlyFire.js';
+import { playerEmits, radarContacts, linkContacts, dangerRadius } from '../../sim/Radar.js';
 import { CombatFx } from '../../render/fx/CombatFx.js';
 import { CombatAudio } from '../../audio/CombatAudio.js';
 import { Projectiles } from '../../sim/Projectiles.js';
@@ -30,7 +31,11 @@ const RADIO = {
   blocked: { from: 'TECHNIK', text: 'Waffen gesichert oder ohne Reaktorleistung — Feuerfreigabe prüfen.' },
   armLost: { from: 'TECHNIK', text: 'Arm verloren! Waffen dort ausgefallen.' },
   legsLost: { from: 'TECHNIK', text: 'Beinantrieb zerstört — wir sind bewegungsunfähig.' },
-  radarLater: { from: 'TECHNIK', text: 'Radarumschaltung aktiv/passiv folgt mit dem neuen Radar.' },
+  noJammer: { from: 'TECHNIK', text: 'Kein Störsender an Bord.' },
+  jammerLost: { from: 'TECHNIK', text: 'Störsender ausgefallen.' },
+  jammerOn: { from: 'TECHNIK', text: 'Störsender an — wir sind laut, Anti-Radar-Raketen finden uns.' },
+  jammerOff: { from: 'TECHNIK', text: 'Störsender aus.' },
+  jammerEmpty: { from: 'TECHNIK', text: 'Kondensator leer — Störsender aus.' },
   noPod: { from: 'TECHNIK', text: 'Keine Zielkapsel an Bord — Komponentenwahl nicht möglich.' },
   podLost: { from: 'TECHNIK', text: 'Zielkapsel ausgefallen — Komponentenwahl nicht möglich.' },
   trackingOff: { from: 'TECHNIK', text: 'Zielnachführung aus — Ziel außerhalb des Torso-Schwenkbereichs.' },
@@ -78,6 +83,10 @@ export class MissionCombat {
       game, controls, targeting: this.targeting, weapons: this.weapons, player: this.player, units: this.units, sound: this.sound,
     });
     this.missiles.emitters = () => this.emitters;
+    // A4: active / semi-active missiles lock only with the radar active and working
+    this.missiles.radarLock = () => this.radarActive && this.radarPowered;
+    this.radarRangeDial = () => (controls.has('radarRange') ? Number(controls.positionLabel('radarRange')) : 1000);
+    this.jammerOn = false;
     this.tracking = new TargetTracking({ controls, motion: this.player.motion, targeting: this.targeting, walker: this.player.walker, radio: () => radio(RADIO.trackingOff) });
     this.missileEnds = []; // { serial, reason } for the missile camera
     this.onPlayerHit = null; // set by CockpitHits
@@ -129,6 +138,77 @@ export class MissionCombat {
     return this.player.condition.evaluate().sensorPerformance;
   }
 
+  /** A4: RADAR switch on AKTIV (layouts without the switch: always active, as before). */
+  get radarActive() {
+    return !this.controls.has('radarMode') || this.controls.value('radarMode') === 0;
+  }
+
+  /** The radar works at all: SENSOREN on and powered. */
+  get radarPowered() {
+    return (!this.controls.has('sensors') || this.controls.value('sensors') === 1) && !!this.systems.s.power.bus;
+  }
+
+  /** J: ST-2 jammer on/off (needs the equipment, working, and energy in the capacitor). */
+  toggleJammer() {
+    const had = this.weapons.equipment.some((e) => e.def.id === 'jammer');
+    if (!this.weapons.has('jammer')) {
+      this.radio(had ? RADIO.jammerLost : RADIO.noJammer);
+      this.game.audio.play('weapon.dryFire');
+      return;
+    }
+    this.jammerOn = !this.jammerOn;
+    this.radio(this.jammerOn ? RADIO.jammerOn : RADIO.jammerOff);
+    this.game.audio.play('weapon.chain');
+  }
+
+  /**
+   * Per step: jammer drain and failure, the player's emission (radar active or jammer), and
+   * every COMBAT.radar.refresh s the radar contact list (line of sight checks).
+   */
+  updateRadar(dt, cond) {
+    const k = COMBAT.jammer;
+    if (this.jammerOn && !this.weapons.has('jammer')) {
+      this.jammerOn = false;
+      this.radio(RADIO.jammerLost);
+    }
+    if (this.jammerOn) {
+      this.weapons.capacitor = Math.max(0, this.weapons.capacitor - k.drain * dt);
+      if (this.weapons.capacitor <= 0 || cond.reactorOutput <= 0) {
+        this.jammerOn = false;
+        this.radio(RADIO.jammerEmpty);
+      }
+    }
+    this.player.jamming = !!this.jammerOn;
+    this.player.emitting = playerEmits({ sensorsOn: this.radarPowered, powered: true, radarActive: this.radarActive, jamming: this.player.jamming });
+    this.radarT = (this.radarT ?? 0) - dt;
+    if (this.radarT > 0 && this.radar) return;
+    this.radarT = COMBAT.radar.refresh;
+    const range = (this.radarRangeDial?.() ?? 1000) * this.sensorsRange;
+    const mode = this.radarActive ? 'active' : 'passive';
+    const enemies = this.units.enemies;
+    this.radar = {
+      mode,
+      powered: this.radarPowered,
+      contacts: this.radarPowered ? radarContacts({ mode, range, eye: this.eye, enemies, los: (a, b) => this.lineOfSight(a, b), link: linkContacts(this.ai?.flight) }) : [],
+      danger: mode === 'passive' ? dangerRadius({ signature: this.player.signature, enemies, rangeFactor: (u) => this.ai?.perception.rangeFactor(this.player) ?? 1, emitting: this.player.emitting }) : 0,
+    };
+  }
+
+  /**
+   * Bereitschaftslicht (A4): can this weapon hit the selected target right now? Loaded and
+   * working, weapons armed, target inside the torso cone with a free line, within range,
+   * locked if its guidance needs it (and the radar active), emitting for anti-radar.
+   */
+  canHitTarget(slot, cond) {
+    const t = this.targeting;
+    if (!t.target || t.target.wreck?.kind === 'reactor' || !cond.weaponsOnline || slot.disabled) return false;
+    if (!t.inCone || (t.distance ?? Infinity) > slot.def.range) return false;
+    if (!this.weapons.canShoot(slot) && !(slot.def.kind === 'beam' && slot.beamCool <= 0)) return false;
+    // An anti-radar missile only finds a target that emits
+    if (slot.mode === 'antiRadar' && !t.target.emitting) return false;
+    return !this.missiles.holdReason(slot);
+  }
+
   // ---- input (per frame) ----
 
   /**
@@ -150,7 +230,12 @@ export class MissionCombat {
     if (input.pressed('debugEmitting')) this.toggleEmitting();
     if (input.pressed('targetCycle')) this.targeting.cycle(this.units.all, this.eye, this.aimDir, this.sensorsRange);
     if (input.pressed('targetSelect')) this.targeting.select(this.units.all, this.eye, this.aimDir, this.sensorsRange);
-    if (input.pressed('radarMode') || input.pressed('radarRange')) this.radio(RADIO.radarLater);
+    if (input.pressed('radarMode') && this.controls.has('radarMode')) this.controls.toggle('radarMode');
+    if (input.pressed('radarRange') && this.controls.has('radarRange')) {
+      const n = this.controls.get('radarRange').def.positions?.length ?? 4;
+      this.controls.setValue('radarRange', (this.controls.value('radarRange') + 1) % n, 'user');
+    }
+    if (input.pressed('jammer')) this.toggleJammer();
 
     // Mouse triggers only count with the pointer caught (a click to catch it must not fire)
     const pointerOk = input.pointerLocked || input.gamepad.connected;
@@ -244,9 +329,8 @@ export class MissionCombat {
     this.cond = cond; // for spread and recoil of the shots fired in this step
     const power = cond.reactorOutput;
     this.units.update(dt, { enabled: cond.shieldsOnline, rate: power * (preset.shields / 0.34) });
-    // Until the radar (A4): the player emits while the SENSOREN switch is on
-    if (this.controls.has('sensors')) this.player.emitting = this.controls.value('sensors') === 1 && sys.s.power.bus;
     this.player.signature = signatureOf(sys);
+    this.updateRadar(dt, cond);
 
     this.beamDraw.clear();
     this.missiles.updateModes();
@@ -583,13 +667,18 @@ export class MissionCombat {
       guidance: this.missiles.selectedMode,
       hasPod: this.weapons.has('target-pod'),
       tracking: this.tracking.active,
+      radar: this.radar ?? null,
+      radarActive: this.radarActive,
+      jamming: !!this.player.jamming,
+      hasJammer: this.weapons.equipment.some((e) => e.def.id === 'jammer'),
+      canHit: Object.fromEntries(this.weapons.slots.map((sl) => [sl.id, this.canHitTarget(sl, this.cond ?? this.player.condition.evaluate())])),
     };
   }
 
   debugLines() {
     const t = this.targeting.target;
     const lines = [`Kampf: Geschosse ${this.projectiles.count}  Schüsse ${this.stats.shots}  Treffer ${this.stats.hits}  Abschüsse ${this.units.kills}  Partikel ${this.fx.stats.sparks}/${this.fx.stats.smoke}  Kondensator ${(this.weapons.capacitor).toFixed(0)}`];
-    lines.push(`Lenkung ${this.missiles.selectedMode}  Aufschaltung ${this.missiles.lockState}  Kapsel ${this.podComponent ?? '-'}  Nachführung ${this.tracking.active ? 'an' : 'aus'}  Strahler ${this.units.all.filter((u) => u.emitting).map((u) => u.id).join(',') || '-'}`);
+    lines.push(`Lenkung ${this.missiles.selectedMode}  Aufschaltung ${this.missiles.lockState}  Kapsel ${this.podComponent ?? '-'}  Nachführung ${this.tracking.active ? 'an' : 'aus'}  Strahler ${this.units.all.filter((u) => u.emitting).map((u) => u.id).join(',') || '-'}  Radar ${this.radarActive ? 'AKTIV' : 'PASSIV'}${this.radarPowered ? '' : ' (aus)'} ${this.radar?.contacts.length ?? 0} Kontakte${this.radar?.danger ? ` Gefahr ${Math.round(this.radar.danger)} m` : ''}${this.player.jamming ? '  STÖRT' : ''}`);
     lines.push(`Hitze Kern ${this.systems.s.reactor.temp.toFixed(0)}°C  Waffen +${this.systems.s.reactor.weaponHeatRate.toFixed(1)} °C/s  Ziel ${t ? `${t.walker.name} ${Math.round(this.targeting.distance ?? 0)} m lock ${this.targeting.lockTime.toFixed(1)} s` : '-'}`);
     if (t) {
       const parts = Object.entries(t.damage.parts).map(([k, v]) => `${k} ${Math.round(v.armor)}+${Math.round(v.internal)} ${COMBAT.stages[v.stage].label}`).join(' · ');

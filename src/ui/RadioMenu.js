@@ -1,6 +1,6 @@
 import { Overlay, esc } from './Overlay.js';
 
-/** The seven wingman orders (ai/Flight.js; keys Shift+1..7 in input/actions.js). */
+/** The wingman orders (ai/Flight.js; keys Shift+1..9 in input/actions.js); 8 and 9 are switches (A4). */
 export const RADIO_COMMANDS = [
   { id: 'formation', label: 'Formation' },
   { id: 'attackMyTarget', label: 'Mein Ziel angreifen' },
@@ -9,13 +9,15 @@ export const RADIO_COMMANDS = [
   { id: 'holdPosition', label: 'Stellung halten' },
   { id: 'fallBack', label: 'Zurückfallen / zu mir' },
   { id: 'aimLegs', label: 'Beine zielen' },
+  { id: 'holdFire', label: 'Feuer einstellen / frei' },
+  { id: 'radar', label: 'Funkstille / Radar an' },
 ];
 
 const ORDER_LABELS = { wait: 'wartet', formation: 'Formation', attackMyTarget: 'greift an', freeFire: 'freies Feuer', goNav: 'Navpunkt', holdPosition: 'hält Stellung', fallBack: 'kommt zurück' };
 const STATE_TEXT = { ok: '', immobile: ' · BEINE WEG', broken: ' · MORAL', lost: ' · AUSGEFALLEN' };
 
 /**
- * Radio menu (F): digits 1–7 or up/down + Enter choose an order, Esc closes; after a choice
+ * Radio menu (F): digits 1–9 or up/down + Enter choose an order, Esc closes; after a choice
  * it closes by itself. Runs in the 'menu' input context while open. Shows the wingmen
  * (this.flight, set by MissionState) with walker, torso state and current order.
  */
@@ -56,7 +58,7 @@ export class RadioMenu extends Overlay {
     }
     const order = this.flight.order;
     this.note.innerHTML = team.map((t) => `<div class="radio-wing ${t.state}">${esc(t.name)} · ${esc(t.callsign)} <span>${esc(t.walker)}</span> <span>${t.state === 'lost' ? '—' : `T ${Math.round(t.torso * 100)} %`}</span> <span>${esc(ORDER_LABELS[t.order] ?? t.order)}${STATE_TEXT[t.state] ?? ''}</span></div>`).join('')
-      + `<div class="radio-wing-foot">Befehl: ${esc(ORDER_LABELS[order] ?? order)}${this.flight.aimLegs ? ' · Beine zielen' : ''}</div>`;
+      + `<div class="radio-wing-foot">Befehl: ${esc(ORDER_LABELS[order] ?? order)}${this.flight.aimLegs ? ' · Beine zielen' : ''} · ${this.flight.weaponsHold ? 'FEUER HALTEN' : 'Feuer frei'} · ${this.flight.radarOn ? 'RADAR AN' : 'Funkstille'}</div>`;
   }
 
   mark() {

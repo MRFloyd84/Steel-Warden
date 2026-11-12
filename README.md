@@ -119,6 +119,17 @@ Schnellstart-Parameter (Dev und Build):
   Moral im Einsatz, Funkmeldungen, Marken im HUD, Ringe auf dem Radar, Teamtabelle und
   Abschüsse je Schütze in der Nachbesprechung. Plan und Prüfung: `docs/WINGMEN-PLAN.md`.
 
+- **Radar und Tarnung (A4):** Kippschalter RADAR AKTIV/PASSIV (`R`, Bereich `Shift+R`). Aktiv
+  zeigt alles im Bereich mit freier Linie (Gelände und Gebäude decken) und strahlt; passiv zeigt
+  nur strahlende Einheiten bis 2 000 m plus einen Gefahrenkreis, aktive und halbaktive Raketen
+  halten dann („RADAR PASSIV“). Datenlink: Was die Flügelleute sehen, steht in beiden Modi auf dem
+  Radar. Der Späher SPLITTER strahlt (1 600 m). Ausrüstung ST-2 Störsender statt Zielkapsel
+  (KESTREL, BASTION; Einsatzvorbereitung oder `?equip=jammer`), Taste `J`: gegnerische Aufschaltung
+  dreimal langsamer, 60 % ihrer Radarraketen verlieren das Ziel, Späher in 900 m können nicht
+  rufen — dafür 4 Energie/s und Ortung im Umkreis von 700 m. Bereitschaftslicht je Waffe auf der
+  Waffenseite. Funkbefehle 8 „Feuer einstellen/frei“ und 9 „Funkstille/Radar an“.
+  Plan und Prüfung: `docs/A4-PLAN.md`.
+
 - **Cockpit-Modell aus Tripo:** ein texturiertes Cockpit für alle sechs Walker (je Klasse leicht
   skaliert). Die echten Schalter, Lampen und sechs Monitore sitzen auf seinen Paneelen und in
   seinen Rahmen: links Strom, Hilfsaggregat und Reaktor, rechts der große ENERGIE-Knopf und die
@@ -166,7 +177,9 @@ wichtigsten Tasten von selbst.
 - **Optische Rakete:** Beim Start schaltet der Monitor selbst auf die Raketenkamera (Kontext
   Raketenkamera); bei gehaltenem Feuer lenkt die Maus die Rakete. Nach Einschlag oder Absturz
   zurück. `M` dient zum Zuschauen bei aktiven/halbaktiven Raketen.
-- **Funkmenü** `F`: zeigt die Flügelleute (Walker, Torso, Befehl); Ziffern 1–7 wählen den Befehl, `Esc` schließt. Dieselben Befehle direkt mit `Shift+1`–`7`.
+- **Funkmenü** `F`: zeigt die Flügelleute (Walker, Torso, Befehl); Ziffern 1–9 wählen den Befehl, `Esc` schließt. Dieselben Befehle direkt mit `Shift+1`–`9`
+  (8 Feuer einstellen/frei, 9 Funkstille/Radar an).
+- **Radar:** `R` aktiv/passiv, `Shift+R` Bereich weiterschalten, `J` Störsender (falls ausgerüstet).
 - **Pause:** `Esc` gibt die Maus frei und pausiert in einem Schritt; `Esc` oder „Fortsetzen“ geht
   weiter, ein Klick ins Bild fängt die Maus wieder. Fokuswechsel lässt alle gehaltenen Tasten los,
   der Schub bleibt stehen.
@@ -245,8 +258,9 @@ _Erzeugt aus `src/input/actions.js` mit `node tools/gen-controls.mjs` — nicht 
 |---|---|---|---|
 | Schildenergie nach vorn | `Q` | Kreuz ← | Kampf, Raketenkamera |
 | Schildenergie nach hinten | `E` | Kreuz → | Kampf, Raketenkamera |
-| Radar aktiv/passiv (ab A4) | `R` | – | Kampf |
-| Radarreichweite (ab A4) | `Shift+R` | – | Kampf |
+| Radar aktiv/passiv | `R` | – | Kampf |
+| Radarreichweite durchschalten | `Shift+R` | – | Kampf |
+| Störsender an/aus (nur wenn vorhanden) | `J` | – | Kampf |
 | Automatischer Start | `Shift+S` | – | Kampf, freier Blick |
 
 **Sicht und Bedienung**
@@ -271,6 +285,8 @@ _Erzeugt aus `src/input/actions.js` mit `node tools/gen-controls.mjs` — nicht 
 | Team: Stellung halten | `Shift+5` | – | Kampf, freier Blick, Außenkamera |
 | Team: Zurückfallen / zu mir | `Shift+6` | – | Kampf, freier Blick, Außenkamera |
 | Team: Beine zielen (an/aus) | `Shift+7` | – | Kampf, freier Blick, Außenkamera |
+| Team: Feuer einstellen / frei | `Shift+8` | – | Kampf, freier Blick, Außenkamera |
+| Team: Funkstille / Radar an | `Shift+9` | – | Kampf, freier Blick, Außenkamera |
 | Tastenhilfe ein/aus | `H` | Select | überall |
 | Pause | `Esc` | Start | Kampf, freier Blick, Raketenkamera, Außenkamera, Freiflug |
 
@@ -286,7 +302,7 @@ _Erzeugt aus `src/input/actions.js` mit `node tools/gen-controls.mjs` — nicht 
 | Menü: Reiter vor | `E` / `Bild ↓` | RB | Menü |
 | Menü: bestätigen | `Enter` / `Num Enter` / `Leertaste` | A | Menü |
 | Menü: zurück / schließen | `Esc` | B | Menü |
-| Menü: Eintrag 1–7 | `1`–`7` | – | Menü |
+| Menü: Eintrag 1–9 | `1`–`9` | – | Menü |
 
 **Debug**
 

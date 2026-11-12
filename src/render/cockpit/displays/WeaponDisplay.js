@@ -36,6 +36,8 @@ export const WeaponDisplay = {
       const armHurt = (s.location === 'armL' || s.location === 'armR') && (d.stages?.[s.location] ?? 0) >= 3;
       const color = armHurt || (s.disabled && (s.location === 'armL' || s.location === 'armR')) ? RED : null;
       if (s.inChain) p.poly([[6, y - 4], [12, y], [6, y + 4]], dim, true, color);
+      // Bereitschaftslicht (A4): green = this weapon can hit the selected target now
+      if (d.target && !s.disabled && !s.empty) p.circle(40, y - 4, 3, d.canHit?.[s.id] ? 1 : 0.35, !!d.canHit?.[s.id], 0, Math.PI * 2, d.canHit?.[s.id] ? '#6dff8e' : null);
       p.text(s.id, 16, y, { size: 11, alpha: dim, color });
       p.text(s.short, 50, y, { size: 11, alpha: dim, color });
       if (s.mode) p.text(GUIDANCE_LABELS[s.mode] ?? '', 50, y + 9, { size: 7, alpha: dim * (s.mode === 'dumb' ? 0.5 : 0.95) });

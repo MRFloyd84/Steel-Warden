@@ -80,8 +80,9 @@ export const ACTIONS = [
   // ---- systems ----
   { id: 'shieldFront', label: 'Schildenergie nach vorn', category: 'systems', contexts: ['combat', 'missileCam'], type: 'press', keys: ['KeyQ'], pad: [14], help: true },
   { id: 'shieldRear', label: 'Schildenergie nach hinten', category: 'systems', contexts: ['combat', 'missileCam'], type: 'press', keys: ['KeyE'], pad: [15], help: true },
-  { id: 'radarMode', label: 'Radar aktiv/passiv (ab A4)', category: 'systems', contexts: ['combat'], type: 'toggle', keys: ['KeyR'] },
-  { id: 'radarRange', label: 'Radarreichweite (ab A4)', category: 'systems', contexts: ['combat'], type: 'press', keys: ['Shift+KeyR'] },
+  { id: 'radarMode', label: 'Radar aktiv/passiv', category: 'systems', contexts: ['combat'], type: 'press', keys: ['KeyR'] },
+  { id: 'radarRange', label: 'Radarreichweite durchschalten', category: 'systems', contexts: ['combat'], type: 'press', keys: ['Shift+KeyR'] },
+  { id: 'jammer', label: 'Störsender an/aus (nur wenn vorhanden)', category: 'systems', contexts: ['combat'], type: 'press', keys: ['KeyJ'] },
   { id: 'autoStart', label: 'Automatischer Start', category: 'systems', contexts: ['combat', 'freeLook'], type: 'press', keys: ['Shift+KeyS'], help: true },
 
   // ---- view ----
@@ -94,7 +95,7 @@ export const ACTIONS = [
   // ---- communication ----
   { id: 'radioMenu', label: 'Funkmenü', category: 'comms', contexts: ['combat', 'freeLook', 'external'], type: 'press', keys: ['KeyF'], pad: [3], help: true },
   // The seven wingman orders (ui/RadioMenu.js RADIO_COMMANDS, ai/Flight.js) — also in the radio menu
-  ...['Formation', 'Mein Ziel angreifen', 'Freies Feuer', 'Navpunkt anlaufen', 'Stellung halten', 'Zurückfallen / zu mir', 'Beine zielen (an/aus)'].map((label, i) => ({
+  ...['Formation', 'Mein Ziel angreifen', 'Freies Feuer', 'Navpunkt anlaufen', 'Stellung halten', 'Zurückfallen / zu mir', 'Beine zielen (an/aus)', 'Feuer einstellen / frei', 'Funkstille / Radar an'].map((label, i) => ({
     id: `wing${i + 1}`, label: `Team: ${label}`, category: 'comms', contexts: ['combat', 'freeLook', 'external'], type: 'press', keys: [`Shift+Digit${i + 1}`], help: i === 0 || i === 1,
   })),
   { id: 'help', label: 'Tastenhilfe ein/aus', category: 'comms', contexts: ['global'], type: 'toggle', keys: ['KeyH'], pad: [8], help: true, intro: true },
@@ -109,7 +110,7 @@ export const ACTIONS = [
   { id: 'menuTabNext', label: 'Menü: Reiter vor', category: 'menu', contexts: ['menu'], type: 'press', keys: ['KeyE', 'PageDown'], pad: [5] },
   { id: 'menuConfirm', label: 'Menü: bestätigen', category: 'menu', contexts: ['menu'], type: 'press', keys: ['Enter', 'NumpadEnter', 'Space'], pad: [0] },
   { id: 'menuBack', label: 'Menü: zurück / schließen', category: 'menu', contexts: ['menu'], type: 'press', keys: ['Escape'], pad: [1] },
-  ...[1, 2, 3, 4, 5, 6, 7].map((n) => ({
+  ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => ({
     id: `menuChoice${n}`, label: `Menü: Eintrag ${n}`, category: 'menu', contexts: ['menu'], type: 'press', keys: [`Digit${n}`, `Numpad${n}`],
   })),
 

@@ -40,6 +40,7 @@ import { damp } from '../util/math.js';
 import { AIDirector } from '../ai/AIDirector.js';
 import { Flight } from '../ai/Flight.js';
 import { wingmenSlots } from '../data/pilots.js';
+import { equipmentOverride } from '../sim/loadout.js';
 import { RADIO_COMMANDS } from '../ui/RadioMenu.js';
 import { DETAIL, detailDebugLine } from '../render/DetailTextures.js';
 import { PropLibrary } from '../world/PropLibrary.js';
@@ -58,12 +59,12 @@ const COMPONENT_LABELS = { torso: 'TORSO', armL: 'ARM L', armR: 'ARM R', legs: '
  * startup procedure, audio, pause, stats.
  */
 export class MissionState extends State {
-  enter({ missionId, walkerId, practice = null, wingmen = null }) {
+  enter({ missionId, walkerId, practice = null, wingmen = null, equipment = null }) {
     const game = this.game;
     const cfg = game.config;
     const params = new URLSearchParams(window.location.search);
     // Practice options from the mission preparation (menu); URL parameters stay for tests
-    this.missionParams = { missionId, walkerId, practice, wingmen };
+    this.missionParams = { missionId, walkerId, practice, wingmen, equipment };
     const pr = practice ?? {};
     // Start site (hangar base or drop zone) is added to the mission; validation ran before (missionStartup.js)
     const base = getMission(missionId);
@@ -126,6 +127,9 @@ export class MissionState extends State {
       mission: this.mission,
       player: { walker: this.walker, motion: this.motion },
     });
+    // Equipment swap (mission preparation, URL ?equip=jammer for tests): the walker's equipment
+    // slot carries the chosen item instead of its factory one
+    this.entities.player.loadoutOverride = equipmentOverride(this.entities.player.walker, equipment ?? params.get('equip'));
     this.combat = new MissionCombat({
       game, world: this.world, entities: this.entities, systems: this.systems, controls: this.controls,
       radio: (msg) => this.radioMessage(msg),

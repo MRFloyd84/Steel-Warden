@@ -67,6 +67,7 @@ export class MissileControl {
   /** Why a triggered launcher may not fire right now ('' = may fire). */
   holdReason(slot) {
     if (!slot.def.guidance) return '';
+    if (LOCKED_MODES.has(slot.mode) && this.radarLock && !this.radarLock()) return 'RADAR PASSIV';
     if (LOCKED_MODES.has(slot.mode) && !this.lockedFor(slot)) return 'AUFSCHALT.';
     if (slot.mode === 'optical' && slot.flying && slot.flying.active && slot.flying.serial === slot.flyingSerial) return 'LENKT';
     return '';
@@ -130,7 +131,7 @@ export class MissileControl {
     const t = this.targeting;
     let state = 'none';
     let progress = 0;
-    if (need.length && t.target && t.inCone && powered) {
+    if (need.length && t.target && t.inCone && powered && (!this.radarLock || this.radarLock())) {
       const lockTime = Math.min(...need.map((s) => s.def.lockTime));
       progress = Math.min(1, t.lockTime / Math.max(0.01, lockTime));
       state = progress >= 1 ? 'locked' : 'locking';

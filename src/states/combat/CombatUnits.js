@@ -52,9 +52,12 @@ export class CombatUnits {
     u.lastHitBy = null; // shooter of the last hit (kill credit)
     u.killedBy = null;
     u.faction = w.faction ?? 'human';
-    u.weapons = new WeaponSystem(w, { loadout: w.defaultLoadout, groups: w.defaultGroups, chains: w.defaultChains });
+    // loadoutOverride: equipment swap from the mission preparation (A4: jammer instead of the pod)
+    u.weapons = new WeaponSystem(w, { loadout: { ...w.defaultLoadout, ...(u.loadoutOverride ?? {}) }, groups: w.defaultGroups, chains: w.defaultChains });
     u.mounts = new WeaponMounts(u.model, [...u.weapons.slots, ...u.weapons.equipment]);
-    u.emitting = !!u.spawnEmitting; // radar emitting (player: SENSOREN switch; A4: radar mode)
+    // radar emitting: mission spawn flag or the type's ai.emits (scouts); player: MissionCombat (A4)
+    u.emitting = !!u.spawnEmitting || (!isPlayer && u.side !== 'player' && !!u.walker.ai?.emits);
+    u.jamming = false;
     u.volumes = new HitVolumes(u.model);
     u.damage = new DamageModel(w);
     if (!isPlayer) u.damage.fillShields();

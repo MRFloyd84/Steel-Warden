@@ -65,7 +65,7 @@ Funk, Radar, Kampf, Übung) zusammen.
      Belegungsoberfläche (Tastatur, Maus, Gamepad/HOTAS, Profile, Export/Import), Funkmenü
      (vorbereitet für die 7 Wingmen-Befehle), Tastenhilfe, README-Generator `tools/gen-controls.mjs`.
      Feld `secondaryChain` je Walker (rechte Maustaste); im Hangar einstellbar, sobald es ihn gibt.
-     Offen: Sprungdüsen (Leertaste ist belegt, KESTREL hat Daten, Physik fehlt), Radar R/Shift+R ab A4.
+     Offen: Sprungdüsen (Leertaste ist belegt, KESTREL hat Daten, Physik fehlt).
 3. **Synthese-Gegner und KI ✅** (Grundkonzept Phase 5, Plan in `docs/A3-PLAN.md`):
    - ✅ Späher, Jäger, Brecher, Belagerer als Synthese-Walker (kristallin, asymmetrisch,
      schwebende Panzersegmente, Leuchtadern, Insektengang), 6 Synthese-Waffen inkl.
@@ -127,12 +127,55 @@ Funk, Radar, Kampf, Übung) zusammen.
      Umschalter detailliert/klassisch; Waffen an den modellierten Rohren, Werksbewaffnung
      passend zum Aussehen (RK-30, große Schwarmsalve). Offen: Drohne (Flugmodell),
      Vierbein-Kriecher, OBELISK-Modell; Hangar (C) mit Waffen ohne Gegenstück am Modell.
-4. **Radar und Tarnung**:
+4. ✅ **Radar und Tarnung** (Plan und Ergebnis in `docs/A4-PLAN.md`, Ideen aus dem EarthSiege-2-Abgleich):
    - Schalter aktiv/passiv im Cockpit.
    - Aktiv: große, einstellbare Reichweite, macht sichtbar.
    - Passiv: nur strahlende Gegner, dazu deren Erfassungskreis.
    - Datenlink zwischen eigenen Walkern.
    - Aufschalten nur im Sichtkegel des Torsos, der Kegel ist auf dem Radar sichtbar.
+   - Dazu: Störsender als Ausrüstung, Bereitschaftslicht je Waffe („trifft das Ziel“),
+     Funkbefehle „Feuer einstellen/frei“ und „Funkstille/Radar an“.
+   - Offen: Bauwerke als eigene Radarkontakte, Störsender für Walker ohne Ausrüstungsplatz erst
+     mit der Bewaffnungsseite (C), Gegner-Missionen mit strahlenden Patrouillen.
+
+### Abgleich mit EarthSiege 2 (Nov 2026)
+
+Renes Auswertung von EarthSiege 2 (Dynamix 1996) als Vorbild, gegen den Code geprüft. Übernommen
+werden nur Mechaniken, keine Namen, Texte, Grafiken oder Töne.
+
+Schon vorhanden: getrennter Torso und Beine mit Zentrieren und Ausrichten; Schubhebel mit
+Halteposition und Stopp; Feuerketten und Gruppen; Hardpoint-Größen; Energie- gegen
+Panzerungswaffen; Schilde vorn/hinten verschiebbar; 5 Schadensstufen je Komponente; alle vier
+Lenkarten plus ungelenkt und Raketenkamera; Aufschaltkegel; Zielnachführung; Zielkapsel
+(Bauteilwahl); Bergungswert je Wrack; Einsatzgebiet mit Warnung; Übungsschalter; Tag/Nacht;
+Funk-Ereigniszeile; Nachbesprechung mit Abschüssen je Schütze; Flügelleute mit Kurzbefehlen.
+
+Übernehmen, mit Einordnung:
+
+| Idee | Wohin |
+|---|---|
+| Radar aktiv/passiv, sicherer Kreis, Datenlink, Kegel | A4 |
+| Störsender als Ausrüstung (gegen Aufschaltung und Verstärkungsruf, verrät dich) | A4 |
+| Bereitschaftslicht je Waffe: grün, wenn sie das gewählte Ziel treffen kann | A4 |
+| Funkbefehle „Feuer einstellen/frei“, „Funkstille/Radar an“, später „Hilfe!“ | A4 / B5 |
+| Hilfsmodule auf Hardpoints: Turbo (Antriebs-Überlast, Wärme), Schild-, Energiemodul | A2-Erweiterung |
+| Taktikkarte mit Einzelbefehlen an einen Piloten | B5 Teil 2 |
+| Pilotenfenster mit Rauschen bei Funk- oder Walkerausfall | B5 |
+| Einsatzgebiet verlassen = gescheitert nach 15 s (heute nur Warnung) | B2 |
+| Briefing mit Lagekarte und nummerierten Wegpunkten, Ziele im Einsatz abrufbar | B4 |
+| Bergung als Währung, „nach dem Auftrag bleiben und einsammeln“ | B3 / C |
+| Reparatur stufenweise, Bau über mehrere Einsätze, Verschrotten mit Verlust | C |
+| Verkettete Einsätze, Abbruch mit Folgen, steigende Härte, ein Kommandeur als Gesicht | C |
+| Pilotenerfahrung Anfänger bis Elite | C |
+| „Beutetechnik“-Walker: schwer, aber fast so schnell wie ein mittlerer | C (Forschung) |
+
+Bewusst nicht übernommen:
+- **Ein gemeinsamer Energiespeicher** für Antrieb, Schilde und Waffen. Wir haben den
+  ENERGIE-Drehschalter, den Waffenkondensator und die Reaktorwärme als zweite Grenze; das ist in
+  Phase 2 und 2.1 gemessen abgestimmt und erzeugt dieselben Entscheidungen.
+- **Getrennte Sprach- und Computerstimmen**: Es gibt keine Sprachausgabe, die Absender im Funk sind
+  schon getrennt.
+- **Ein eigener Kopplungsknopf für Waffenpaare**: Gruppen und Ketten decken das ab.
 
 ### B – Missionen (Missionsdokument)
 1. Datenformat und Missions-Engine: Trigger, Aktionen, Ziele, abgestufter Erfolg

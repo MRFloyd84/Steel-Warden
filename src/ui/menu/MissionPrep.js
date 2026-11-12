@@ -8,6 +8,7 @@ import { Storage } from '../../core/Storage.js';
 import { missionError, startupOf } from '../../states/missionStartup.js';
 import { TIME_LABELS, theaterName, weatherName, START_LABELS } from './missionInfo.js';
 import { PILOTS, WING_NAMES, wingmenSlots } from '../../data/pilots.js';
+import { EQUIPMENT_CHOICES, equipmentOverride, factoryEquipment } from '../../sim/loadout.js';
 
 const ALL = WALKER_ORDER.map((id) => WALKERS[id]);
 const armorOf = (w) => Object.values(w.armor).reduce((a, b) => a + b, 0);
@@ -41,8 +42,22 @@ export class MissionPrep extends MenuPage {
     const d = Storage.load('difficulty', 'normal');
     this.difficulty = DIFFICULTY[d] ? d : 'normal';
     // Team: one walker (or none) per wingman slot; the mission limits the slots
+    // Equipment swap (A4): ZK-1 target pod or ST-2 jammer on walkers with an equipment slot
+    this.equipment = Storage.load('prepEquipment', null);
     const savedTeam = Storage.load('prepWingmen', []) ?? [];
     this.team = WING_NAMES.map((_, i) => (WALKERS[savedTeam[i]] ? savedTeam[i] : null));
+  }
+
+  /** Equipment on this walker: the chosen one if it fits, else the factory item. */
+  get chosenEquipment() {
+    const w = this.walker;
+    return this.equipment && equipmentOverride(w, this.equipment) ? this.equipment : factoryEquipment(w);
+  }
+
+  /** Loadout override for the mission start (null = factory). */
+  get equipmentSwap() {
+    const e = this.chosenEquipment;
+    return e && e !== factoryEquipment(this.walker) ? equipmentOverride(this.walker, e) : null;
   }
 
   get slots() {
@@ -94,8 +109,9 @@ export class MissionPrep extends MenuPage {
     const m = this.mission;
     const bars = STATS.map((s) => `
       <div class="m-stat"><span class="m-label">${s.label}</span><span class="m-bar"><span style="width:${Math.round((s.get(w) / MAX[s.label]) * 100)}%"></span></span><span class="m-num">${esc(s.text(w))}</span></div>`).join('');
+    const swap = this.equipmentSwap;
     const loadout = w.hardpoints.map((hp) => {
-      const wid = w.defaultLoadout[hp.id];
+      const wid = swap?.[hp.id] ?? w.defaultLoadout[hp.id];
       const def = WEAPONS[wid];
       return `<tr><td>${esc(hp.id)}</td><td>${esc(hp.size)} ${esc(hp.type)}</td><td>${def ? esc(def.short) : '—'}</td></tr>`;
     }).join('');
@@ -110,6 +126,7 @@ export class MissionPrep extends MenuPage {
           <div class="m-stats">${bars}</div>
           <h3>Bewaffnung <span class="m-dim">(Werk — Hangar folgt in Phase C)</span></h3>
           <table class="m-loadout">${loadout}</table>
+          ${factoryEquipment(w) ? choiceRow('equip', 'Ausrüstung', WEAPONS[this.chosenEquipment].name, { hint: 'Zielkapsel (Bauteile am Ziel wählen, Tab) oder Störsender (J: stört Aufschaltung und Funk, verrät dich)' }) : ''}
           ${this.teamHtml()}
           <h3>Übung</h3>
           ${choiceRow('invulnerable', 'Verwundbar', p.invulnerable ? 'nein' : 'ja')}
@@ -148,6 +165,10 @@ export class MissionPrep extends MenuPage {
       this.walkerId = n;
       Storage.save('prepWalker', n);
       this.stack.scene?.showcase(n);
+      changed = true;
+    } else if (key === 'equip') {
+      this.equipment = this.cycle(EQUIPMENT_CHOICES, this.chosenEquipment, dir, true);
+      Storage.save('prepEquipment', this.equipment);
       changed = true;
     } else if (key.startsWith('wing')) {
       const i = Number(key.slice(4));
@@ -200,7 +221,7 @@ export class MissionPrep extends MenuPage {
     }
     const practice = { ...this.practice, difficulty: this.difficulty };
     this.game.loading.show({ name: this.mission.name, place: `${theaterName(this.mission)} · ${this.walker.name}` });
-    this.game.states.change('mission', { missionId: this.mission.id, walkerId: this.walkerId, practice, wingmen: this.wingmen });
+    this.game.states.change('mission', { missionId: this.mission.id, walkerId: this.walkerId, practice, wingmen: this.wingmen, equipment: this.equipmentSwap ? this.chosenEquipment : null });
     return true;
   }
 }

@@ -54,6 +54,8 @@ const LEFT_CONSOLE = [
   { id: 'radarRange', type: 'rotary', panel: 'leftConsole', at: [0.72, 0.12], label: 'RADAR m', positions: ['250', '500', '1000', '2000'], initial: 1 },
   { id: 'radioChannel', type: 'rotary', panel: 'leftConsole', at: [0.28, 0.31], label: 'FUNK', positions: ['1', '2', '3', '4'] },
   { id: 'throttle', type: 'throttle', panel: 'leftConsole', at: [0.6, 0.6] },
+  // A4: radar active (emits, everything in range with a free line) / passive (only emitters)
+  { id: 'radarMode', type: 'toggle', panel: 'leftConsole', at: [0.72, 0.31], label: 'RADAR', positions: ['AKTIV', 'PASSIV'] },
 ];
 
 const RIGHT_CONSOLE = [
@@ -169,7 +171,7 @@ function heavyLayout(extraCircuit) {
   ];
   if (extraCircuit) {
     items.push(
-      { id: 'reactor2Ignition', type: 'toggle', panel: 'leftConsole', at: [0.72, 0.33], label: 'KREIS 2', positions: ['AUS', 'ZÜND'], guard: 'red' },
+      { id: 'reactor2Ignition', type: 'toggle', panel: 'leftConsole', at: [0.25, 0.5], label: 'KREIS 2', positions: ['AUS', 'ZÜND'], guard: 'red' },
       { id: 'lampReactor2', type: 'lamp', panel: 'glare', at: [0.4, 0.5], text: 'KREIS 2', color: 'green', size: [0.07, 0.034] },
     );
   }
@@ -235,6 +237,7 @@ function modelLayout(extraCircuit) {
     { id: 'floodlight', type: 'toggle', panel: 'rightTall', at: [0.8, 0.13], label: 'SCHEINW.', positions: ['AUS', 'EIN'] },
     { id: 'targetTracking', type: 'toggle', panel: 'rightTall', at: [0.8, 0.38], label: 'ZIELNACHF.', positions: ['AUS', 'EIN'] },
     { id: 'missileGuidance', type: 'rotary', panel: 'rightTall', at: [0.37, 0.53], scale: 1.15, label: 'LENKUNG', positions: ['UNGEL', 'AKTIV', 'HALB', 'A-RAD', 'OPT'] },
+    { id: 'radarMode', type: 'toggle', panel: 'rightTall', at: [0.8, 0.6], label: 'RADAR', positions: ['AKTIV', 'PASSIV'] },
     ...arming('rightTall', 0.79),
 
     // The model's grips: left = throttle, right = side stick

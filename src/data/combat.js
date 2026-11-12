@@ -64,6 +64,23 @@ export const COMBAT = {
     hiddenGrace: 1.5, // a locked target out of sight is dropped after this many seconds
   },
 
+  // A4 radar (docs/A4-PLAN.md): who emits is seen
+  radar: {
+    passiveRange: 2000, // m — passive radar shows emitters this far, no line of sight needed
+    refresh: 0.25, // s between two contact list updates (line-of-sight checks)
+    linkMemory: 3, // s — data link: a wingman's contact stays on the radar this long after it was seen
+    aiDefault: 1200, // m — radar range of an emitting AI unit without its own value (ai.radar)
+  },
+  // ST-2 Störsender (equipment, weapons.js 'jammer')
+  jammer: {
+    drain: 4, // energy per s from the weapon capacitor
+    lockSlow: 3, // enemy lock takes this much longer on a jamming target
+    missileRange: 200, // m — further out, enemy active/semi-active missiles may lose a jamming target
+    breakChance: 0.6, // share of those missiles that do (fixed per missile serial)
+    callRadius: 900, // m — a scout this close to a jamming player cannot call reinforcements
+    noticeRadius: 700, // m — enemies this close know where the jammer is
+  },
+
   explosion: { radius: 14, radiusPerTon: 0.3, damage: 30, damagePerTon: 1.1 }, // reactor explosion: radius/damage + per ton of the exploding walker
   synthGlowFade: 25, // s until the veins of a Synthesis wreck are dark
   salvage: { reactor: 0.1, legs: 1.0, weaponMount: 1.0 },

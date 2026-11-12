@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { COMBAT } from '../data/combat.js';
 import { NavGrid } from './NavGrid.js';
 import { Perception } from './Perception.js';
 import { AIController, velocityOf } from './AIController.js';
@@ -12,6 +13,7 @@ import { patchObjectMaterial } from '../render/DetailTextures.js';
 const PATHS_PER_STEP = 3;
 const RADIO = {
   reinforcements: { from: 'LEITSTELLE', text: 'Synthese-Funkverkehr aufgefangen — der Späher ruft Verstärkung!' },
+  jammedCall: { from: 'LEITSTELLE', text: 'Synthese-Funk gestört — der Späher kommt mit seinem Ruf nicht durch.' },
   lander: { from: 'LEITSTELLE', text: 'Landefähre im Anflug, Sektor markiert auf dem Radar.' },
   edge: { from: 'LEITSTELLE', text: 'Neue Synthese-Kontakte am Rand des Einsatzgebiets.' },
   wave: (n, total) => ({ from: 'LEITSTELLE', text: `Welle ${n} von ${total} im Anflug!` }),
@@ -252,8 +254,15 @@ export class AIDirector {
   }
 
   /** A scout radios for help (or first contact, trigger 'contact'): reinforcements after the mission's delay. */
-  callReinforcements() {
+  callReinforcements(group = null, pos = null, caller = null) {
     if (!this.canCallHelp()) return;
+    // A4: a jamming player close to the caller blocks the call (it may try again later)
+    const pl = this.player;
+    if (caller && pl.jamming && Math.hypot(caller.motion.x - pl.motion.x, caller.motion.z - pl.motion.z) <= COMBAT.jammer.callRadius) {
+      if (!this.jamReported) this.radio(RADIO.jammedCall);
+      this.jamReported = true;
+      return;
+    }
     this.reinfState = 'coming';
     this.reinfT = (this.reinf.delay ?? 60) * this.diff.reinforcement;
     this.radio(RADIO.reinforcements);

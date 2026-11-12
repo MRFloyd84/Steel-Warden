@@ -54,3 +54,25 @@ export function validateFactoryLoadouts() {
   }
   if (errors.length) throw new Error(`Ungültige Werks-Bewaffnung:\n${errors.join('\n')}`);
 }
+
+/** Equipment that can be swapped in the mission preparation (A4). */
+export const EQUIPMENT_CHOICES = ['target-pod', 'jammer'];
+
+/**
+ * Equipment swap: every hardpoint that carries equipment in the factory loadout gets
+ * `equipmentId` instead — only if the result is a valid loadout (size, type, weight).
+ * Returns the override map, or null (nothing to swap, unknown item or not valid).
+ */
+export function equipmentOverride(walker, equipmentId) {
+  if (!equipmentId || !EQUIPMENT_CHOICES.includes(equipmentId)) return null;
+  const base = walker.defaultLoadout ?? {};
+  const slots = Object.entries(base).filter(([, id]) => WEAPONS[id]?.kind === 'equipment').map(([hp]) => hp);
+  if (!slots.length) return null;
+  const override = Object.fromEntries(slots.map((hp) => [hp, equipmentId]));
+  return checkLoadout(walker, { ...base, ...override }, walker.defaultGroups, walker.defaultChains).problems.length ? null : override;
+}
+
+/** The equipment a walker carries ab Werk (first equipment item), or null. */
+export function factoryEquipment(walker) {
+  return Object.values(walker.defaultLoadout ?? {}).find((id) => WEAPONS[id]?.kind === 'equipment') ?? null;
+}

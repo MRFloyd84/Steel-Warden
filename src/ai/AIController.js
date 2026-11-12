@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { COMBAT } from '../data/combat.js';
 import { wrap } from './Perception.js';
 
 const DEG = Math.PI / 180;
@@ -135,7 +136,7 @@ export class AIController {
     const p = u.motion.pose;
     const eye = v1.set(p.x, p.y, p.z);
     for (const h of this.d.hostilesOf(u)) {
-      const res = this.d.perception.look(eye, p.yaw, this.ai.sight, this.ai.detectEmitting, h);
+      const res = this.d.perception.look(eye, p.yaw, this.ai.sight, this.ai.detectEmitting, h, null, u.emitting ? this.ai.radar ?? COMBAT.radar.aiDefault : 0);
       const c = this.contacts.get(h);
       if (!res) {
         if (c) c.visible = false;
@@ -266,7 +267,7 @@ export class AIController {
       case 'callHelp':
         this.hasGoal = false;
         if (this.stateT > 2.5) {
-          this.d.callReinforcements(this.group, c?.pos ?? m.pose);
+          this.d.callReinforcements(this.group, c?.pos ?? m.pose, u);
           this.setState(this.diff.flank && this.chooseFlank(c) ? 'flank' : 'attack');
         }
         return;
@@ -674,12 +675,14 @@ export class AIController {
     const visible = !!c?.visible;
     const spotted = !!c && (visible || this.d.spottedAgo(c.target) < 3);
     // Missile lock: target seen, in range, roughly ahead
-    if (this.missileSlots.length && visible && this.aimDist <= this.missileRange && this.yawErr < 30 * DEG) this.lockT = Math.min(this.lockT + dt, this.lockTime * 1.5);
+    // A4: locking onto a jamming target takes COMBAT.jammer.lockSlow times as long
+    const lockRate = c?.target?.jamming ? 1 / COMBAT.jammer.lockSlow : 1;
+    if (this.missileSlots.length && visible && this.aimDist <= this.missileRange && this.yawErr < 30 * DEG) this.lockT = Math.min(this.lockT + dt * lockRate, this.lockTime * 1.5);
     else this.lockT = Math.max(0, this.lockT - dt * 2);
     this.locked = this.lockT >= this.lockTime;
     u.locking = this.lockT > 0.25 ? c?.target ?? null : null;
     this.ballisticCache = null;
-    const want = !!c && (visible || (this.ballisticSlots.length > 0 && spotted)) && this.time >= this.fireReadyAt && this.state !== 'callHelp' && !this.d.holdFire;
+    const want = !!c && (visible || (this.ballisticSlots.length > 0 && spotted)) && this.time >= this.fireReadyAt && this.state !== 'callHelp' && !this.d.holdFire && !this.weaponsHeld();
     const combat = this.d.combat;
     u.weapons.update(dt, {
       canFire: true,
@@ -730,6 +733,11 @@ export class AIController {
     if (this.pitchErr > tol * 1.6 && !s.hp.location.startsWith('arm')) return 'AUSR.';
     if (this.friendlyCheck && this.friendInLine()) return 'FREUND';
     return '';
+  }
+
+  /** Weapons held by order (wingmen: Feuer einstellen); the base AI never holds. */
+  weaponsHeld() {
+    return false;
   }
 
   /**

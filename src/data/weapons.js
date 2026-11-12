@@ -18,7 +18,7 @@
  * missile     flight model: launchSpeed m/s, thrust m/s², maxSpeed m/s, burnTime s (then
  *             ballistic), turnRate °/s, seekerCone ° (half angle), semiActiveBonus (damage
  *             factor), loft (climbs first when guided)
- * kind 'equipment'  carried, never fires (targetPod: component selection with Tab)
+ * kind 'equipment'  carried, never fires (target-pod: component selection with Tab; jammer: ST-2, J)
  * effect      optional: { kind: 'disrupt' | 'emp', time } — electronics / shields knocked out
  * visual.model  weapon model on the hardpoint (render/walker/WeaponModels.js)
  * ballistic   true: the projectile falls (artillery, high arc aimed by the AI); blastRadius splash
@@ -181,6 +181,13 @@ export const WEAPONS = {
     kind: 'equipment', damage: 0, range: 0, energyCost: 0, heatPerShot: 0, fireRate: 0, burst: 0,
     ammoPerMagazine: null, guidance: null,
     visual: { model: 'pod', color: '#9fd8ff' },
+  },
+  jammer: {
+    id: 'jammer', name: 'ST-2 Störsender', short: 'STÖRSENDER', type: 'universal', size: 'S', weight: 1.5,
+    kind: 'equipment', damage: 0, range: 0, energyCost: 0, heatPerShot: 0, fireRate: 0, burst: 0,
+    ammoPerMagazine: null, guidance: null,
+    // on/off with J; effects in COMBAT.jammer (A4)
+    visual: { model: 'pod', color: '#ffb36b' },
   },
   'imp-2': {
     id: 'imp-2', name: 'IMP-2 EMP-Werfer', short: 'IMP-2', type: 'universal', size: 'M', weight: 3.0,

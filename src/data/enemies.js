@@ -11,6 +11,8 @@
  *             flankChance     0..1 — chance to flank instead of a frontal attack
  *             sight           { range m, coneDeg full cone } (×daylight ×weather)
  *             detectEmitting  m — an emitting target is known this far away
+ *             radar           m — own radar range while the unit emits (A4; located, line of sight)
+ *             emits           emits from the start (scouts: active radar)
  *             retreatAt       share of structure left (torso) that triggers a retreat
  *             callsHelp       radios for reinforcements on first contact
  *             needsSpotter    fires only at contacts the group sees (artillery)
@@ -46,7 +48,7 @@ export const ENEMIES = {
     systems: {},
     ai: {
       profile: 'scout', preferredRange: 170, aggression: 0.75, morale: 0.35, flankChance: 0.7,
-      sight: { range: 1100, coneDeg: 140 }, detectEmitting: 1500, retreatAt: 0.35, callsHelp: true,
+      sight: { range: 1100, coneDeg: 140 }, detectEmitting: 1500, retreatAt: 0.35, callsHelp: true, radar: 1600, emits: true,
     },
     salvage: { scrap: 90, weaponDropChance: 0.5 },
   },

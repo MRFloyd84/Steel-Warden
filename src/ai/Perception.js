@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { raycastTerrain } from '../sim/HitVolumes.js';
+import { COMBAT } from '../data/combat.js';
 
 const DEG = Math.PI / 180;
 const LIGHT = { day: 1, dusk: 0.75, dawn: 0.75, night: 0.45 };
@@ -19,6 +20,9 @@ const d = new THREE.Vector3();
  *   noise     shots and explosions tell units nearby a position (AIDirector.noise)
  *   signature target.signature { sight, detect } from the walker's systems state
  *             (cold … reactor, data/systems.js): factor on sight range, located without sight
+ *
+ * radar     (A4) an emitting observer locates everything within its ai.radar with a free line;
+ *           a jamming target is located within COMBAT.jammer.noticeRadius
  *
  * Night: a lit floodlight makes the player visible as by day.
  */
@@ -54,7 +58,7 @@ export class Perception {
    * Can a walker see the target? eye: world point, yaw: torso heading,
    * sight: { range, coneDeg }. Returns 'seen' | 'located' | null.
    */
-  look(eye, yaw, sight, detectEmitting, target, ignore = null) {
+  look(eye, yaw, sight, detectEmitting, target, ignore = null, radar = 0) {
     const t = target.volumes.componentCenter('torso', b);
     const dx = t.x - eye.x;
     const dz = t.z - eye.z;
@@ -70,6 +74,10 @@ export class Perception {
     if (seen) return 'seen';
     if (target.emitting && dist <= detectEmitting) return 'located';
     if (sig?.detect && dist <= sig.detect) return 'located';
+    // A4: a jammer gives itself away nearby; an emitting observer's radar finds anything in
+    // range with a free line (terrain and buildings cover)
+    if (target.jamming && dist <= COMBAT.jammer.noticeRadius) return 'located';
+    if (radar > 0 && dist <= radar && this.lineOfSight(a.copy(eye), t, ignore)) return 'located';
     return null;
   }
 }

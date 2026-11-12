@@ -31,6 +31,8 @@ export class Flight {
     this.members = [];
     this.order = 'wait';
     this.aimLegs = false;
+    this.weaponsHold = false; // Feuer einstellen (A4)
+    this.radarOn = false; // Funkstille by default; on: the wingmen emit and locate by radar (A4)
     this.lastFF = new Map(); // controller → time of the last friendly-fire call
     this.time = 0;
     this.deployed = false;
@@ -118,7 +120,8 @@ export class Flight {
 
   /**
    * Radio order (RadioMenu / Shift+1..7). Returns false when there is nobody to take it.
-   * id: formation | attackMyTarget | freeFire | goNav | holdPosition | fallBack | aimLegs
+   * id: formation | attackMyTarget | freeFire | goNav | holdPosition | fallBack | aimLegs |
+   *     holdFire (switch) | radar (switch)
    */
   command(id) {
     const all = this.alive;
@@ -127,6 +130,17 @@ export class Flight {
       return false;
     }
     const speaker = all[0];
+    if (id === 'holdFire') {
+      this.weaponsHold = !this.weaponsHold;
+      this.say(speaker, WING_RADIO.ack[this.weaponsHold ? 'holdFireOn' : 'holdFireOff']);
+      return true;
+    }
+    if (id === 'radar') {
+      this.radarOn = !this.radarOn;
+      for (const c of all) c.unit.emitting = this.radarOn;
+      this.say(speaker, WING_RADIO.ack[this.radarOn ? 'radarOn' : 'radarOff']);
+      return true;
+    }
     if (id === 'aimLegs') {
       this.aimLegs = !this.aimLegs;
       for (const c of all) c.aimComponent = this.aimLegs ? 'legs' : 'torso';
@@ -326,7 +340,7 @@ export class Flight {
 
   debugLines() {
     if (!this.members.length) return [];
-    return [`Team: Befehl ${this.order}${this.aimLegs ? ' + Beine' : ''}  ` + this.members.map((c) => `${c.unit.wingName} ${c.unit.walker.name} ${c.label} T${Math.round(c.unit.damage.fraction('torso') * 100)} % Moral ${c.morale.toFixed(2)}${c.target ? ` Ziel ${c.target.target.id}` : ''}`).join(' · ')];
+    return [`Team: Befehl ${this.order}${this.aimLegs ? ' + Beine' : ''}${this.weaponsHold ? ' + Feuer halten' : ''}${this.radarOn ? ' + Radar' : ' + Funkstille'}  ` + this.members.map((c) => `${c.unit.wingName} ${c.unit.walker.name} ${c.label} T${Math.round(c.unit.damage.fraction('torso') * 100)} % Moral ${c.morale.toFixed(2)}${c.target ? ` Ziel ${c.target.target.id}` : ''}`).join(' · ')];
   }
 
   dispose() {

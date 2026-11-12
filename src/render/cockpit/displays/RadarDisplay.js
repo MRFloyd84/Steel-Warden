@@ -1,7 +1,9 @@
 /**
  * Top-down radar, torso-up. Range rings, rotating sweep (the phosphor
  * afterglow draws its trail), torso field-of-view wedge, leg direction,
- * north marker and nav points.
+ * north marker and nav points. A4: AKTIV/PASSIV in the title; passive has no sweep and a
+ * dashed danger circle; contacts: filled = own radar or passive, rays = emitting, hollow =
+ * wingmen's data link; STÖRT while the jammer is on.
  */
 export const RadarDisplay = {
   persistence: 0.8,
@@ -61,9 +63,15 @@ export const RadarDisplay = {
       }
     }
 
-    // Sweep — one turn every 2.4 s
+    // Sweep — one turn every 2.4 s; passive radar listens only (no sweep)
     const a = (d.time / 2.4) * Math.PI * 2;
-    p.line(cx, cy, cx + Math.sin(a) * R, cy - Math.cos(a) * R, 1);
+    if (d.radarMode !== 'passive') p.line(cx, cy, cx + Math.sin(a) * R, cy - Math.cos(a) * R, 1);
+    // Passive: danger circle — enemies inside it can notice you (A4)
+    if (d.radarMode === 'passive' && d.radarDanger > 0) {
+      const rr = Math.min(R, d.radarDanger * scale);
+      for (let i = 0; i < 24; i += 2) p.circle(cx, cy, rr, 0.75, false, (i / 24) * Math.PI * 2, ((i + 1) / 24) * Math.PI * 2, '#ffb34a');
+      if (d.radarDanger * scale > R) p.text(`GEFAHR ${Math.round(d.radarDanger)} m`, w / 2, 26, { size: 9, align: 'center', color: '#ffb34a' });
+    }
 
     // North marker on the outer ring
     const [nx, ny] = toScreen(0, -range);
@@ -90,8 +98,16 @@ export const RadarDisplay = {
       if (c.wreck) {
         p.line(x - 3, y - 3, x + 3, y + 3, 0.6);
         p.line(x - 3, y + 3, x + 3, y - 3, 0.6);
+      } else if (c.how === 'link') {
+        // Data link (a wingman sees it): hollow square
+        p.rect(x - 3, y - 3, 6, 6, 0.9);
       } else {
         p.rect(x - 2.5, y - 2.5, 5, 5, 1, true);
+        // Emitting: small rays (passive radar finds it, anti-radar homes on it)
+        if (c.emitting) {
+          p.line(x - 6, y - 6, x - 4, y - 4, 0.7);
+          p.line(x + 6, y - 6, x + 4, y - 4, 0.7);
+        }
       }
       if (c.locked) p.rect(x - 6, y - 6, 12, 12, 1);
     }
@@ -133,7 +149,8 @@ export const RadarDisplay = {
       p.text('SENSOR GESTÖRT', w / 2, 28, { size: 10, align: 'center', alpha: Math.floor(d.time * 2) % 2 ? 1 : 0.5 });
     }
 
-    p.text('RADAR', 8, 12, { size: 11 });
+    p.text(d.radarMode === 'passive' ? 'RADAR PASSIV' : 'RADAR AKTIV', 8, 12, { size: 11 });
+    if (d.jamming) p.text('STÖRT', w / 2, 12, { size: 10, align: 'center', color: '#ffb34a', alpha: Math.floor(d.time * 2) % 2 ? 1 : 0.6 });
     p.text(`${range} m`, w - 8, 12, { size: 11, align: 'right' });
     p.text(`KURS ${String(Math.round(d.headingDeg)).padStart(3, '0')}`, 8, h - 12, { size: 11 });
     const nav = d.navPoints.find((n) => n.active);

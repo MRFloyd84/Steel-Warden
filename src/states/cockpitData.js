@@ -138,6 +138,7 @@ function updateCombatData(d, m, combat) {
   d.armorNow.reactor = t.internal;
   d.radarRange *= r.sensorsRange;
   d.weaponsReadout = r.weapons;
+  d.canHit = r.canHit;
   d.lockState = r.lockState;
   d.sensorsHeavy = r.parts.sensors.stage >= 3;
   const th = combat.threat;
@@ -148,13 +149,23 @@ function updateCombatData(d, m, combat) {
   d.loadoutWeight = r.weapons.slots.reduce((sum, sl) => sum + combat.weapons.byId[sl.id].def.weight, 0);
 
   d.area = d.worldLink?.areaRelative(m.x, m.z) ?? null;
-  // Radar contacts (all other walkers; data link and passive radar come with A4)
+  // Radar contacts (A4, sim/Radar.js): active = in range with a free line, passive = emitters,
+  // both plus the wingmen's data link; refreshed 4× per second by MissionCombat
   d.contacts.length = 0;
-  for (const u of combat.units.enemies) {
+  d.radarMode = r.radarActive ? 'active' : 'passive';
+  d.radarDanger = r.radar?.danger ?? 0;
+  d.jamming = r.jamming;
+  for (const { unit: u, how } of r.radar?.contacts ?? []) {
     const p = u.motion.pose;
     const dx = p.x - m.x;
     const dz = p.z - m.z;
-    d.contacts.push({ dx, dz, dist: Math.hypot(dx, dz), locked: u === r.target?.unit, wreck: !!u.wreck });
+    d.contacts.push({ unit: u, dx, dz, dist: Math.hypot(dx, dz), locked: u === r.target?.unit, wreck: !!u.wreck, how, emitting: !!u.emitting });
+  }
+  // Wrecks stay where they fell (no emission, no line needed)
+  for (const u of combat.units.enemies) {
+    if (!u.wreck || d.contacts.some((c) => c.unit === u)) continue;
+    const p = u.motion.pose;
+    d.contacts.push({ dx: p.x - m.x, dz: p.z - m.z, dist: Math.hypot(p.x - m.x, p.z - m.z), wreck: true });
   }
   // Wingmen (own data link): ring with their number
   for (const u of combat.units.allies) {

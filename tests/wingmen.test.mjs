@@ -333,3 +333,38 @@ test('no wingmen: the radio says so, nothing else changes', () => {
   assert.equal(w.last(), WING_RADIO.noWingmen);
   w.run(1);
 });
+
+// ---- A4: orders 8 and 9 ----
+
+test('hold fire: no shots while held, return fire for 5 s after a hit, fire free again', () => {
+  const w = world({ enemies: [['splitter', 0, -350]] });
+  w.flight.deploy();
+  w.flight.command('holdFire');
+  assert.equal(w.flight.weaponsHold, true);
+  assert.equal(w.last(), WING_RADIO.ack.holdFireOn);
+  w.run(15);
+  assert.equal(w.shots.filter((s) => s.from !== 'player').length, 0, 'nobody fired while held');
+  // ZWEI takes a hit: returns fire
+  const zwei = w.flight.members[0];
+  zwei.unit.damage.applyRaw('torso', 20);
+  w.run(3);
+  assert.ok(w.shots.some((s) => s.from === zwei.unit.id), 'ZWEI returned fire');
+  assert.ok(!w.shots.some((s) => s.from !== 'player' && s.from !== zwei.unit.id), 'the others still hold');
+  w.flight.command('holdFire');
+  assert.equal(w.flight.weaponsHold, false);
+  assert.equal(w.last(), WING_RADIO.ack.holdFireOff);
+  const before = w.shots.length;
+  w.run(5);
+  assert.ok(w.shots.length > before, 'fire free');
+});
+
+test('radio silence / radar: wingmen emit only on order', () => {
+  const w = world();
+  assert.ok(w.flight.members.every((c) => !c.unit.emitting), 'radio silence by default');
+  w.flight.command('radar');
+  assert.ok(w.flight.members.every((c) => c.unit.emitting === true));
+  assert.equal(w.last(), WING_RADIO.ack.radarOn);
+  w.flight.command('radar');
+  assert.ok(w.flight.members.every((c) => c.unit.emitting === false));
+  assert.equal(w.last(), WING_RADIO.ack.radarOff);
+});

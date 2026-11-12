@@ -44,6 +44,18 @@ export class WingmanController extends AIController {
     return this.d.player;
   }
 
+  /**
+   * Feuer einstellen (Flight.weaponsHold): no shots — except returning fire for 5 s after
+   * this wingman took a hit.
+   */
+  weaponsHeld() {
+    if (!this.flight.weaponsHold) return false;
+    const hp = this.unit.damage.fraction('torso') + this.unit.damage.shieldFraction('front') + this.unit.damage.shieldFraction('rear');
+    if (this.lastHp !== undefined && hp < this.lastHp - 1e-6) this.returnFireUntil = this.time + 5;
+    this.lastHp = hp;
+    return this.time >= (this.returnFireUntil ?? -1);
+  }
+
   /** Shots of the own side are no news (only an alert for the enemy). */
   hear(pos, source) {
     if (source?.side === this.unit.side) return;

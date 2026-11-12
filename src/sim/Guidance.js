@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { jamBreaks } from './Radar.js';
 
 const DEG = Math.PI / 180;
 const GRAVITY = 9.81;
@@ -82,6 +83,11 @@ function wishDirection(p, ctx, dir) {
   t.volumes.componentCenter(p.component ?? 'torso', goal).sub(p.pos);
   const dist = goal.length();
   if (dist < 1e-3) return null;
+  // A4: a jamming target shakes off part of the radar-guided missiles beyond burn-through range
+  if ((p.mode === 'active' || p.mode === 'semiActive') && t.jamming && jamBreaks(p.serial, dist)) {
+    p.lost = true;
+    return null;
+  }
   goal.divideScalar(dist);
   if (p.mode === 'active' && Math.acos(Math.min(1, goal.dot(dir))) > m.seekerCone * DEG) {
     p.lost = true; // left the seeker's field of view
