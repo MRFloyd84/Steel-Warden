@@ -21,6 +21,31 @@ Schnellstart-Parameter (Dev und Build):
   sonst gilt die Wahl im Hauptmenü
 - `?start=hot` – ohne Startprozedur, `?walker=goliath` – Walker wählen
 
+## Desktop-App mit automatischen Updates
+
+STEEL WARDEN gibt es als Linux-AppImage unter
+[Releases](https://github.com/MRFloyd84/steel-warden/releases). Die App prüft bei jedem Start im
+Hintergrund, ob es eine neue Version gibt, lädt sie herunter und fragt dann „Jetzt neu starten“
+oder „Später“ (dann wird sie beim Beenden eingespielt). Ohne Internet startet sie ganz normal.
+Einstellungen, Tastenbelegung und Spielstände bleiben über Updates erhalten.
+
+- **Einrichten:** `STEEL_WARDEN-x.y.z-x86_64.AppImage` und `install-desktop.sh` aus dem neuesten
+  Release laden, dann `bash install-desktop.sh STEEL_WARDEN-….AppImage`. Das Spiel liegt danach
+  in `~/Applications/` und im Startmenü unter Spiele. AppImages brauchen FUSE 2 (CachyOS/Arch:
+  `sudo pacman -S fuse2`). Entfernen: `bash install-desktop.sh --remove`.
+- **Vollbild:** `F11`.
+- **Grafikkarte:** Auf Laptops mit zwei Grafikchips nimmt die App automatisch die NVIDIA-Karte;
+  `STEEL_WARDEN_GPU=integrated` erzwingt den eingebauten Chip.
+- **Ohne Installation:** Jedes Release hat auch `STEEL_WARDEN-vx.y.z-browser.zip`; entpacken und
+  `index.html` doppelklicken. Diese Fassung aktualisiert sich nicht selbst.
+
+**Neue Version veröffentlichen:** `version` in `package.json` erhöhen und auf `main` pushen. Der
+Workflow `Release` prüft (Tests, Credits, Build), baut das AppImage und legt das Release an; die
+installierten Apps finden es beim nächsten Start. Jeder Push läuft außerdem durch `Prüfung`.
+
+Lokal: `npm run app` startet die Desktop-App aus dem Build, `npm run dist:linux` baut das
+AppImage nach `release/`.
+
 ## Stand
 
 - **Ausbaustufe 1 (Grundgerüst):** Game-Loop mit festem Simulationstakt, Zustandsmaschine

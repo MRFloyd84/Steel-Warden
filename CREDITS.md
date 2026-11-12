@@ -1,5 +1,15 @@
 # Credits
 
+**Lizenz:** Die MIT-Lizenz in `LICENSE` gilt für den Quelltext und alles, was im Code erzeugt
+wird (prozedurale Grafik, Texturen, Klicks und Töne). Die unten aufgeführten Dateien fallen
+nicht darunter; für sie gelten die Bedingungen ihrer Quellen. Die mit Tripo AI erzeugten Modelle
+(Cockpit, Walker, Synthese) und Renes Tonaufnahmen dürfen mit dem Spiel weitergegeben, aber
+nicht ohne seine Zustimmung in anderen Projekten verwendet werden.
+
+*The MIT licence in `LICENSE` covers the source code only. The assets listed below keep the terms
+of their sources; the Tripo models and Rene's recordings may not be reused elsewhere without his
+permission.*
+
 ## Sounds
 
 Rohaufnahmen liegen unverändert in `assets/sounds-raw/`, die aufbereiteten Spiel-Samples
@@ -7,8 +17,12 @@ erzeugt `tools/prepare_sounds.py` nach `src/audio/samples/`.
 
 - Von Rene bereitgestellte Aufnahmen (alle Dateien ohne Präfix `freesound_community-`).
 - `freesound_community-big-garage-door-opening-43959.mp3` und
-  `freesound_community-mech_step_001-87175.mp3`: Uploads des Accounts „freesound_community“,
-  vermutlich von Pixabay. Vor einer Veröffentlichung die Lizenz auf der Quellseite prüfen.
+  `freesound_community-mech_step_001-87175.mp3`: Uploads des Accounts „freesound_community“
+  auf Pixabay (Pixabay Content License). **Die unveränderten Originale sind nicht im
+  Repository**, weil die Pixabay-Lizenz die Weitergabe unveränderter Einzeldateien nicht erlaubt;
+  enthalten sind nur die geschnittenen Spiel-Samples in `src/audio/samples/`. Wer
+  `tools/prepare_sounds.py` neu laufen lässt, lädt die beiden Dateien selbst bei Pixabay und legt
+  sie in `assets/sounds-raw/`.
 
 Alle übrigen Klänge (Schalterklicks, Drehregler-Rasten, Taster) werden zur Laufzeit
 prozedural erzeugt (`src/audio/ClickSynth.js`).

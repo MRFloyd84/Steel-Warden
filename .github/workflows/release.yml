@@ -1,0 +1,53 @@
+# Veröffentlicht automatisch ein GitHub-Release, sobald auf `main` eine neue Version in
+# package.json ankommt (oder per Hand über „Run workflow“). Die installierte App findet es
+# beim nächsten Start (electron-updater). Gibt es das Release zur Version schon, passiert
+# nichts.
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths: [package.json]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  appimage:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Version bestimmen, vorhandenes Release überspringen
+        id: version
+        run: |
+          v="v$(node -p "require('./package.json').version")"
+          echo "tag=$v" >> "$GITHUB_OUTPUT"
+          if gh release view "$v" >/dev/null 2>&1; then
+            echo "Release $v gibt es schon – nichts zu tun."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-node@v4
+        if: steps.version.outputs.skip != 'true'
+        with:
+          node-version: 22
+          cache: npm
+      - if: steps.version.outputs.skip != 'true'
+        run: npm ci
+      # Tests, Credits und Build – nur ein grünes Projekt wird veröffentlicht.
+      - if: steps.version.outputs.skip != 'true'
+        run: npm run check
+      - name: AppImage bauen und als Release veröffentlichen
+        if: steps.version.outputs.skip != 'true'
+        run: npx electron-builder --linux AppImage --publish always
+      - name: Offline-Version und Installationsskript anhängen
+        if: steps.version.outputs.skip != 'true'
+        run: |
+          (cd dist && zip -qr "../STEEL_WARDEN-${{ steps.version.outputs.tag }}-browser.zip" .)
+          gh release upload "${{ steps.version.outputs.tag }}" scripts/install-desktop.sh "STEEL_WARDEN-${{ steps.version.outputs.tag }}-browser.zip" --clobber

@@ -1,2 +1,7 @@
 node_modules/
 dist/
+release/
+
+# Unveränderte Pixabay-Originale: dürfen laut Pixabay-Lizenz nicht einzeln weitergegeben
+# werden. Nur lokal aufbewahren (siehe CREDITS.md).
+/assets/sounds-raw/freesound_community-*
